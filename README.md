@@ -1,43 +1,32 @@
-# Astro Starter Kit: Minimal
+# Personal blog (Nada Tayebi)
 
-```sh
-npm create astro@latest -- --template minimal
+Trilingual learning notes (EN / FR / AR), built with [Astro](https://astro.build/).
+
+## Live site
+
+Open this in your browser (not the `github.com/...` code page):
+
+**https://anonymnd.github.io/Personal-blog/**
+
+Use the trailing slash or pick a language from the home page.
+
+### If you only see the GitHub README
+
+The site is deployed by **GitHub Actions**, not from the raw files on `main`.
+
+1. Repo → **Settings** → **Pages**
+2. **Build and deployment** → **Source**: choose **GitHub Actions** (not “Deploy from a branch”).
+3. **Actions** tab → confirm the latest **Deploy to GitHub Pages** workflow is green (re-run if it failed).
+
+## Local development
+
+```bash
+npm install
+npm run dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+With the configured `base` path, open **http://localhost:4326/Personal-blog/** (see `astro.config.mjs`).
 
-## 🚀 Project Structure
+## New posts
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Add Markdown under `src/content/blog/en/`, `fr/`, and `ar/` with the same `translationKey` in each file’s frontmatter.
