@@ -1,0 +1,225 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { homeLocaleHrefs } from '../../lib/localeHrefs';
+import { blogIndexHref, type Locale, locales } from '../../i18n/locales';
+import { homeStrings, layoutStrings } from '../../i18n/ui';
+import { getCollection } from 'astro:content';
+
+export function getStaticPaths() {
+	return locales.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const L = layoutStrings(lang);
+const H = homeStrings(lang);
+const localeHrefs = homeLocaleHrefs();
+
+const posts = (
+	await getCollection('blog', ({ data }) => {
+		if (import.meta.env.PROD && data.draft === true) return false;
+		return data.locale === lang;
+	})
+).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout title={L.siteTitle} description={H.heroLead} lang={lang} localeHrefs={localeHrefs}>
+	<section class="hero">
+		<div class="hero-inner">
+			<p class="eyebrow">{H.eyebrow}</p>
+			<h1>{H.heroTitle}</h1>
+			<p class="lead">{H.heroLead}</p>
+			<p class="cta-row">
+				<a class="btn primary" href={blogIndexHref(lang)}>{H.browsePosts}</a>
+				<a class="btn ghost" href="https://docs.astro.build/en/guides/content-collections/" target="_blank" rel="noopener noreferrer">
+					{H.astroDocs}
+				</a>
+			</p>
+		</div>
+	</section>
+
+	<section class="recent">
+		<div class="section-head">
+			<h2>{H.recentPosts}</h2>
+			<a href={blogIndexHref(lang)}>{H.viewAll}</a>
+		</div>
+		<ul class="post-grid">
+			{
+				posts.slice(0, 5).map((post) => (
+					<li>
+						<a href={`/${lang}/blog/${post.data.translationKey}/`} class="card">
+							<time datetime={post.data.pubDate.toISOString()}>
+								{post.data.pubDate.toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en')}
+							</time>
+							<h3>{post.data.title}</h3>
+							<p>{post.data.description}</p>
+							{post.data.tags && post.data.tags.length > 0 && (
+								<ul class="tags">
+									{post.data.tags.map((t) => (
+										<li>{t}</li>
+									))}
+								</ul>
+							)}
+						</a>
+					</li>
+				))
+			}
+		</ul>
+	</section>
+</BaseLayout>
+
+<style>
+	.hero {
+		padding: 3rem 1.5rem 4rem;
+		background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(61, 214, 198, 0.12), transparent);
+	}
+	.hero-inner {
+		max-width: 40rem;
+		margin: 0 auto;
+		text-align: center;
+	}
+	.eyebrow {
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		font-size: 0.75rem;
+		color: var(--accent);
+		font-weight: 600;
+		margin: 0 0 1rem;
+	}
+	.hero h1 {
+		font-size: clamp(1.75rem, 4vw, 2.35rem);
+		line-height: 1.2;
+		margin: 0 0 1rem;
+		letter-spacing: -0.03em;
+	}
+	.lead {
+		color: var(--text-muted);
+		margin: 0 0 1.75rem;
+		font-size: 1.1rem;
+	}
+	.cta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		justify-content: center;
+		margin: 0;
+	}
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.65rem 1.15rem;
+		border-radius: 999px;
+		font-weight: 600;
+		font-size: 0.95rem;
+		text-decoration: none;
+		border: 1px solid transparent;
+		transition:
+			background 0.15s,
+			border-color 0.15s,
+			color 0.15s;
+	}
+	.btn.primary {
+		background: var(--accent);
+		color: var(--bg);
+	}
+	.btn.primary:hover {
+		background: #5fe8d9;
+		color: var(--bg);
+	}
+	.btn.ghost {
+		border-color: var(--border);
+		color: var(--text-muted);
+	}
+	.btn.ghost:hover {
+		border-color: var(--accent-dim);
+		color: var(--accent);
+	}
+
+	.recent {
+		max-width: 56rem;
+		margin: 0 auto;
+		padding: 0 1.5rem 3rem;
+	}
+	.section-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+	.section-head h2 {
+		margin: 0;
+		font-size: 1.25rem;
+	}
+	.section-head a {
+		font-size: 0.9rem;
+		text-decoration: none;
+		color: var(--text-muted);
+	}
+	.section-head a:hover {
+		color: var(--accent);
+	}
+
+	.post-grid {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		gap: 1rem;
+	}
+	@media (min-width: 640px) {
+		.post-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+	.card {
+		display: block;
+		height: 100%;
+		padding: 1.25rem 1.35rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		text-decoration: none;
+		color: inherit;
+		transition:
+			border-color 0.15s,
+			transform 0.15s;
+	}
+	.card:hover {
+		border-color: var(--accent-dim);
+		transform: translateY(-2px);
+	}
+	.card time {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.card h3 {
+		margin: 0.5rem 0 0.35rem;
+		font-size: 1.1rem;
+		color: var(--text);
+	}
+	.card p {
+		margin: 0;
+		font-size: 0.92rem;
+		color: var(--text-muted);
+		line-height: 1.5;
+	}
+	.tags {
+		list-style: none;
+		padding: 0;
+		margin: 0.85rem 0 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+	}
+	.tags li {
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 0.2rem 0.5rem;
+		border-radius: 6px;
+		background: var(--bg-elevated);
+		color: var(--accent);
+		border: 1px solid var(--border);
+	}
+</style>

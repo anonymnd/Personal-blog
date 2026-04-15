@@ -1,0 +1,64 @@
+---
+import { locales, type Locale } from '../i18n/locales';
+
+interface Props {
+	lang: Locale;
+	hrefs: Record<Locale, string>;
+	/** If set, locales not in the set use a muted style (fallback href to blog index). */
+	available?: Set<Locale>;
+}
+
+const { lang, hrefs, available } = Astro.props;
+
+const labels: Record<Locale, string> = { en: 'EN', fr: 'FR', ar: 'العربية' };
+---
+
+<div class="locale-bar" role="navigation" aria-label="Language">
+	{
+		locales.map((l) => {
+			const isCurrent = l === lang;
+			const isMissing = available && !available.has(l);
+			return (
+				<a
+					href={hrefs[l]}
+					class:list={['locale-link', { current: isCurrent, missing: isMissing }]}
+					hreflang={l}
+					aria-current={isCurrent ? 'true' : undefined}
+				>
+					{labels[l]}
+				</a>
+			);
+		})
+	}
+</div>
+
+<style>
+	.locale-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+	.locale-link {
+		font-size: 0.78rem;
+		font-weight: 600;
+		padding: 0.35rem 0.55rem;
+		border-radius: 8px;
+		text-decoration: none;
+		color: var(--text-muted);
+		border: 1px solid transparent;
+	}
+	.locale-link:hover {
+		color: var(--accent);
+		border-color: var(--border);
+		background: var(--bg-elevated);
+	}
+	.locale-link.current {
+		color: var(--bg);
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+	.locale-link.missing:not(.current) {
+		opacity: 0.55;
+	}
+</style>
