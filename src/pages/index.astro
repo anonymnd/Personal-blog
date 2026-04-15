@@ -1,0 +1,153 @@
+---
+import '../styles/global.css';
+import { homeHref, type Locale } from '../i18n/locales';
+
+const labels: Record<Locale, { title: string; blurb: string; enter: string }> = {
+	en: {
+		title: 'Nada Tayebi',
+		blurb: 'Software engineering student — learning notes in IT and computer science.',
+		enter: 'Choose a language',
+	},
+	fr: {
+		title: 'Nada Tayebi',
+		blurb: 'Étudiante en génie logiciel — notes d\u2019apprentissage en informatique et IT.',
+		enter: 'Choisir une langue',
+	},
+	ar: {
+		title: 'ندى الطيبي',
+		blurb: 'طالبة هندسة البرمجيات — ملاحظات تعلّم في المعلوماتية وعلوم الحاسوب.',
+		enter: 'اختر اللغة',
+	},
+};
+
+const order: Locale[] = ['en', 'fr', 'ar'];
+const buttonLabels: Record<Locale, string> = { en: 'English', fr: 'Français', ar: 'العربية' };
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="Nada Tayebi — software engineering student. Learning blog in English, French, and Arabic." />
+		<title>Nada Tayebi · Learning blog</title>
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+	<body>
+		<main class="hub">
+			<h1 class="name">{labels.en.title}</h1>
+			<p class="role">{labels.en.blurb}</p>
+			<p class="pick">{labels.en.enter}</p>
+			<ul class="langs">
+				{
+					order.map((loc) => (
+						<li>
+							<a class="card" href={homeHref(loc)} hreflang={loc} lang={loc}>
+								<span class="btn-label">{buttonLabels[loc]}</span>
+								<span class="sub">{labels[loc].blurb}</span>
+							</a>
+						</li>
+					))
+				}
+			</ul>
+			<p class="hint">
+				Each article can exist in three files: <code>src/content/blog/en/…</code>, <code>fr/…</code>, <code>ar/…</code> with the same{' '}
+				<code>translationKey</code>.
+			</p>
+		</main>
+	</body>
+</html>
+
+<style>
+	:global(body) {
+		margin: 0;
+		min-height: 100vh;
+		font-family: 'DM Sans', system-ui, sans-serif;
+		background: #0c0f14;
+		color: #e8ecf4;
+		line-height: 1.6;
+	}
+	.hub {
+		max-width: 28rem;
+		margin: 0 auto;
+		padding: 3rem 1.5rem;
+		text-align: center;
+	}
+	.name {
+		margin: 0 0 0.5rem;
+		font-size: 1.75rem;
+		letter-spacing: -0.02em;
+	}
+	.role {
+		margin: 0 0 2rem;
+		color: #8b95a8;
+		font-size: 1rem;
+	}
+	.pick {
+		margin: 0 0 1rem;
+		font-size: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: #3dd6c6;
+		font-weight: 600;
+	}
+	.langs {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.card {
+		display: block;
+		padding: 1rem 1.15rem;
+		border-radius: 12px;
+		border: 1px solid #2a3344;
+		background: #1a2130;
+		text-decoration: none;
+		color: inherit;
+		text-align: start;
+		transition:
+			border-color 0.15s,
+			transform 0.15s;
+	}
+	.card:hover {
+		border-color: #2a9d8f;
+		transform: translateY(-2px);
+	}
+	.btn-label {
+		display: block;
+		font-weight: 700;
+		color: #3dd6c6;
+		margin-bottom: 0.25rem;
+	}
+	.sub {
+		font-size: 0.85rem;
+		color: #8b95a8;
+		line-height: 1.45;
+	}
+	.card[lang='ar'] .sub,
+	.card[lang='ar'] .btn-label {
+		font-family: 'Noto Sans Arabic', 'DM Sans', sans-serif;
+	}
+	.hint {
+		margin: 0;
+		font-size: 0.8rem;
+		color: #8b95a8;
+		line-height: 1.5;
+	}
+	code {
+		font-size: 0.78em;
+		background: #0f131c;
+		padding: 0.1em 0.35em;
+		border-radius: 4px;
+		border: 1px solid #2a3344;
+	}
+</style>

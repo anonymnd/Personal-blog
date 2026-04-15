@@ -1,0 +1,136 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { postAvailableLocales, postLocaleHrefs } from '../../../lib/localeHrefs';
+import { blogIndexHref, type Locale } from '../../../i18n/locales';
+import { postStrings } from '../../../i18n/ui';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog', ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
+	return posts.map((post) => ({
+		params: {
+			lang: post.data.locale,
+			slug: post.data.translationKey,
+		},
+		props: { post },
+	}));
+}
+
+const { post } = Astro.props;
+const allPosts = await getCollection('blog', ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
+const { Content } = await render(post);
+const lang = post.data.locale as Locale;
+const P = postStrings(lang);
+
+const localeHrefs = postLocaleHrefs(allPosts, post.data.translationKey);
+const availableLocales = postAvailableLocales(allPosts, post.data.translationKey);
+---
+
+<BaseLayout
+	title={post.data.title}
+	description={post.data.description}
+	lang={lang}
+	localeHrefs={localeHrefs}
+	availableLocales={availableLocales}
+>
+	<article class="article">
+		<header class="article-head">
+			<p class="back">
+				<a href={blogIndexHref(lang)}>{P.backToBlog}</a>
+			</p>
+			<h1>{post.data.title}</h1>
+			<p class="desc">{post.data.description}</p>
+			<div class="byline">
+				<time datetime={post.data.pubDate.toISOString()}>
+					{P.published}{' '}
+					{post.data.pubDate.toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en')}
+				</time>
+				{
+					post.data.updatedDate && (
+						<>
+							<span class="sep">·</span>
+							<time datetime={post.data.updatedDate.toISOString()}>
+								{P.updated}{' '}
+								{post.data.updatedDate.toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en')}
+							</time>
+						</>
+					)
+				}
+			</div>
+			{
+				post.data.tags && post.data.tags.length > 0 && (
+					<ul class="tags">
+						{post.data.tags.map((t) => (
+							<li>{t}</li>
+						))}
+					</ul>
+				)
+			}
+		</header>
+		<div class="prose">
+			<Content />
+		</div>
+	</article>
+</BaseLayout>
+
+<style>
+	.article {
+		max-width: 48rem;
+		margin: 0 auto;
+		padding: 2rem 1.5rem 4rem;
+	}
+	.back {
+		margin: 0 0 0.5rem;
+	}
+	.back a {
+		font-size: 0.9rem;
+		color: var(--text-muted);
+		text-decoration: none;
+	}
+	.back a:hover {
+		color: var(--accent);
+	}
+	.article-head h1 {
+		margin: 0 0 0.75rem;
+		font-size: clamp(1.5rem, 4vw, 2rem);
+		line-height: 1.2;
+		letter-spacing: -0.02em;
+	}
+	.desc {
+		color: var(--text-muted);
+		font-size: 1.05rem;
+		margin: 0 0 1rem;
+	}
+	.byline {
+		font-size: 0.88rem;
+		color: var(--text-muted);
+		margin-bottom: 1rem;
+	}
+	.sep {
+		margin: 0 0.35rem;
+		opacity: 0.6;
+	}
+	.tags {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+	.tags li {
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: 0.25rem 0.55rem;
+		border-radius: 6px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		color: var(--accent);
+	}
+	.prose {
+		margin-top: 2rem;
+		padding-top: 2rem;
+		border-top: 1px solid var(--border);
+	}
+</style>

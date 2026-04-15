@@ -1,0 +1,165 @@
+---
+import '../styles/global.css';
+import LocaleBar from '../components/LocaleBar.astro';
+import { blogIndexHref, homeHref, isRtl, type Locale } from '../i18n/locales';
+import { layoutStrings } from '../i18n/ui';
+
+interface Props {
+	title: string;
+	description?: string;
+	lang: Locale;
+	localeHrefs: Record<Locale, string>;
+	/** For post pages: which translations exist (others link to blog index). */
+	availableLocales?: Set<Locale>;
+}
+
+const {
+	title,
+	description = 'Learning notes in computer science and IT—by Nada Tayebi.',
+	lang,
+	localeHrefs,
+	availableLocales,
+} = Astro.props;
+
+const L = layoutStrings(lang);
+const pageTitle = title === L.siteTitle ? `${title} · ${L.siteSubtitle}` : `${title} · ${L.siteTitle}`;
+const dir = isRtl(lang) ? 'rtl' : 'ltr';
+---
+
+<!doctype html>
+<html lang={lang} dir={dir}>
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content={description} />
+		<title>{pageTitle}</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+	<body class:list={{ 'font-ar': lang === 'ar' }}>
+		<a href="#main" class="skip">{L.skipToContent}</a>
+		<header class="site-header">
+			<div class="inner">
+				<div class="brand">
+					<a href={homeHref(lang)} class="logo">{L.siteTitle}</a>
+					<span class="subtitle">{L.siteSubtitle}</span>
+				</div>
+				<div class="header-right">
+					<nav class="main-nav" aria-label="Primary">
+						<a href={homeHref(lang)}>{L.navHome}</a>
+						<a href={blogIndexHref(lang)}>{L.navBlog}</a>
+					</nav>
+					<LocaleBar lang={lang} hrefs={localeHrefs} available={availableLocales} />
+				</div>
+			</div>
+		</header>
+		<main id="main">
+			<slot />
+		</main>
+		<footer class="site-footer">
+			<p>{L.footer}</p>
+		</footer>
+	</body>
+</html>
+
+<style is:global>
+	.font-ar {
+		font-family: 'Noto Sans Arabic', 'DM Sans', system-ui, sans-serif;
+	}
+
+	.skip {
+		position: absolute;
+		left: -9999px;
+		top: 0;
+		padding: 0.5rem 1rem;
+		background: var(--accent);
+		color: var(--bg);
+		font-weight: 600;
+		z-index: 100;
+	}
+	.skip:focus {
+		left: 1rem;
+		top: 1rem;
+	}
+
+	.site-header {
+		border-bottom: 1px solid var(--border);
+		background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+	}
+	.site-header .inner {
+		max-width: 56rem;
+		margin: 0 auto;
+		padding: 1rem 1.5rem;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.brand {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+	.logo {
+		font-weight: 700;
+		font-size: 1.1rem;
+		color: var(--text);
+		text-decoration: none;
+		letter-spacing: -0.02em;
+	}
+	.logo:hover {
+		color: var(--accent);
+	}
+	.subtitle {
+		font-size: 0.82rem;
+		color: var(--text-muted);
+		font-weight: 500;
+	}
+	.header-right {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.65rem;
+	}
+	@media (min-width: 640px) {
+		.header-right {
+			flex-direction: row;
+			align-items: center;
+			gap: 1rem;
+		}
+	}
+	.main-nav {
+		display: flex;
+		gap: 1.25rem;
+	}
+	.main-nav a {
+		color: var(--text-muted);
+		text-decoration: none;
+		font-size: 0.95rem;
+		font-weight: 500;
+	}
+	.main-nav a:hover {
+		color: var(--accent);
+	}
+
+	.site-footer {
+		max-width: 56rem;
+		margin: 4rem auto 0;
+		padding: 2rem 1.5rem 3rem;
+		border-top: 1px solid var(--border);
+		color: var(--text-muted);
+		font-size: 0.9rem;
+	}
+	.site-footer p {
+		margin: 0;
+		line-height: 1.55;
+	}
+</style>

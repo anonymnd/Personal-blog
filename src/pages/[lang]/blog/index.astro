@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { blogIndexLocaleHrefs } from '../../../lib/localeHrefs';
+import { type Locale, locales } from '../../../i18n/locales';
+import { blogIndexStrings, layoutStrings } from '../../../i18n/ui';
+import { getCollection } from 'astro:content';
+
+export function getStaticPaths() {
+	return locales.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Locale;
+const L = layoutStrings(lang);
+const B = blogIndexStrings(lang);
+const localeHrefs = blogIndexLocaleHrefs();
+
+const posts = (
+	await getCollection('blog', ({ data }) => {
+		if (import.meta.env.PROD && data.draft === true) return false;
+		return data.locale === lang;
+	})
+).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout
+	title={B.title}
+	description={B.intro(posts.length)}
+	lang={lang}
+	localeHrefs={localeHrefs}
+>
+	<div class="page">
+		<h1>{B.title}</h1>
+		<p class="intro">{B.intro(posts.length)}</p>
+		<ol class="list">
+			{
+				posts.map((post) => (
+					<li>
+						<a href={`/${lang}/blog/${post.data.translationKey}/`}>
+							<span class="title">{post.data.title}</span>
+							<span class="meta">
+								<time datetime={post.data.pubDate.toISOString()}>
+									{post.data.pubDate.toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en')}
+								</time>
+								<span class="dash">·</span>
+								<span class="desc">{post.data.description}</span>
+							</span>
+						</a>
+					</li>
+				))
+			}
+		</ol>
+	</div>
+</BaseLayout>
+
+<style>
+	.page {
+		max-width: 40rem;
+		margin: 0 auto;
+		padding: 2.5rem 1.5rem 4rem;
+	}
+	h1 {
+		margin: 0 0 0.5rem;
+		font-size: 1.75rem;
+		letter-spacing: -0.02em;
+	}
+	.intro {
+		color: var(--text-muted);
+		margin: 0 0 2rem;
+	}
+	.list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
+	.list li {
+		border-bottom: 1px solid var(--border);
+	}
+	.list li:first-child {
+		border-top: 1px solid var(--border);
+	}
+	.list a {
+		display: block;
+		padding: 1.15rem 0;
+		text-decoration: none;
+		color: inherit;
+		transition: padding-inline-start 0.15s;
+	}
+	.list a:hover {
+		padding-inline-start: 0.35rem;
+	}
+	.list a:hover .title {
+		color: var(--accent);
+	}
+	.title {
+		display: block;
+		font-weight: 600;
+		margin-bottom: 0.35rem;
+	}
+	.meta {
+		display: block;
+		font-size: 0.88rem;
+		color: var(--text-muted);
+		line-height: 1.45;
+	}
+	.dash {
+		margin: 0 0.35rem;
+		opacity: 0.5;
+	}
+</style>
