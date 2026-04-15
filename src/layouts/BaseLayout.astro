@@ -3,6 +3,7 @@ import '../styles/global.css';
 import LocaleBar from '../components/LocaleBar.astro';
 import { blogIndexHref, homeHref, isRtl, type Locale } from '../i18n/locales';
 import { layoutStrings } from '../i18n/ui';
+import { withBase } from '../utils/url';
 
 interface Props {
 	title: string;
@@ -30,7 +31,7 @@ const dir = isRtl(lang) ? 'rtl' : 'ltr';
 <html lang={lang} dir={dir}>
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content={description} />

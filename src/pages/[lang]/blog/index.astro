@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { blogIndexLocaleHrefs } from '../../../lib/localeHrefs';
-import { type Locale, locales } from '../../../i18n/locales';
+import { postHref, type Locale, locales } from '../../../i18n/locales';
 import { blogIndexStrings, layoutStrings } from '../../../i18n/ui';
 import { getCollection } from 'astro:content';
 
@@ -35,7 +35,7 @@ const posts = (
 			{
 				posts.map((post) => (
 					<li>
-						<a href={`/${lang}/blog/${post.data.translationKey}/`}>
+						<a href={postHref(lang, post.data.translationKey)}>
 							<span class="title">{post.data.title}</span>
 							<span class="meta">
 								<time datetime={post.data.pubDate.toISOString()}>

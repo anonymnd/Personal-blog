@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { homeLocaleHrefs } from '../../lib/localeHrefs';
-import { blogIndexHref, type Locale, locales } from '../../i18n/locales';
+import { blogIndexHref, postHref, type Locale, locales } from '../../i18n/locales';
 import { homeStrings, layoutStrings } from '../../i18n/ui';
 import { getCollection } from 'astro:content';
 
@@ -46,7 +46,7 @@ const posts = (
 			{
 				posts.slice(0, 5).map((post) => (
 					<li>
-						<a href={`/${lang}/blog/${post.data.translationKey}/`} class="card">
+						<a href={postHref(lang, post.data.translationKey)} class="card">
 							<time datetime={post.data.pubDate.toISOString()}>
 								{post.data.pubDate.toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en')}
 							</time>
