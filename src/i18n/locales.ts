@@ -1,3 +1,5 @@
+import { withBase } from '../utils/url';
+
 export const locales = ['en', 'fr', 'ar'] as const;
 export type Locale = (typeof locales)[number];
 
@@ -8,15 +10,15 @@ export function isLocale(s: string | undefined): s is Locale {
 }
 
 export function homeHref(lang: Locale): string {
-	return `/${lang}/`;
+	return withBase(`${lang}/`);
 }
 
 export function blogIndexHref(lang: Locale): string {
-	return `/${lang}/blog/`;
+	return withBase(`${lang}/blog/`);
 }
 
 export function postHref(lang: Locale, translationKey: string): string {
-	return `/${lang}/blog/${translationKey}/`;
+	return withBase(`${lang}/blog/${translationKey}/`);
 }
 
 export function isRtl(lang: Locale): boolean {
