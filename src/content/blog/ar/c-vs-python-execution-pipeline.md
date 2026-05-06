@@ -163,7 +163,7 @@ PVM كيقرا bytecode وكيخدم instruction بوحدة.
 
 ### 7) OS + CPU
 
-- OS: system calls, process/memory management
+- OS: [system calls, process/memory management](../system-calls-role-in-program-execution/)
 - CPU: كينفذ machine code فقط
 
 ---
