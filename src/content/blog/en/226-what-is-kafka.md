@@ -1,37 +1,48 @@
 ---
-title: "What Is Kafka?"
-description: "An introduction to Apache Kafka as a distributed event streaming platform for decoupling microservices."
-pubDate: 2026-10-16T01:48:00.000Z
+title: "Use Messaging and Kafka When Work Must Survive the Request"
+description: "Learn to decouple critical workflows using Kafka, focusing on the Outbox pattern, partition ordering, and idempotency to ensure reliable label printing and analytics."
+pubDate: 2026-10-08T18:48:00.000Z
 translationKey: 226-what-is-kafka
+seriesOrder: 51
 locale: en
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-Imagine you are building a procurement system. When a requester submits a purchase request, several things must happen: the manager needs a notification, the budget service must check funds, and the audit log must record the entry. If you use direct API calls, your system becomes a 'spaghetti' of dependencies. If the budget service is down, the whole request fails. This is where Apache Kafka solves the problem by acting as a distributed commit log.
+## Synchronous vs. Asynchronous Trade-offs
 
-## The Core Mechanism
-Kafka works on a publish-subscribe model. Instead of sending a message directly to a receiver, a 'Producer' sends data (an event) to a 'Topic'. A topic is like a category or a folder. This data is stored in 'Partitions', which allow Kafka to scale across multiple servers. 'Consumers' then subscribe to these topics to read the data at their own pace. Because Kafka persists data to disk, a consumer can crash and resume exactly where it left off.
+When a client sends a request to an API, the server has two choices: complete all side effects before responding (Synchronous) or acknowledge receipt and process the work later (Asynchronous). 
 
-## Procurement App Example
-In our procurement app, the 'Request-Submitted' topic handles the flow:
-1. **Producer**: The Request Service sends a JSON event: `{"id": 101, "item": "Laptop", "amount": 1200}`.
-2. **Topic**: Kafka stores this event in the `purchase_requests` topic.
-3. **Consumers**: 
-   - The **Notification Service** reads the event and emails the manager.
-   - The **Budget Service** reads the same event to reserve funds.
+In a synchronous flow, if the label printing service is down, the entire order request fails, even though the order was successfully saved to the database. This creates tight coupling where the availability of the system is the product of the availability of every single dependency. 
 
-Outcome: The Request Service doesn't need to know who is listening; it just fires the event and moves on.
+Asynchronous communication via a message broker like Kafka breaks this chain. The API saves the order and produces a message. The API can then return a `202 Accepted` to the client. The label printer and analytics engine consume this message at their own pace. If the printer is offline for ten minutes, the messages simply queue up in Kafka; they are not lost, and the customer's order process is not blocked.
 
-## Ordering and Idempotency
-One critical detail is that Kafka only guarantees the order of messages *within a single partition*. If you have multiple partitions, messages might be processed out of order. Furthermore, because network failures can cause a producer to send the same message twice, your consumers must be 'idempotent'. This means processing the same request ID twice should not result in two separate budget deductions.
+## Broker Roles: Kafka vs. Database vs. Cache
 
-## Common Mistake: Using Kafka as a Database
-Developers often mistake Kafka for a primary database because it stores data. However, Kafka is optimized for sequential streaming, not random access queries. 
+A relational database is useful for current state, transactions and queries; a database-backed work queue can also be a valid design at suitable scale. Polling costs and contention need measurement, not blanket dismissal. Redis pub/sub is transient; other Redis data structures have different persistence and delivery features.
 
-**Correction**: Use Kafka to move data between services, but store the final state (like the current order status) in a database like PostgreSQL or MongoDB.
+Kafka provides partitioned logs with replay and consumer groups. It does not replace the order database or automatically make every event durable forever. Configure replication, acknowledgements, retention and consumer recovery. Separate label-printing and analytics consumer groups when each must see every event.
+## Kafka Core Mechanisms
 
-## Practical Exercise
-If you have a topic with 3 partitions and 4 consumers in the same consumer group, what happens to the 4th consumer?
+Each partition has ordered records with offsets. A committed consumer-group offset normally identifies the next record to consume, not proof that every external side effect completed. Within a conventional group, a partition is assigned to one consumer at a time, but retries, rebalances and crashes can still repeat processing.
 
-**Answer**: The 4th consumer will remain idle because each partition in a group can be assigned to only one consumer.
+A stable order_id key and partitioning strategy place one order’s events together; changing partition count or routing needs care. Log order is not automatically completion order if handlers process asynchronously. Keying alone also cannot fix business events emitted out of order by producers.
+## Ensuring Reliability: The Outbox Pattern and Idempotency
+
+Commit the order and an outbox row in the same SQL transaction. A relay publishes the row with a stable event_id and marks progress only after the configured broker acknowledgement. This makes publication recoverable, not guaranteed without a functioning relay, retained data and retry policy. A crash after publish can cause duplicate publication.
+
+| Failure point | Recovery requirement |
+| --- | --- |
+| Before SQL commit | Neither order nor outbox row persists |
+| After commit, before relay publish | Relay retries the retained outbox row |
+| After publish, before relay acknowledgement | Duplicate event may be published |
+| After external print, before local receipt | Outcome may be uncertain; printer-side idempotency is needed |
+
+For an internal analytics update, insert an event_id into a uniquely constrained processed-events table and apply the counter update in the same database transaction. A separate check-then-act sequence is racy. Commit the Kafka offset only after that transaction succeeds.
+
+Printing is an external physical effect. Checking processed_events, printing, then saving a marker is not safe: the process can crash after printing, and retry prints again. Marking before printing instead risks never printing. Send a stable idempotency key to a label service that durably deduplicates and exposes job status, or design a reconciliation/manual-review flow for uncertain outcomes. Without cooperation from the external system, do not promise exactly one physical print. The outbox solves SQL-to-event coordination; it does not solve every downstream side effect.
+## Exercise
+
+With three partitions and four consumers in one conventional group, at most three consumers receive partition assignments; actual busy consumers depend on available records. A and C in the same partition have a defined log order, but processing completes in that order only when the handler preserves it.
+
+Kafka transactions can coordinate supported Kafka reads and writes under their documented semantics. They do not automatically include a printer or an arbitrary external database. Identify the transaction boundary and crash windows before claiming exactly-once business outcomes.

@@ -1,52 +1,99 @@
 ---
-title: "What Is a Database Transaction?"
-description: "A comprehensive guide to understanding the ACID properties and the mechanism of database transactions using a procurement scenario."
-pubDate: 2026-10-12T20:48:00.000Z
+title: "Database Transactions and Spring Transaction Boundaries"
+description: "Deep dive into ACID, Spring's @Transactional proxy mechanism, propagation, and the limits of rollback."
+pubDate: 2026-10-08T01:48:00.000Z
 translationKey: 149-what-is-a-database-transaction
+seriesOrder: 34
 locale: en
-tags: ["software-engineering","persistence","learning-series"]
+tags: ["persistence","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The ACID Promise and the Database
 
-Imagine you are building a procurement app. A requester submits a purchase request, and a manager approves it. Now, the system must subtract the item cost from the department budget and create an order record. If the budget is updated but the order creation fails due to a network glitch, your data becomes inconsistent: money is gone, but no order exists. This is where a database transaction saves the day.
+A database transaction is a logical unit of work that ensures data integrity through ACID properties. In a PostgreSQL environment using Hibernate, the transaction ensures that if you are transferring reward credits from Account A to Account B, you don't end up in a state where credits are deducted from A but never added to B.
 
-## The Concept of Atomicity
-At its core, a transaction is a logical unit of work that contains one or more SQL statements. The most critical property is Atomicity (the 'A' in ACID). Atomicity ensures that either every operation within the transaction succeeds, or none of them do. If any part fails, the database performs a rollback, returning the data to its original state as if nothing happened.
+*   **Atomicity**: All operations succeed or none do.
+*   **Consistency**: The database moves from one valid state to another, respecting all constraints.
+*   **Isolation**: Concurrent transactions do not see each other's partial changes.
+*   **Durability**: Once committed, the data survives system failures.
 
-## ACID Properties Explained
-Beyond atomicity, transactions rely on three other pillars:
-- **Consistency**: The database moves from one valid state to another, maintaining all constraints (like foreign keys).
-- **Isolation**: Concurrent transactions cannot see each other's partial changes until they are committed.
-- **Durability**: Once a transaction is committed, the changes are permanent, even if the server crashes immediately after.
+## Spring's @Transactional Mechanism
 
-## Worked Example: Procurement Order
-Consider this simplified logic using Jakarta Persistence (@Transactional):
+Spring implements transaction management using AOP (Aspect-Oriented Programming) proxies. When a method is marked `@Transactional`, Spring creates a proxy wrapper around the bean. The proxy intercepts the call, starts a transaction via the `PlatformTransactionManager`, executes the method, and then decides whether to commit or rollback based on the outcome.
+
+### The Self-Invocation Trap
+
+Because Spring uses proxies, the interception only happens when a call comes from *outside* the bean. If `methodA()` calls `methodB()` within the same class, the call bypasses the proxy and goes directly to the local method. Consequently, any `@Transactional` settings on `methodB()` are ignored.
+
+### Propagation and Joining
+
+Propagation defines how transactions behave when one transactional method calls another. The default `REQUIRED` means: if a transaction already exists, join it; otherwise, create a new one. This ensures that multiple service calls can participate in a single atomic unit.
+
+## Worked Example: Reward Credit Transfer
+
+Consider a scenario where we transfer credits and send an email receipt. 
 
 ```java
-@Transactional
-public void processOrder(Long requestId, double amount) {
-    Budget budget = budgetRepo.findByDept(requestId);
-    budget.setBalance(budget.getBalance() - amount);
-    budgetRepo.save(budget);
-    
-    Order order = new Order(requestId, "PENDING");
-    orderRepo.save(order);
-    // If an exception occurs here, the budget subtraction is rolled back
+@Service
+public class RewardService {
+
+    private final AccountRepository accountRepository;
+    private final EmailService emailService;
+
+    public RewardService(AccountRepository accountRepository, EmailService emailService) {
+        this.accountRepository = accountRepository;
+        this.emailService = emailService;
+    }
+
+    @Transactional
+    public void transferCredits(Long fromId, Long toId, Integer amount) {
+        Account from = accountRepository.findById(fromId)
+            .orElseThrow(() -> new IllegalArgumentException("Source not found"));
+        Account to = accountRepository.findById(toId)
+            .orElseThrow(() -> new IllegalArgumentException("Target not found"));
+
+        from.setCredits(from.getCredits() - amount);
+        to.setCredits(to.getCredits() + amount);
+
+        // This call is internal (self-invocation)
+        this.sendNotification(fromId, toId, amount);
+
+        if (amount > 1000) {
+            throw new RuntimeException("Limit exceeded");
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendNotification(Long from, Long to, Integer amount) {
+        emailService.send("Credits transferred: " + amount);
+    }
 }
 ```
-In this case, if `orderRepo.save()` throws a `RuntimeException`, the budget balance is automatically restored to its previous value in PostgreSQL.
 
-## Common Mistake: The External Side Effect
-A frequent error is assuming transactions can undo everything. For example, if you send a confirmation email inside a `@Transactional` method before the order is saved, and the database transaction later rolls back, the email cannot be "unsent." Always trigger external side effects (emails, API calls) only after the transaction has successfully committed.
+### Analysis of the Execution Trace
 
-## Practical Exercise
-**Scenario**: You have a transaction that updates a user's profile and logs the change in an audit table. The audit table update fails due to a constraint violation.
+1.  **The Proxy Call**: An external controller calls `transferCredits()`. The proxy starts a transaction.
+2.  **The Self-Invocation**: `transferCredits()` calls `sendNotification()`. Because this is a local call, the `REQUIRES_NEW` instruction is **ignored**. The notification logic runs inside the existing transaction.
+3.  **The Side Effect**: `emailService.send()` is called. This is an external API call (SMTP/HTTP). 
+4.  **The Failure**: A `RuntimeException` is thrown because the amount exceeds 1000.
+5.  **The Rollback**: Spring catches the unchecked exception and tells PostgreSQL to rollback. The credit balances in the DB are restored to their original values.
+6.  **The Leak**: The email has already been sent. Database transactions **cannot** undo external side effects. The user receives a receipt for a transfer that technically never happened.
 
-**Question**: What happens to the user's profile update?
+## Rollback Defaults
 
-**Answer**: The profile update is rolled back; neither change is persisted in the database.
+By default, Spring rolls back on `RuntimeException` and `Error` (unchecked exceptions). It does **not** roll back on checked exceptions (e.g., `IOException`, `SQLException`) unless explicitly configured via `@Transactional(rollbackFor = Exception.class)`.
+
+## Exercise
+
+**Scenario**: You have a method `processOrder()` marked `@Transactional`. Inside it, you call `updateInventory()`, which is also marked `@Transactional(propagation = Propagation.REQUIRED)`. `updateInventory()` throws a checked `InsufficientStockException`. 
+
+1. Does the transaction roll back by default?
+2. If `processOrder()` calls `updateInventory()` via `this.updateInventory()`, does the propagation setting matter?
+
+**Answer**:
+1. No. Checked exceptions do not trigger rollback by default in Spring.
+2. No. Self-invocation bypasses the proxy, so the propagation setting is ignored; it simply executes as a standard Java method call within the existing transaction started by `processOrder()`.
 
 ## Further reading
 

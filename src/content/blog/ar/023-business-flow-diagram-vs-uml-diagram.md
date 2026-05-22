@@ -1,45 +1,86 @@
 ---
-title: "الفرق بين Business Flow Diagram و UML Diagram"
-description: "تعلم كيفاش تفرق بين رسمات مسار الخدمة (Business Flow) وموديلات البرمجة ديال UML."
-pubDate: 2026-10-07T14:48:00.000Z
+title: "كيفاش تختار الـ UML Diagram اللي كيجاوب على السؤال ديالك"
+description: "دليل باش تعرف تختار وتبني الـ UML diagrams على حساب السؤال التقني اللي عندك، باستعمال مثال ديال رزرفاسيون ديال تيكيتات."
+pubDate: 2026-10-06T20:48:00.000Z
 translationKey: 023-business-flow-diagram-vs-uml-diagram
+seriesOrder: 5
 locale: ar
-tags: ["software-engineering","uml-modeling","learning-series"]
+tags: ["uml-modeling","learning-series"]
 draft: false
 ---
 
-تخيل راسك كتشرح كيفاش كيدوز الطلب ديال الشراء لمدير الشركة ومن بعد لواحد المطور (Developer). إلا ورّيتي المدير رسمة معقدة ديال Sequence Diagram فيها ليفاي ديال لي أوبجي، غادي يتلف. وإلا ورّيتي للمطور غير مربعات بسيطة فيها «مقبول» و«مرفوض»، ما غاديش يعرف شنو هما لي كلاص (Classes) لي خاصو يصاوب. هنا فين كاين الفرق بين Business Flow و UML.
+## المشكل الأساسي: الغلط فاستعمال الـ Diagrams
 
-## شنو هو الـ Business Flow؟
-الـ Business Flow Diagram هو خريطة عامة ديال كيفاش كتمشى الخدمة. كيركز على «شنو» كيوقع و«شكون» لي مسؤول، بلا ما يهتم بالتكنولوجيا. كيستعمل أشكال بسيطة باش يبين المراحل والقرارات. مثلاً في تطبيق ديال الشراء: الموظف كيدفع الطلب → المدير كيوافق → المشتري كيطلب السلعة. هاد الرسمة كتشرح غير المنطق ديال الخدمة في الشركة.
+بزاف ديال لي ديفلوبور كيتعاملوا مع UML بحال شي فرض ضروري خاصو يدار، ماشي كأداة ديال التواصل. أكبر غلط هو ملي كتستعمل diagram غالط باش تجاوب على سؤال محدد. مثلا، إلا بغيتي تشرح كيفاش كتم عملية Decision فالبزنس باستعمال Deployment diagram، راه مستحيل، حيت الـ deployment diagram كيهضر على فين محطوط الكود (Infrastructure) ماشي كيفاش خدام (Logic).
 
-## شنو هو الـ UML؟
-الـ UML هو لغة موحدة ديال الرسمات لي كنستعملوها باش نصممو السوفتوير. عكس الـ Business Flow، الـ UML دقيق بزاف. فيه أنواع: رسمات ديال البنية (بحال Class Diagram) ورسمات ديال السلوك (بحال Activity و Sequence Diagrams). وخا الـ Activity Diagram كيشبه لـ Flowchart، ولكن عندو قواعد صارمة باش يبين كيفاش السيستيم كينفذ المهمة بالضبط.
+باش تختار الأداة الصحيحة، خاصك أولا تعرف شنو هو السؤال اللي باغي تجاوب عليه: « شكون اللي داخل فالموضوع؟ »، « كيفاش داير السيركوي (Flow)؟ »، « شنو هو الترتيب ديال الهضرة بين الـ objects؟ »، « كيفاش دايرة البنية (Structure)؟ » أو « فين غادي يخدم هاد الكود؟ »
 
-## الفرق بيناتهم في الاستعمال
+## الربط بين السؤال والـ Diagram
 
-| الميزة | Business Flow Diagram | UML Diagram |
+| السؤال | الـ Diagram الصحيح | التركيز الأساسي |
 | :--- | :--- | :--- |
-| لمن موجه | المدراء وأصحاب المشروع | المطورين والمهندسين |
-| الهدف | فهم كيفاش كتمشى الخدمة | تطبيق السيستيم برمجياً |
-| الدقة | قليلة (عامة) | عالية (تقنية) |
-| النطاق | سير العمل في المؤسسة | بنية وسلوك البرنامج |
+| شكون اللي كيتفاعل مع السيستيم باش يوصل لهدف معين؟ | Use Case Diagram | Actors و Goals |
+| شنو هما الخطوات المنطقية و فين كاينين التقسيمات (Decisions)؟ | Activity Diagram | Workflow و Control Flow |
+| شنو هو الترتيب الدقيق ديال الميساجات بين الـ components؟ | Sequence Diagram | Interactions مرتبة بالوقت |
+| شنو هما الـ entities المفهومية والعلاقات اللي بيناتهم؟ | Class Diagram | Static Structure و Logic |
+| كيفاش مقسم السيستيم لأجزاء (Modules)؟ | Component Diagram | Physical/Logical Modules |
+| أنا سيرفور أو جهاز اللي هاز كل component؟ | Deployment Diagram | Hardware و Execution Environment |
 
-## مثال تطبيقي: الموافقة على الشراء
-في الـ Business Flow، كنرسمو مربع مكتوب فيه: «المدير كيراجع الطلب».
-في الـ UML، كنقسمو هادشي لـ:
-1. **Use Case Diagram**: كنرسمو Actor سميتو «Manager» مرتبط بـ Use Case سميتها «Approve Purchase Request».
-2. **Sequence Diagram**: الـ `RequestController` كيعيط لـ `approvalService.verify(requestId)`، وهادي كتبدل الحالة ديال الأوبجي `Request` لـ `APPROVED`.
+## مثال تطبيقي: رزرفاسيون ديال تيكيتات
 
-## غلط شائع: كل class خاصها تكون table
-Class diagram يقدر يشرح الدومين، الكود ولا التخزين على حساب الهدف ديالو. تقدر تحط فيه ID ولا معلومة ديال persistence إلا كانت مفيدة لهاد الهدف. الغلط هو تفترض بلي كل class كتولي نيشان table وحدة فـ SQL، ولا كل علاقة كتحتاج غير column ديال foreign key. Inheritance وvalue objects وmany-to-many كيحتاجو اختيارات ديال mapping واضحة. قبل ما تحول الرسمة لـ schema، وضح شنو بالضبط كتمثل.
-## تمرين تطبيقي
-السيناريو: مستخدم بغا يبدل المودباس. السيستيم كيصيفط ليه إيميل فيه رابط. المستخدم كيورك على الرابط باش يبدل المودباس.
+تخيل سيستيم فين المستخدم كيختار بلايص. هاد البلايص كيبقاو محجوزين (Held) لمدة 10 دقايق. إلا داز الخلاص، الرزرفاسيون كتكون Confirmed؛ إلا سالا الوقت أو فشل الخلاص، البلايص كيرجعوا خاويين.
 
-سؤال: أنا رسمة تستعمل باش تبين الترتيب ديال الميساجات لي كيدوزو بين المستخدم، و EmailService، و Database؟
+### 1. سؤال الـ Workflow: Activity Diagram
+Activity Diagram مناسب لهاد workflow حيت كيبين actions و branches و concurrency. ولكن Sequence Diagram حتى هو يقدر يبين branches و interactions متوازية؛ اختارو ملي السؤال كيهضر على messages بين participants محددين.
 
-الجواب: UML Sequence Diagram.
+**تتبع المنطق (Logic Trace):**
+- البداية → اختيار البلايص → [حجز مؤقت] → سؤال: واش الخلاص وصل؟
+- إلا آه → تأكيد التيكيت → النهاية.
+- إلا لا → تسنى الـ timeout → سؤال: واش سالا الوقت؟
+- إلا آه → تحرير البلايص → النهاية.
 
+### 2. سؤال التفاعل: Sequence Diagram
+ملي كيكون الـ workflow واضح، خاصنا نعرفو *شكون* بالضبط من الـ objects اللي كيتكلف بهاد الخدمة. الـ Sequence Diagram كيربط هاد الخطوات بـ lifelines (Acteurs و Objects).
+
+**مثال ديال التفاعل (Interaction Trace):**
+- User → ReservationController: requestHold(seatId)
+- ReservationController → SeatService: lockSeat(seatId)
+- SeatService → Database: updateStatus('HELD')
+- ReservationController → User: return holdConfirmation
+- [Loop: كيتشيكي واش الخلاص داز]
+- PaymentGateway → ReservationController: notifyPaymentSuccess()
+- ReservationController → SeatService: finalizeBooking()
+
+**رموز مهمة استعملناها هنا:**
+- **alt (Alternative):** كنستعملوها باش نفرقو بين طريق « الخلاص نجح » و « الخلاص فشل ».
+- **loop:** كنستعملوها ملي كنكونو كنتسناو شي حاجة (بحال الـ timeout).
+- **par (Parallel):** كنستعملوها إلا كان السيستيم كيصيفط email وفي نفس الوقت كيموديفي فـ database.
+- **Lifelines:** الـ User هنا هو actor lifeline، والـ SeatService هو object lifeline.
+
+### 3. سؤال البنية: Class Diagram
+الـ Sequence كيبين لينا « الهضرة »، ولكن الـ Class Diagram كيبين لينا « المعرفة » (شنو كيعرف كل object).
+
+**فرق مهم: Conceptual Class مقابل SQL Table**
+الـ UML Class كتمثل مفهوم فالبزنس وعندو سلوك (methods)، ماشي غير سطر فـ table. مثلا Class ديال `Reservation` تقدر تكون فيها method سميتها `calculateExpiry()`، ولكن فـ SQL table كتلقى غير column سميتها `expiry_date`.
+
+**نموذج مبسط:**
+- Class `Ticket`: فيها (id, price, seatNumber).
+- Class `Reservation`: فيها (id, startTime) و methods بحال (confirm(), cancel()).
+- العلاقة: `Reservation` عندها علاقة 1..* مع `Ticket`.
+
+## علاش الـ Deployment Diagrams ما كيصلحوش للمنطق
+
+إلا حاولتي تشرح الـ « Timeout ديال الخلاص » فـ Deployment Diagram، غادي تغلط. الـ Deployment Diagram كيقول ليك بلي `PaymentService.jar` محطوط فـ `Server-A` وكيواصل مع `PaymentGateway-API` عبر HTTPS. كيشرح ليك *فين* (Where)، ماشي *كيفاش* (How). المنطق بلاصتو فـ Activity أو Sequence، أما الـ Infrastructure بلاصتها فـ Deployment.
+
+## تمرين
+
+**السيناريو:** مستخدم كيـ uploady تصويرة ديال البروفيل. السيستيم خاصو يصغر التصويرة، يقلب واش فيها virus، وعاد يحطها فـ cloud bucket. إلا لقى virus، التصويرة كتمسح ديك الساعة.
+
+**السؤال:** شنو هما الـ 2 diagrams اللي خاصك تستعمل باش ترسم المنطق ديال « Scan Malware → Delete » والكونيكسيون ديال « App Server → Cloud Bucket »؟ وشرح علاش.
+
+**الجواب:**
+1. **Activity Diagram** (أو Sequence Diagram) على قبل المنطق: حيت هو اللي كيتكلف بالـ decision (واش scan نجح ولا فشل) والنتيجة ديالها (Save ولا Delete).
+2. **Deployment Diagram** على قبل الكونيكسيون: حيت هو اللي كيبين العلاقة الفيزيائية بين الـ App Server والـ Cloud Storage.
 
 ## باش تزيد تفهم
 

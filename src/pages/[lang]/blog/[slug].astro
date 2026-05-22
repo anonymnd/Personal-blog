@@ -5,18 +5,27 @@ import { blogIndexHref, postHref, type Locale } from '../../../i18n/locales';
 import { postStrings } from '../../../i18n/ui';
 import { isPublished } from '../../../lib/publication.mjs';
 import { getCollection, render } from 'astro:content';
+import redirects from '../../../../article-redirects.json';
 
 export async function getStaticPaths() {
 	const posts = await getCollection('blog', ({ data }) => isPublished(data, import.meta.env.PROD));
-	return posts.map((post) => ({
+	const articlePaths = posts.map((post) => ({
 		params: {
 			lang: post.data.locale,
 			slug: post.data.translationKey,
 		},
 		props: { post },
 	}));
+	const aliasPaths = redirects.flatMap(({ from, to }) =>
+		posts.filter((p) => p.data.translationKey === to).map((p) => ({
+			params: { lang: p.data.locale, slug: from },
+			props: { redirectTo: postHref(p.data.locale, to) },
+		})),
+	);
+	return [...articlePaths, ...aliasPaths];
 }
 
+if (Astro.props.redirectTo) return Astro.redirect(Astro.props.redirectTo);
 const { post } = Astro.props;
 const allPosts = await getCollection('blog', ({ data }) => isPublished(data, import.meta.env.PROD));
 const { Content } = await render(post);
@@ -25,7 +34,7 @@ const P = postStrings(lang);
 
 const localeHrefs = postLocaleHrefs(allPosts, post.data.translationKey);
 const availableLocales = postAvailableLocales(allPosts, post.data.translationKey);
-const series = allPosts.filter(p => p.data.locale === lang && /^\d{3}-/.test(p.data.translationKey)).sort((a,b) => a.data.translationKey.localeCompare(b.data.translationKey));
+const series = allPosts.filter(p => p.data.locale === lang && /^\d{3}-/.test(p.data.translationKey)).sort((a,b) => (a.data.seriesOrder ?? 0) - (b.data.seriesOrder ?? 0));
 const position = series.findIndex(p => p.data.translationKey === post.data.translationKey);
 const previous = position > 0 ? series[position-1] : undefined;
 const next = position >= 0 ? series[position+1] : undefined;

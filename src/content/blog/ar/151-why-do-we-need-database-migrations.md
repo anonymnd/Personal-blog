@@ -1,40 +1,64 @@
 ---
-title: "علاش محتاجين Database Migrations؟"
-description: "شرح كيفاش كايحلّو migrations المشاكل ديال التغيير اليدوي في schéma ديال database فاش كيكون خدام بزاف ديال الناس على مشروع واحد."
-pubDate: 2026-10-12T22:48:00.000Z
+title: "كيفاش تطور Schema ديال Production بـ Flyway بلا ما تبقى تخمن"
+description: "تعلم كيفاش تسير migrations ديال database بالترتيب، وتخدم بـ expand-contract باش ما تحبسش السيرفيس، وكيفاش تعامل مع الـ failures."
+pubDate: 2026-10-08T02:48:00.000Z
 translationKey: 151-why-do-we-need-database-migrations
+seriesOrder: 35
 locale: ar
-tags: ["software-engineering","schema-migrations","learning-series"]
+tags: ["schema-migrations","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## علاش ddl-auto=update خطر فـ Production
 
-تخايل راسك خدام على application ديال الشراء (procurement app). زدتي واحد column سميتها `priority` في table ديال `PurchaseRequest` في PC ديالك. كلشي خدام مزيان. صيفطتي الكود لصاحبك، ولكن application عندو تبلوكات حيت database ديالو مافيهاش ديك column. هاد المشكل ديال "خدام عندي في PC" هو علاش خاصنا migrations.
+فاش كنكونو يلاه بادين فـ development، `spring.jpa.hibernate.ddl-auto=update` كيبان ساهل حيت كيبدل tables بوحدو باش يجيوا مع Java entities. ولكن فـ production، هادشي خطر بزاف. Hibernate كيدير غير محاولة تقريبية (best-effort guess)، وما يقدرش يدير rename لشي column ولا يغير constraints بطريقة دقيقة. وإلا وقع مشكل، غادي يخلي database فـ حالة ما معروفاش وما عندك حتى trace باش تعرف شنو وقع.
 
-## المشكل ديال التغيير اليدوي
-فاش كيبقاو developers يلونصيو scripts SQL بيديهم، كايوقع الروينة. شي واحد كينسى ما يلونصيش script، ولا جوج د الناس كيبدلو نفس table بطرق مختلفة. وحتى `hibernate.hbm2ddl.auto=update` ما صالحاش في production حيت ما كتعرفش تعامل مع تغييرات صعيبة بحال تبديل سمية column بلا ما يضيعو البيانات. هي غير كاتشوف واش mapping متوافق مع schema، ماشي واش التغيير آمن.
+الحل هو تخدم بـ `ddl-auto=validate`. فهاد الحالة، Hibernate ما كيقيس والو فـ database، غير كيتأكد بلي schema اللي كاين فـ DB هو نيت اللي كاين فـ code. إلا لقى شي حاجة ناقصة ولا type ماشي هو هاداك، application ما غاديش تـ startup. هكا كتضمن بلي app ما غاديش تخدم بـ database version ماشي هي هذيك.
 
-## Version Control لـ Schema
-الـ migrations كايتعاملو مع schema بحال إلا كود. أدوات بحال Flyway كايخدمو بـ scripts فيهم version (مثلا `V1__Create_Request_Table.sql` و `V2__Add_Priority_To_Request.sql`). هاد scripts كيكونوا في Git. فاش كاتنوض application، tool كايشوف واحد table ديال metadata في database باش يعرف شنو لي ديجا تطبق، وكايزيد يلونصي غير scripts الجداد بالترتيب.
+## كيفاش Flyway كيضمن لينا Consistency
 
-## مثال تطبيقي: زيد شكون وافق على الطلب
-نفترضو بغينا نعرفو شكون لي وافق (approve) على طلب الشراء. بلا ما نمشيو نبدلو database بيدينا، كانصاوبو script جديد:
+Flyway كيعوض التخمين بـ history table سميتها `flyway_schema_history`. بلاصة ما نخليو framework يخمن، حنا كنكتبو scripts SQL واضحين.
+
+### كيفاش كيخدم الـ Versioning
+Flyway كيعرف الـ migrations من السمية ديال file: `V<Version>__<Description>.sql` (مثلا `V1__Create_user_table.sql`).
+1. **Execution**: Flyway كيقلب على scripts فـ classpath وكيقارنهم مع table ديال history.
+2. **Checksums**: فاش كيتطبق script، Flyway كيحسب ليه واحد الـ checksum (hash ديال content).
+3. **Immutability**: فاش `V1` كيتطبق فـ production، ممنوع تبدلو. إلا بدلتي غير حرف واحد فـ `V1__Create_user_table.sql` من بعد ما تـ apply، Flyway غادي يلقى checksum mismatch فـ المرة الجاية اللي تـ startup فيها app وغادي يوقف كلشي.
+
+## سيناريو: إضافة `displayName` ضروري (Required)
+
+إضافة colonne مطلوبة لـ users عامرة كتفشل إلا rows القديمة ناقصين values. زيد display_name nullable، ومن بعد deploy code اللي كيعمّرها فكل row جديدة وكيقبل القديمة. Old writers باقيين يقدرو يدخلو null، يعني backfill مرة وحدة ما كافيش.
+
+حيد ولا عدل كاع old writers قبل invariant الأخيرة. عمّر rows بقيمة مقبولة فـ domain وراقب واش username null ولا طويلة بزاف، وتأكد ما بقا null. فـ table كبيرة خدم batches مراقبين وقابلين للاستئناف. من بعد فرض NOT NULL ملي versions اللي باقي خدامين متوافقين.
 
 ```sql
--- V3__Add_Approver_To_Request.sql
-ALTER TABLE purchase_requests 
-ADD COLUMN approved_by VARCHAR(255);
+ALTER TABLE users ADD COLUMN display_name VARCHAR(255);
+-- Backfill only after writers reliably populate the new field.
+UPDATE users SET display_name = username WHERE display_name IS NULL;
+-- Later, after compatibility and null checks:
+ALTER TABLE users ALTER COLUMN display_name SET NOT NULL;
 ```
 
-فاش كانديبلويو هادشي في server ديال staging، Flyway كايلقى بلي `V1` و `V2` ديجا دازو، إذن كايخدم غير `V3`. النتيجة هي أن schema كاتكون بحال بحال في كاع environments بلا تمارة.
+هاد SQL كتخص مراحل migration وdeployment مفصولين بوضوح؛ الفصل بوحدو ما كيضمنش compatibility. PostgreSQL تقدر ترجع DDL transactional العادية وbackfill بجوج إلا migration فشلات؛ جمع statements ما كيخلقش دائما partial schema. المراحل باش نتحكمو فـ compatibility والتشغيل. بعض DBs وoperations عندهم transaction behavior آخر.
+## التعامل مع الـ Failures و Transactional DDL
 
-## غلط شائع: تبديل migrations قدام
-بزاف د الناس كايغلطو وكيمشيو يبدلو `V1__Create_Table.sql` من بعد ما تكون ديجا مشات لـ production. الـ tools ديال migration كايخدمو بـ checksums باش يتأكدو بلي script ماتبدلش. إلا بدلتي شي ملف قديم، tool غايعرف بلي checksum تبدلات وما غايخليش application تخدم باش ما يوقعش تضارب.
+فاش كيوقع failure فـ migration، النتيجة كتختلف على حسب الـ DB:
 
-**التصحيح:** عمرك ماتبدل migration ديجا تدار ليها merge. دير version جديدة (مثلا `V4`) باش تصحح الغلط.
+- **PostgreSQL**: أغلب الـ DDL كيكون transactional. إلا `V3` فشل فـ النص، كلشي كيرجع (rollback) و الـ history table كيبقى فـ `V2`. كتصلح script وكتعاود تـ restart.
+- **MySQL/Oracle**: الـ DDL كيدير implicit commit. إلا كان script فيه 3 ديال `ALTER TABLE` وفشل الثالث، الـ 2 لولين كيبقاو applied.
 
-## تمرين تطبيقي
-إلا بغيتي تبدل سمية column من `req_date` لـ `request_date` في production بلا ما تحبس الخدمة، واش خاصك تبدل script لي صاوبتي في الأول؟
+### المشكل ديال `repair`
+فاش كتفشل migration فـ DB ماشي transactional، Flyway كيسجل ديك version بلي `failed`. app ما غاديش تخدم حتى تحل هاد المشكل.
 
-**الجواب:** لا. خاصك تصاوب script ديال migration جديد بـ version جديدة باش تبدل السمية ويبقى كلشي synchronized.
+بزاف ديال الناس كيسحاب ليهم `flyway repair` هو شي button ديال "Undo". **`flyway repair` ما كيرجعش الـ SQL اللي تـ apply**. هو غير كينقي `flyway_schema_history` باش يحيد الـ failed entries ولا يقاد checksums. إلا كان script ديالك زاد column عاد فشل، خاصك تمسح ديك column بـ SQL يدويًا عاد دير `repair` وتـ restart app.
+
+## تمرين
+
+باش تبدل total_amount بـ grand_total، زيد colonne الجديدة nullable. Deploy code متوافقة كتزامن بجوج values فالوقت اللي versions متعايشين، ومن بعد حيد old writers ولا وفر synchronization مجربة. دير backfill وreconciliation وتأكد من values. بدل reads لـ grand_total وما توقفش الاعتماد على total_amount حتى كاع writers وrollback versions متوافقين. حيد القديمة فـ migration لاحقة مراجعة.
+
+تغيير code مرحلة deployment، ماشي SQL migration سميتها Update_app. ما تحيدش column نصف مصاوبة عشوائيا بعد failure؛ شوف الحالة واختار recovery كتحتافظ بـ data. repair كتبدل history ماشي DB. ddl-auto=validate ما كتثبتش كاع constraints ولا indexes ولا business rules. خلي migrations اللي تطبقو بلا تبديل وزيد migration جديدة للتطوير.
+
+## باش تزيد تفهم
+
+- [Flyway repair](https://documentation.red-gate.com/flyway/reference/commands/repair)
+- [Flyway migration transaction handling](https://documentation.red-gate.com/fd/migration-transaction-handling-273973399.html)

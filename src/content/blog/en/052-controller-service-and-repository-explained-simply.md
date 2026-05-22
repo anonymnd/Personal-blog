@@ -1,74 +1,128 @@
 ---
-title: "Controller, Service and Repository Explained Simply"
-description: "A beginner's guide to understanding the three-tier architecture in Spring Boot to separate concerns and improve code maintainability."
-pubDate: 2026-10-08T19:48:00.000Z
+title: "Give Controllers, Services and Repositories Clear Responsibilities"
+description: "A deep dive into responsibility allocation using a warehouse dispatch scenario to separate HTTP translation, business orchestration, and persistence."
+pubDate: 2026-10-07T03:48:00.000Z
 translationKey: 052-controller-service-and-repository-explained-simply
+seriesOrder: 12
 locale: en
-tags: ["software-engineering","spring-architecture","learning-series"]
+tags: ["spring-architecture","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The Logic of Layering
 
-Imagine you are building a procurement app. You have a request for a new laptop, but if you put the validation, the database query, and the API response all in one single class, your code becomes a 'spaghetti' mess. It becomes impossible to test or change one part without breaking everything else. This is why we use the Controller-Service-Repository pattern.
+Layered architecture is often misunderstood as a set of rigid rules about where 'if' statements go. In reality, it is about managing the scope of authority. Each layer should only care about the concerns of its immediate neighbors. When these boundaries blur, the system becomes fragile: a change in the database schema might force a change in the API contract, or a business rule change might require updating five different controllers.
 
-## The Controller: The Receptionist
-The Controller is the entry point of your application. Its only job is to handle incoming HTTP requests and return a response. It should not contain business logic. Think of it as a receptionist: they take your request, hand it to the right department, and give you the answer once it's ready.
+## Responsibility Allocation
 
-## The Service: The Brain
-The Service layer is where the business rules live. This is where you decide if a request is valid. For example, in our procurement app, the Service checks if the requester has enough budget before allowing the request to proceed. It coordinates the flow of data between the Controller and the Repository.
+### The Controller: The HTTP Translator
+The controller is the entry point. Its sole responsibility is to translate the external world (HTTP) into the internal world (Java). It handles request binding, basic input validation (e.g., ensuring a field isn't null), and mapping the result of a business operation to an HTTP status code. It should not know *how* a shipment is dispatched, only *which* service to call and *what* to tell the client.
 
-## The Repository: The Librarian
-The Repository is the data access layer. It communicates directly with the database using Spring Data JPA. It doesn't care about business rules; it only cares about CRUD operations (Create, Read, Update, Delete). It acts like a librarian who knows exactly where a specific record is stored.
+### The Service: The Orchestrator
+The service layer is where the business process lives. It coordinates the flow of data between the controller and the repositories. It enforces domain invariants—rules that must always be true for the business to function. For example, "a shipment cannot be created if stock is zero" is a business invariant. The service orchestrates the sequence: check stock → select carrier → record shipment.
 
-## Worked Example: Procurement Request
-Here is how a request flows through these layers:
+### The Repository: The Persistence Gateway
+The repository is an abstraction over the data store. It should not contain business logic. Its job is to provide a way to retrieve or save entities. While it can handle query-specific logic (like finding a carrier by a specific status), it does not decide *if* a carrier is eligible for a specific order; that decision belongs in the service or the domain model.
+
+## Worked Example: Warehouse Dispatch
+
+Consider a scenario where a warehouse must dispatch an order. The process requires checking stock, selecting a carrier based on availability, and recording the shipment.
+
+### The Implementation Trace
 
 ```java
-// Controller
-@RestController
-@RequestMapping("/requests")
-public class ProcurementController {
-    @Autowired private ProcurementService service;
-
-    @PostMapping
-    public ResponseEntity<Request> create(@RequestBody Request req) {
-        return ResponseEntity.ok(service.processRequest(req));
-    }
+// Illustrative: Domain Entity
+public class Shipment {
+    private Long id;
+    private Long orderId;
+    private String carrierName;
+    // Getters, constructor
 }
 
-// Service
+// Illustrative: Repository
+public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
+    // Pure persistence: no business rules here
+}
+
+// Illustrative: Service
 @Service
-public class ProcurementService {
-    @Autowired private ProcurementRepository repo;
+public class DispatchService {
+    private final ShipmentRepository shipmentRepo;
+    private final StockRepository stockRepo;
+    private final CarrierRepository carrierRepo;
 
-    public Request processRequest(Request req) {
-        if (req.getAmount() > 5000) { 
-            req.setStatus("PENDING_MANAGER_APPROVAL");
-        } else {
-            req.setStatus("APPROVED");
+    public DispatchService(ShipmentRepository sr, StockRepository str, CarrierRepository cr) {
+        this.shipmentRepo = sr;
+        this.stockRepo = str;
+        this.carrierRepo = cr;
+    }
+
+    @Transactional
+    public Shipment dispatchOrder(Long orderId) {
+        // 1. Domain Invariant: Stock must exist
+        var stock = stockRepo.findByOrderId(orderId)
+            .orElseThrow(() -> new IllegalStateException("No stock available for order"));
+
+        if (stock.getQuantity() <= 0) {
+            throw new IllegalStateException("Insufficient stock");
         }
-        return repo.save(req);
+
+        // 2. Business Decision: Choose eligible carrier
+        var carrier = carrierRepo.findFirstAvailable()
+            .orElseThrow(() -> new IllegalStateException("No carriers available"));
+
+        // 3. Orchestration: Create and persist
+        Shipment shipment = new Shipment(orderId, carrier.getName());
+        return shipmentRepo.save(shipment);
     }
 }
 
-// Repository
-public interface ProcurementRepository extends JpaRepository<Request, Long> {}
+// Illustrative: Controller
+@RestController
+@RequestMapping("/dispatch")
+public class DispatchController {
+    private final DispatchService dispatchService;
+
+    public DispatchController(DispatchService ds) {
+        this.dispatchService = ds;
+    }
+
+    @PostMapping("/{orderId}")
+    public ResponseEntity<ShipmentResponse> handleDispatch(@PathVariable Long orderId) {
+        try {
+            var shipment = dispatchService.dispatchOrder(orderId);
+            return ResponseEntity.ok(new ShipmentResponse(shipment.getId(), "Dispatched"));
+        } catch (IllegalStateException e) {
+            // Translate business exception to HTTP 400/422
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+}
 ```
-**Outcome:** The Controller receives the JSON, the Service applies the budget rule, and the Repository saves it to the database.
 
-## Common Mistake: Logic in the Repository
-A common error is putting business logic inside the Repository or Controller. For instance, checking if a user is an admin inside the Repository. 
-**Correction:** Move all decision-making logic to the Service layer. The Repository should only execute queries.
+### Analysis of the Flow
+1. **Controller**: Receives the `orderId` from the URL. It doesn't know about `StockRepository`. If the service throws an `IllegalStateException`, the controller decides that this means a `400 Bad Request` to the client.
+2. **Service**: This is the "brain." It ensures the stock is checked before the carrier is picked. If we moved the stock check to the repository, the repository would suddenly need to know about the business definition of "available stock." If we moved it to the controller, we couldn't reuse the dispatch logic in a scheduled task or a message queue listener.
+3. **Repository**: Simply executes `findByOrderId` or `save`. It doesn't care why the shipment is being saved; it only cares that the SQL is valid.
 
-## Practical Exercise
-If you need to send an email notification after a procurement request is approved, which layer should trigger the email service?
+## Failure Cases and Misplacements
 
-**Answer:** The Service layer, because sending a notification is a business process requirement.
+- **The "Fat Controller"**: Putting the `if (stock <= 0)` check in the controller. Result: If you add a second API endpoint for "Bulk Dispatch," you have to duplicate the stock check logic.
+- **The "Anemic Service"**: The service just calls `repository.save(entity)`. Result: The controller is forced to handle the business logic, or the logic is leaked into the database via triggers, making the system impossible to test without a database.
+- **The "Smart Repository"**: Adding a method `saveIfStockAvailable()`. Result: The repository now depends on the `Stock` table and business rules, violating the single responsibility principle.
 
-## Layers are not separate servers
-These are logical responsibilities inside the backend. They can run together in one Spring Boot process; calling them three layers does not mean deploying three servers. The excerpt focuses on that separation. In a real API, use dedicated request and response DTOs, validate input and check authorization before saving a request.
+## Focused Exercise
+
+**Scenario**: You are adding a "Priority Shipping" feature. Only orders over $100 can use priority carriers. Where should this check live, and how does it affect the layers?
+
+**Answer**: 
+1. **Controller**: No change, except perhaps accepting a `priority` flag in the request.
+2. **Service**: The check `if (order.getTotal() < 100 && priorityRequested) throw ...` must live here. This is a business invariant.
+3. **Repository**: No change. It still just fetches the order or saves the shipment. The repository should not know about the $100 threshold.
 
 ## Further reading
 
 - [Spring Data JPA: Persisting Entities](https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html)
+- [MDN: CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)

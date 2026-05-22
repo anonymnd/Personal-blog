@@ -1,45 +1,72 @@
 ---
-title: "What Is CORS?"
-description: "Un guide simple pour comprendre le Cross-Origin Resource Sharing et la gestion de la sécurité par les navigateurs entre différents domaines."
-pubDate: 2026-10-14T18:48:00.000Z
+title: "Comprendre les Origines, le CORS et l'Accès Imposé par le Navigateur"
+description: "Analyse approfondie de la politique de même origine (SOP), des mécanismes de preflight et de la distinction cruciale entre CORS et authentification."
+pubDate: 2026-10-08T09:48:00.000Z
 translationKey: 195-what-is-cors
+seriesOrder: 42
 locale: fr
-tags: ["software-engineering","web-communication","learning-series"]
+tags: ["web-communication","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Tuple d'Origine
 
-Imaginez que vous développez une application d'achats où le frontend s'exécute sur `http://localhost:3000` et l'API backend sur `http://localhost:8080`. Vous écrivez un appel `fetch()` parfait pour soumettre une demande d'achat, mais le navigateur bloque la réponse avec une erreur rouge mentionnant 'CORS'. Cela arrive à cause de la Same-Origin Policy, une mesure de sécurité qui empêche un script d'un site de lire des données d'un autre site sans autorisation explicite.
+La sécurité dans le navigateur repose sur la Same-Origin Policy (SOP). Une « origine » n'est pas simplement un domaine ; c'est un tuple strict composé de trois éléments : **le Schéma (Protocole), l'Hôte et le Port**. Si l'un de ces éléments diffère, le navigateur considère la requête comme cross-origin.
 
-## Définition de l'Origine
-Une origine est définie par trois éléments : le schéma (http/https), l'hôte (domaine) et le port. Si l'un de ces éléments diffère, la requête est considérée comme cross-origin. Par exemple, `http://api.app.com` et `https://api.app.com` sont des origines différentes car le schéma change.
+Prenons notre scénario : un tableau de bord sur `http://localhost:3000` tentant d'appeler un backend sur `http://localhost:8080`.
 
-## Fonctionnement du CORS
-Le CORS est un mécanisme qui utilise des en-têtes HTTP pour indiquer au navigateur qu'un serveur autorise les requêtes provenant d'une origine spécifique. Lorsqu'un navigateur effectue une requête cross-origin, il vérifie l'en-tête `Access-Control-Allow-Origin` dans la réponse. Si l'en-tête correspond à l'origine du demandeur ou est un joker (`*`), le navigateur autorise le frontend à lire la réponse.
+*   **Schéma :** `http` == `http` (Correspondance)
+*   **Hôte :** `localhost` == `localhost` (Correspondance)
+*   **Port :** `3000` != `8080` (Différence)
 
-## Les Requêtes Preflight
-Pour les requêtes 'complexes' (comme `PUT` ou `DELETE` ou des en-têtes JSON personnalisés), le navigateur envoie d'abord une requête `OPTIONS`. C'est une vérification 'preflight' pour demander au serveur : "Es-tu d'accord pour que j'envoie cette requête spécifique ?" Le serveur doit répondre par un code 200 OK et préciser les méthodes et origines autorisées.
+Comme les ports sont différents, ce sont des origines distinctes. Cela s'applique également aux sous-domaines : `dashboard.example.com` et `api.example.com` sont des origines différentes car les hôtes diffèrent.
 
-## Exemple concret : Approbation d'achat
-Supposons qu'un manager approuve une demande via un frontend sur `https://manager.app`. Le backend (Jakarta EE) doit autoriser cela :
+## SOP vs CORS : La Politique de Lecture
 
-```java
-// Extrait illustratif d'un filtre
-response.setHeader("Access-Control-Allow-Origin", "https://manager.app");
-response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-response.setHeader("Access-Control-Allow-Headers", "Content-Type");
-```
-Résultat : Le navigateur voit que l'en-tête correspond à `https://manager.app` et permet à l'interface utilisateur de lire la confirmation d'approbation.
+Une idée reçue courante est que la SOP bloque l' *envoi* des requêtes. En réalité, la SOP bloque principalement la *lecture* de la réponse. Pour beaucoup de requêtes, le navigateur envoie les données au serveur, le serveur les traite et renvoie une réponse, mais le navigateur empêche le code JavaScript d'accéder à cette réponse, à moins que le serveur ne l'autorise explicitement via le Cross-Origin Resource Sharing (CORS).
 
-## Erreur courante : Confondre CORS et Authentification
-Une erreur fréquente est de croire que le CORS est un mur de sécurité qui empêche les requêtes d'atteindre le serveur. En réalité, le CORS est une politique appliquée par le navigateur pour la *lecture* de la réponse. Une requête peut toujours atteindre votre serveur et modifier des données même si le navigateur bloque la réponse. L'authentification côté serveur reste indispensable.
+## Requêtes Simples vs Preflight
 
-## Exercice pratique
-Si votre frontend est sur `http://localhost:3000` et que votre serveur envoie `Access-Control-Allow-Origin: http://localhost:8080`, le navigateur autorisera-t-il la lecture des données ?
+Toutes les requêtes cross-origin ne sont pas traitées de la même manière. Le navigateur les classe en requêtes « Simples » ou « Preflighted ».
 
-**Réponse :** Non, car l'origine dans l'en-tête doit correspondre à l'origine du demandeur (`localhost:3000`) ou être un joker.
+### Requêtes Simples
+Les requêtes utilisant `GET`, `POST` ou `HEAD` avec des headers standards (comme `Accept`, `Content-Type: application/x-www-form-urlencoded`, `multipart/form-data` ou `text/plain`) sont envoyées immédiatement. Le navigateur vérifie le header `Access-Control-Allow-Origin` dans la réponse. S'il ne correspond pas à l'origine demanderesse, le navigateur génère une erreur CORS et masque la réponse au script.
 
+### Requêtes Preflight (OPTIONS)
+Si une requête utilise une méthode comme `PUT` ou `DELETE`, ou un header comme `Content-Type: application/json`, le navigateur envoie d'abord une requête `OPTIONS`. C'est le « Preflight ». Il demande au serveur : « J'ai l'intention d'envoyer une requête PUT en JSON ; l'autorisez-vous ? »
+
+Si le serveur répond par un `200 OK` avec les headers `Access-Control-Allow-Methods` et `Access-Control-Allow-Headers` appropriés, le navigateur envoie alors la requête réelle.
+
+## Identifiants et le Piège du Wildcard
+
+Pour les cookies cross-origin, le client utilise credentials: include ou withCredentials, et la réponse exige Access-Control-Allow-Credentials: true avec une origine explicite autorisée plutôt que *. Domain, SameSite et politiques du navigateur peuvent encore empêcher les cookies.
+
+Un header Authorization fourni manuellement est distinct : envoyez-le explicitement et autorisez-le au preflight ; credentials: include n’est pas nécessaire uniquement pour ce header. Ne confondez pas bearer token et cookies. Réfléchir aveuglément tout Origin contournerait une allowlist.
+## Exemple Concret : Trace de Diagnostic
+
+Le dashboard envoie un POST JSON avec cookies. Le preflight contient Origin, Access-Control-Request-Method: POST et Access-Control-Request-Headers: content-type. Il faut les autorisations adaptées d’origine, credentials et headers. L’absence de Allow-Headers: content-type bloque ce JSON. POST est lui-même safelisted : la seule absence de Allow-Methods n’est donc pas le bon exemple ici.
+
+La réponse réelle doit aussi autoriser origine explicite et credentials. Allow-Origin: * la rend illisible en mode include. Un preflight 204 peut réussir ; 200 n’est pas le seul succès acceptable.
+## Le CORS n'est pas une Sécurité
+
+Le CORS est un mécanisme imposé par le navigateur pour protéger les données de l'utilisateur contre des scripts malveillants dans d'autres onglets. Ce n'est **pas** un remplacement pour :
+*   **L'Authentification :** Le CORS ne vérifie pas l'identité de l'utilisateur.
+*   **L'Autorisation :** Le CORS ne vérifie pas si l'utilisateur a le droit de supprimer une ressource.
+*   **La Protection CSRF :** Comme les requêtes simples sont envoyées *avant* la vérification CORS, un site malveillant peut toujours déclencher une requête POST changeant l'état (CSRF), même s'il ne peut pas lire la réponse.
+
+## Exercice
+
+**Question :** Vous avez un environnement de production où le frontend est sur `https://app.example.com` et l'API sur `https://api.example.com`. Le frontend envoie une requête `DELETE` avec un header personnalisé `X-Request-ID` et inclut des cookies de session. Quels headers spécifiques le serveur doit-il renvoyer lors du preflight et de la réponse réelle pour autoriser cela ?
+
+**Réponse :**
+1.  **Preflight (OPTIONS) :**
+    *   `Access-Control-Allow-Origin: https://app.example.com`
+    *   `Access-Control-Allow-Methods: DELETE`
+    *   `Access-Control-Allow-Headers: X-Request-ID`
+    *   `Access-Control-Allow-Credentials: true`
+2.  **Réponse Réelle (DELETE) :**
+    *   `Access-Control-Allow-Origin: https://app.example.com`
+    *   `Access-Control-Allow-Credentials: true`
 
 ## Pour approfondir
 

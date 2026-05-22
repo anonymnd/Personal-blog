@@ -1,56 +1,95 @@
 ---
-title: "Pourquoi deux classes Java avec le même nom peuvent être des types différents"
-description: "Comprendre comment les packages et les chargeurs de classes empêchent les collisions de noms et créent des types distincts dans la JVM."
-pubDate: 2026-10-11T14:48:00.000Z
+title: "Identité des Types Java : Packages et Class Loaders"
+description: "Explication de pourquoi des classes avec des noms identiques sont des types distincts et comment gérer le mappage sécurisé."
+pubDate: 2026-10-07T15:48:00.000Z
 translationKey: 119-why-two-java-classes-with-the-same-name-can-be-different-types
+seriesOrder: 24
 locale: fr
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## La Définition d'un Type en Java
 
-Imaginez que vous développez une application d'achat. Vous avez une classe `Request` dans le package `com.app.requester` et une autre classe `Request` dans le package `com.app.manager`. Vous essayez de passer la demande d'un demandeur à une méthode du manager, mais le compilateur génère une erreur de type. Bien que les deux s'appellent `Request`, Java les considère comme des entités totalement différentes.
+En Java, une classe n'est pas identifiée par son nom simple (ex: `Money`), mais par son Nom Qualifié Complet (FQN - Fully Qualified Name). Le FQN se compose du nom du package et du nom de la classe. Si deux classes partagent le même nom simple mais résident dans des packages différents, la JVM les traite comme des types totalement distincts.
 
-## Le rôle des noms pleinement qualifiés
-En Java, le nom d'une classe n'est pas seulement l'identifiant que vous voyez dans le fichier. L'identité réelle est le Fully Qualified Name (FQN), qui combine le chemin du package et le nom de la classe. `com.app.requester.Request` et `com.app.manager.Request` sont aussi différents que `String` et `Integer`. Le package agit comme un espace de noms, permettant à différents modules d'utiliser des termes communs sans conflit.
+L'identité du type est également liée au ClassLoader. Une classe est identifiée de manière unique par la combinaison de son FQN et du ClassLoader qui l'a définie. Si le même fichier `.class` est chargé par deux ClassLoaders différents, les objets `Class` résultants sont distincts, et toute tentative de conversion (cast) de l'un vers l'autre déclenchera une `ClassCastException`.
 
-## Class Loaders et identité au runtime
-Au-delà des packages, la JVM utilise des Class Loaders pour charger le bytecode. Une classe est identifiée de manière unique par la combinaison de son FQN et du Class Loader qui l'a définie. Si deux chargeurs de classes différents chargent le même fichier `.class` depuis des emplacements différents, la JVM les voit comme deux types distincts. C'est courant dans les architectures de plugins ou les serveurs d'applications.
+## Scénario : Conflit avec un SDK Hérité
 
-## Exemple concret : Le conflit d'approvisionnement
-Voici un scénario où nous gérons une demande d'achat :
+Imaginons un scénario où votre application définit un record `Money` pour la logique métier interne, mais vous devez intégrer un SDK hérité qui fournit également sa propre classe `Money`. Comme il s'agit de types différents, vous ne pouvez pas utiliser un cast pour convertir l'un en l'autre, même si leurs champs sont identiques.
+
+### Implémentation Illustrative
 
 ```java
-package com.app.requester;
-public class Request { public String item = "Laptop"; }
+// Type du domaine applicatif
+package com.app.domain;
 
-package com.app.manager;
-public class Request { public boolean approved = false; }
+public record Money(java.math.BigDecimal amount, String currency) {}
 
-public class ProcurementService {
-    public void process(com.app.manager.Request mgrReq) {
-        System.out.println("Traitement...");
+// Type du SDK hérité
+package com.legacy.sdk;
+
+public class Money {
+    private final java.math.BigDecimal value;
+    private final String isoCode;
+
+    public Money(java.math.BigDecimal value, String isoCode) {
+        this.value = value;
+        this.isoCode = isoCode;
     }
 
-    public void run() {
-        com.app.requester.Request req = new com.app.requester.Request();
-        // process(req); // Cela causerait une erreur de compilation
+    public java.math.BigDecimal getValue() { return value; }
+    public String getIsoCode() { return isoCode; }
+}
+```
+
+## Mappage Sécurisé aux Frontières
+
+Lors du transfert de données entre le SDK et votre application, vous devez implémenter un mécanisme de mappage explicite. Un cast échoue car la JVM vérifie l'identité du type (FQN + ClassLoader) au moment de l'exécution.
+
+### Exemple de Mappage Appliqué
+
+```java
+package com.app.service;
+
+import java.util.Optional;
+import com.app.domain.Money; // Type applicatif
+
+public class CurrencyConverter {
+    
+    public com.app.domain.Money mapToDomain(com.legacy.sdk.Money sdkMoney) {
+        if (sdkMoney == null) return null;
+        
+        // Conversion explicite : extraction des valeurs pour construire une nouvelle instance
+        return new com.app.domain.Money(
+            sdkMoney.getValue(), 
+            sdkMoney.getIsoCode()
+        );
+    }
+
+    public void processPayment(com.legacy.sdk.Money sdkMoney) {
+        // Ceci provoquerait une ClassCastException :
+        // com.app.domain.Money domainMoney = (com.app.domain.Money) sdkMoney;
+        
+        com.app.domain.Money domainMoney = mapToDomain(sdkMoney);
+        System.out.println("Traité : " + domainMoney.amount());
     }
 }
 ```
-Résultat : La méthode `process` attend un `manager.Request`. Passer un `requester.Request` échoue car leurs FQN diffèrent, garantissant que la logique du manager n'opère pas accidentellement sur la structure de données du demandeur.
 
-## Erreur courante : Ambiguïté d'importation
-Les développeurs utilisent souvent `import com.app.requester.*;` et `import com.app.manager.*;` dans le même fichier. Si les deux packages contiennent une classe `Request`, l'utilisation du mot `Request` provoque une erreur d'ambiguïté.
+### Analyse du Mécanisme
+1. **Résolution du FQN** : Le compilateur utilise les imports pour distinguer `com.app.domain.Money` de `com.legacy.sdk.Money`. Dans un seul fichier, si les deux sont nécessaires, l'un ou les deux doivent être référencés par leur chemin complet.
+2. **Allocation Mémoire** : `mapToDomain` crée un nouvel objet sur le tas (heap). Il ne modifie pas l'identité de l'objet du SDK ; il projette son état dans un type compris par l'application.
+3. **Cas d'Échec** : Si un développeur tente d'utiliser une référence `Object` provenant du SDK et la cast vers le `Money` du domaine, la JVM verra que la classe a été chargée depuis le package `com.legacy.sdk` et rejettera le cast, quels que soient les noms des champs.
 
-**Correction :** Utilisez le FQN directement dans le code (ex: `com.app.requester.Request req = new ...`) ou importez-en un seul et utilisez le FQN pour l'autre.
+## Exercice
 
-## Exercice pratique
-Si vous avez `package a.User` et `package b.User`, pouvez-vous caster une instance de `a.User` vers `b.User` via `(b.User) myUser` ?
+**Question** : Vous avez une classe `com.util.Config` et une classe `com.internal.Config`. Vous recevez un objet de type `Object` que vous savez être un `com.util.Config`. Que se passe-t-il si vous exécutez `(com.internal.Config) receivedObject` ? Comment transférer les données en toute sécurité de la config utilitaire vers la config interne ?
 
-**Réponse :** Non. Cela provoquera une `ClassCastException` à l'exécution car ce sont des types distincts malgré un nom simple identique.
+**Réponse** : Une `ClassCastException` est levée car les FQN diffèrent. Pour transférer les données, vous devez utiliser un mappeur explicite : instanciez `com.internal.Config` et passez manuellement les valeurs récupérées depuis l'instance `com.util.Config` via ses méthodes getters.
 
+Les déclarations de package illustrées appartiennent à des fichiers séparés. Java ne possède pas de syntaxe d’alias d’import. Un cast direct entre ces types finaux sans relation peut être refusé à la compilation ; passer par Object peut compiler puis échouer à l’exécution. La distinction porte sur le loader qui définit la classe : deux loaders initiateurs peuvent déléguer à la même définition et obtenir le même type.
 
 ## Pour approfondir
 

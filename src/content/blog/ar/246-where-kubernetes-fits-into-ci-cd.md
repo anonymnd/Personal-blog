@@ -1,44 +1,81 @@
 ---
-title: "فين كيجي Kubernetes فـ CI/CD"
-description: "فهم الدور ديال Kubernetes كهدف ديال orchestration وسط pipeline ديال CI/CD."
-pubDate: 2026-10-16T21:48:00.000Z
+title: "فين كيجي Kubernetes فـ Architecture ديال Deployment"
+description: "الفرق بين packaging ديال containers و orchestration، وكيفاش نخدمو stateless map-tile API بـ Services."
+pubDate: 2026-10-08T22:48:00.000Z
 translationKey: 246-where-kubernetes-fits-into-ci-cd
+seriesOrder: 55
 locale: ar
-tags: ["software-engineering","deployment-devops","learning-series"]
+tags: ["deployment-devops","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## Orchestration مقابل Packaging
 
-بزاف ديال developers كيسحاب ليهم بلي Kubernetes هو أداة ديال CI/CD. كيتخايلو بلي غير كينصبو cluster، راه كلشي كيولي أوتوماتيك من التيست حتى للـ deployment. ولكن في الحقيقة، Kubernetes هو البلاصة فين كيمشي التطبيق (destination)، ماشي هو اللي كيوصلو. هاد الخلط كيجي حيت Kubernetes كيسير lifecycle ديال app، ولكن ما كيعرفش كيفاش يدير compile لكود Java ولا يخدم unit tests.
+بزاف ديال الناس كيخلطو بين Docker و Kubernetes. Docker هو أداة ديال packaging؛ كيصاوب لينا image ما كتبدلش (immutable) فيها الكود، runtime، و كاع داكشي لي محتاج التطبيق باش يخدم. أما Kubernetes، فهو orchestrator. هو ماشي أداة باش تبني الكود (build) أو دير tests — هادشي خدمة ديال CI pipeline. Kubernetes كياخد ديك الـ image لي صاوب pipeline و كيسير كيفاش غتخدم و تتوزع على مجموعة ديال السيرفورات (cluster).
 
-## كيفاش كيمشي الـ Pipeline
-في الخدمة العادية، كلشي كيبدا بـ Git. ملي developer كيدير push لكود، واحد الأداة ديال CI (بحال Jenkins ولا GitHub Actions) كتخدم. هاد الأداة كتـ build التطبيق وكتجمعو في Docker image. ملي كتطلع image لـ registry، هنا كيبدا الدور ديال CD. هنا فين كيدخل Kubernetes: أداة CD كتقول لـ Kubernetes: "بدل version ديال image لـ 2.0". و Kubernetes كيتكلف يوزعها على الـ cluster.
+هاد العملية كتبدا ملي الـ CI/CD pipeline كيصيفط configuration declarative (غالباً كتكون YAML) لـ Kubernetes API. الـ pipeline كيقول لـ Kubernetes: "بغيت هاد النسخة ديال الـ image تكون خدامة بهاد الـ resource limits". Kubernetes من بعد كيبقى يراقب باش يخلي الحالة ديال الـ cluster هي نيت لي طلبنا (desired state).
 
-## الفرق بين Orchestration و Automation
-أدوات CI/CD كيديرو أوتوماتيزاسيون باش يحركو الكود، ولكن Kubernetes كيدير orchestration للخدمات. مثلا، في app ديال procurement (المشتريات)، الخدمة ديال 'Requester' تقدر تكون فيها 3 ديال replicas. إلا طاح واحد pod، الـ kubelet كيعاود يشعلو على حساب الـ restart policy. هادي كتسمى self-healing، ولكن ماشي هي CI/CD، هادي غير باش السيستيم يبقى خدام.
+## سيناريو: Stateless Map-Tile API
 
-## مثال تطبيقي: تحديث App ديال المشتريات
-تخايل بغينا نحدثو service ديال 'Approval' في سيستيم ديال المشتريات:
-1. **مرحلة CI**: كود push → التيستات دازو → تصاوبات image سميتها `procurement-approval:v2`.
-2. **مرحلة CD**: الـ pipeline كيبدل manifest ديال Kubernetes:
+Map-tile API كتستهدف3 replicas. Deployment كتسير rollout عبر ReplicaSets؛ controller ديالها كتخلق Pods، scheduler كتختار nodes المناسبة وkubelets كتشغل containers. Desired replicas هدف، ماشي ضمان3 available instances وقت failure ولا نقص capacity.
+
+ClusterIP Service العادية كتقدم discovery ثابتة وكتوجه لـ ready endpoints اللي selector كتوافقهم. Pods ملي يتبدلو يقدرو يتبدلو IPs؛ clients ما يعتمدوش عليهم. Service داخلية بالافتراضي، ما كتفتحش internet بوحدها. Readiness وrollout خاصهم configuration. Tiles read-only متطابقين baked فكل image يقدرو يبقاو local؛ mutable ولا nonreplicated local state خاصها storage design.
+## تطبيق عملي: Configuration Déclarative
+
+هذا هو الـ YAML لي الـ pipeline كيصيفطو لـ cluster باش يخدم الـ map-tile API.
+
 ```yaml
+# illustrative-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: map-tile-api
 spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: map-tiles
   template:
+    metadata:
+      labels:
+        app: map-tiles
     spec:
       containers:
-      - name: approval-service
-        image: procurement-approval:v2
+      - name: tile-server
+        image: registry.example.com/map-tile-api:v1.2.0
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: map-tile-service
+spec:
+  selector:
+    app: map-tiles
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
 ```
-3. **خدمة K8s**: كيدير rolling update، كيبدل pods v1 بـ v2 واحد بواحد باش السيرفيس ما يقطعش.
 
-## غلط شائع: خلط Liveness Probe مع CI
-كاين اللي كيسحاب ليه بلي Liveness Probe كتصلح bugs. إلا كان عندك bug في الكود، الـ Probe غادي تعاود تشعل container، ولكن الـ bug باقي تما. الـ CI هي اللي خاصها تحيد الـ bug، و Kubernetes خدمتو غير يخلي app شاعلة وخا يوقع crash.
+### تحليل النتيجة
+1. **Desired state:** replicas: 3 كتطلب3 replicas؛ availability كتعلق بـ scheduling وstartup وreadiness ناجحين.
+2. **Decoupling**: الـ Service `map-tile-service` كيقلب على أي Pod عندو label سميتو `app: map-tiles`. إلا الـ Deployment بدل شي Pod حيت دار update، الـ Service كيحدث الـ list ديالو بوحدو بلا ما يحس client بلي الـ IP تبدلات.
+3. **Traffic Flow**: Client → `map-tile-service` (Port 80) → Pod عشوائي (Port 8080).
 
-## تمرين تطبيقي
-إلا كان pipeline CI صاوب Docker image بنجاح، ولكن app ما بغاتش تخدم في Kubernetes حيت كاين غلط في variable d'environnement، شكون اللي فشل هنا؟
+## حالات الفشل و القيود
 
-**الجواب**: مرحلة CD/Deployment (أو configuration)، حيت الـ image تصاوبات صحيحة، ولكن المشكل كان في الإعدادات ديال البلاصة فين تحطات (orchestration target).
+- **مشكل فـ Image Pull**: إلا الـ pipeline صيفط config فيها image tag ما كاينش فـ registry، الـ Pods غيوليو فـ حالة `ImagePullBackOff`. Kubernetes ما يقدرش يصلح image ما كايناش، كيقدر غير يعاود يحاول يـ pull-يها.
+- **نقص فـ Resources**: إلا الـ cluster ما فيهش CPU/RAM كافية باش يهز 3 ديال الـ replicas، شي Pods غيبقاو فـ حالة `Pending`. الـ Deployment عارف بلي خاصو 3، ولكن scheduler ما لقى فين يحطهم.
+- **State design:** local mutable state ما كتتشاركش بوحدها. Tiles read-only متطابقين فكل image يقدرو يتخدمو local؛ mutable tiles خاصهم synchronization ولا shared storage.
+
+## تمرين
+
+بدل spec.replicas لـ5 وimage reference لـ version مراجعة، بالأفضل digest. Deployment كتقرب replica target وrollout. Default RollingUpdate ما كتعنيش دائما Pod وحدة كل مرة ولا بالضبط3 ready replicas مضمونة. maxUnavailable وmaxSurge وreadiness وcapacity وconcurrent failures كيأثرو.
+
+زيد application readiness probe وresource requests مناسبة قبل الاعتماد على traffic handover. راقب rollout status وready endpoints وerror rates. Failed rollout تقدر تبقى stalled بلا rollback أوتوماتيكي؛ خاص recovery procedure واضحة. YAML minimal structural example ماشي production manifest كاملة.
 
 ## باش تزيد تفهم
 

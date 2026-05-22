@@ -1,56 +1,112 @@
 ---
-title: "Pourquoi Hibernate crée parfois des tables supplémentaires"
-description: "Comprendre comment les stratégies de mapping des collections et de l'héritage entraînent la création automatique de tables de jointure."
-pubDate: 2026-10-09T13:48:00.000Z
+title: "Pourquoi les collections de valeurs et les associations nécessitent des tables supplémentaires"
+description: "Analyse approfondie de @ElementCollection, des embeddables et de la différence structurelle entre types de valeurs et entités dans JPA."
+pubDate: 2026-10-07T06:48:00.000Z
 translationKey: 070-why-hibernate-sometimes-creates-extra-tables
+seriesOrder: 15
 locale: fr
-tags: ["software-engineering","spring-architecture","learning-series"]
+tags: ["spring-architecture","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Types de Valeurs vs Entités
 
-Vous avez défini une relation `@ManyToMany` simple dans votre code Java, mais en vérifiant votre base de données, vous découvrez une troisième table que vous n'avez jamais créée explicitement. On a souvent l'impression qu'Hibernate agit de manière autonome, mais ces tables 'supplémentaires' sont en réalité le mécanisme utilisé pour résoudre les exigences de mapping relationnel.
+Dans JPA, il existe une distinction fondamentale entre une **Entité** et un **Type de Valeur**. Une entité possède une identité persistante (une clé primaire) qui permet de la suivre, de la mettre à jour et de s'y référer indépendamment dans tout le système. Un type de valeur, en revanche, est défini par ses attributs. Si deux types de valeurs ont les mêmes données, ils sont considérés comme la même valeur.
 
-## Le mécanisme de la table de jointure
-Dans une base de données relationnelle, une relation plusieurs-à-plusieurs ne peut pas être stockée comme une simple colonne dans l'une des deux tables principales. Pour éviter la duplication des données et maintenir la normalisation, Hibernate crée une 'Join Table'. Cette table sert de pont, contenant uniquement les clés primaires des deux entités qu'elle connecte. Si vous utilisez `@ManyToMany` sans spécifier l'annotation `@JoinTable`, Hibernate en génère une automatiquement selon une convention de nommage par défaut : `Entity1_Entity2`.
+Prenons un `Produit`. Un `Fournisseur` est une entité car un fournisseur existe indépendamment de n'importe quel produit ; il a son propre cycle de vie et son propre ID. À l'inverse, les `Dimensions` d'un produit (hauteur, largeur, profondeur) ou une liste de `Couleurs` (Rouge, Bleu) sont des types de valeurs. Elles n'ont aucun sens en dehors du contexte du produit qu'elles décrivent.
 
-## Stratégies de mapping de l'héritage
-Une autre cause courante est la stratégie `@Inheritance`. Si vous utilisez `InheritanceType.JOINED`, Hibernate crée une table de base pour la classe parente et des tables distinctes pour chaque sous-classe. Chaque table de sous-classe contient uniquement les champs spécifiques de cet enfant et une clé étrangère pointant vers le parent. Bien que ce soit propre pour la normalisation, cela produit plus de tables que ce que votre hiérarchie de classes ne suggère initialement.
+## Le rôle de @ElementCollection
 
-## Exemple concret : Application d'achats
-Imaginez un système d'achats où une `PurchaseRequest` peut avoir plusieurs `Item`s, et un `Item` peut appartenir à plusieurs demandes.
+Le mapping relationnel standard @ElementCollection stocke des valeurs simples ou embarquées dans une table reliée à l’entité propriétaire. C’est un choix de mapping : une base peut aussi stocker des tableaux ou du JSON dans une colonne, avec d’autres mappings et compromis de requête.
+
+Une association vise des entités identifiables indépendamment. Une collection de valeurs ne donne pas d’identité d’entité séparée à ses éléments ; ils appartiennent au propriétaire. Sa table peut toutefois posséder clé primaire, contraintes uniques et index. La suppression du parent via son cycle de vie supprime les valeurs dépendantes ; les suppressions bulk ou natives demandent de vérifier contraintes et nettoyage.
+## Exemple concret : Dimensions et Couleurs du Produit
+
+Voici comment modéliser un produit avec un ensemble de chaînes simples (couleurs) et un ensemble de valeurs complexes (dimensions).
 
 ```java
+import jakarta.persistence.*;
+import java.util.*;
+
+@Embeddable
+public record Dimensions(double height, double width, double depth) {}
+
 @Entity
-public class PurchaseRequest {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class Product {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToMany
-    private List<Item> items;
+
+    private String name;
+
+    @ElementCollection
+    @CollectionTable(name = "product_colors", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "color")
+    private Set<String> colors = new HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(name = "product_dimensions", joinColumns = @JoinColumn(name = "product_id"))
+    private Set<Dimensions> dimensions = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Supplier supplier;
+
+    // Getters, Constructeur
 }
 
 @Entity
-public class Item {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class Supplier {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
+    private String companyName;
+    // Getters, Constructeur
 }
 ```
 
-**Résultat :** Hibernate crée trois tables : `purchase_request`, `item`, et une table de jointure cachée nommée `purchase_request_items`. Cette troisième table gère les liens entre les demandes et les articles.
+### Trace du schéma de base de données
 
-## Erreur courante : Abus du ManyToMany
-Les développeurs utilisent souvent `@ManyToMany` alors qu'un `@OneToMany` avec une colonne de jointure suffirait. Cela crée des tables de jointure inutiles qui ralentissent les requêtes.
+Si nous persistons un produit avec l'ID `101`, les couleurs `{"Rouge", "Bleu"}` et une `Dimensions(10, 20, 30)`, la base de données ressemble à ceci :
 
-**Correction :** Si la relation est réellement un-à-plusieurs (ex: une demande a plusieurs lignes de commande, mais une ligne appartient à une seule demande), utilisez `@OneToMany` et `@ManyToOne`. Cela stocke la clé étrangère directement dans la table enfant, supprimant le besoin de la table pont.
+**Table : `product`**
+| id | name | supplier_id |
+| :--- | :--- | :--- |
+| 101 | Bureau | 50 |
 
-## Exercice pratique
-Si vous avez une entité `User` et une entité `Role` avec une relation `@ManyToMany`, et que vous voulez que la table de jointure s'appelle `user_roles` au lieu du nom par défaut, quelle annotation devez-vous ajouter ?
+**Table : `product_colors`**
+| product_id | color |
+| :--- | :--- |
+| 101 | Rouge |
+| 101 | Bleu |
 
-**Réponse :** Ajoutez `@JoinTable(name = "user_roles")` au-dessus du champ de collection dans l'entité.
+**Table : `product_dimensions`**
+| product_id | height | width | depth |
+| :--- | :--- | :--- |
+| 101 | 10.0 | 20.0 | 30.0 |
+
+**Table : `supplier`**
+| id | company_name |
+| :--- | :--- | 
+| 50 | OfficeCorp |
+
+### Ce que signifient les tables
+
+Ces lignes décrivent des valeurs appartenant au produit, pas des entités avec des identifiants indépendants. Copier une couleur vers un autre produit crée une autre occurrence de la valeur ; cela ne transfère pas une identité d’entité. Le SQL précis et les contraintes physiques dépendent du mapping.
+
+## Cas d'échec et pièges
+
+Si les catégories ont des identifiants partagés, une modification indépendante et des références depuis plusieurs produits, modélisez Category comme entité. Selon le domaine, la relation sera many-to-one, many-to-many ou une entité de liaison. Une simple étiquette répétée n’impose pas automatiquement une entité.
+
+Modifiez soigneusement la collection gérée existante plutôt que de remplacer sans précaution le wrapper Hibernate. Le coût SQL dépend du type de collection, de l’égalité des valeurs, du mapping et de la version du fournisseur. clear/addAll n’est pas intrinsèquement plus efficace ; retirer une valeur Java ne garantit pas toujours un seul DELETE. Observez les requêtes de modifications représentatives avant d’optimiser.
+## Exercice
+
+Un produit stocke des descriptions de garantie : 12 mois pour les pièces, 36 pour la main-d’œuvre. Ici, ce sont des valeurs sans identifiant de contrat ni cycle de vie indépendant. Choisissez un WarrantyPeriod embarqué avec durationMonths et coverageType dans une @ElementCollection.
+
+Retirer une période de la collection gérée dans une transaction doit rendre la collection persistée conforme aux valeurs restantes après flush et commit. Les suppressions ou réinsertions exactes dépendent du mapping ; vérifiez le SQL sans promettre une instruction précise. Si la garantie devient un contrat client géré indépendamment, réexaminez son identité.
+
+L’exemple emploie un record embarqué pris en charge par Hibernate 6.6 ; vérifiez votre fournisseur et la spécification avant réutilisation. Les extraits correspondent à des fichiers séparés et omettent accesseurs et aides de construction. Dans PostgreSQL, une clé étrangère ne crée pas elle-même d’index sur ses colonnes référençantes. Examinez les clés existantes et les plans avant d’ajouter un index product_id ; un scan peut rester efficace sur une petite table.
 
 ## Pour approfondir
 
 - [Spring Data JPA: Persisting Entities](https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html)
+- [Spring declarative transactions](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-decl-explained.html)

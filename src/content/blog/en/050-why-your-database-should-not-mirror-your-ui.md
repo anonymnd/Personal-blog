@@ -1,39 +1,127 @@
 ---
-title: "Why Your Database Should Not Mirror Your UI"
-description: "Learn why designing your database based on screen layouts leads to rigid systems and how to decouple data models from user interfaces."
-pubDate: 2026-10-08T17:48:00.000Z
+title: "Design DTOs and Mappings Around an API Contract"
+description: "Learn to decouple internal database entities from external API contracts using Java Records and mapping strategies to control data visibility and editability."
+pubDate: 2026-10-07T01:48:00.000Z
 translationKey: 050-why-your-database-should-not-mirror-your-ui
+seriesOrder: 10
 locale: en
-tags: ["software-engineering","database-design","learning-series"]
+tags: ["database-design","learning-series"]
 draft: false
 ---
 
-Imagine you are building a procurement app. Your UI has a 'Request Form' where a requester enters their name, department, and a list of items. A beginner's instinct is to create a single `Request` table with columns like `requester_name` and `department_name`. This is a dangerous trap: you are mirroring the UI layout in your database schema.
+## The Boundary Problem
 
-## Separate presentation changes from business changes
-Reordering form fields, adding a dashboard or changing a filter should usually change presentation or queries, rather than the stored domain model. A new business rule can legitimately require a schema change: allowing several requesters per request changes a relationship, even if it first appears as a new form field. The goal is to model durable facts and rules, not to promise that a database will never change.
-## Conceptual vs. Physical Layout
-In the Merise methodology, we distinguish between the Conceptual Data Model (MCD) and the Physical Model. The MCD focuses on business rules, not screens. For instance, a 'Requester' is an entity, and a 'Department' is another. The relationship between them is a business rule (a requester belongs to one department), regardless of whether they appear on the same screen.
+A common mistake in API design is treating the database entity as the communication contract. When a JPA entity is returned directly to a client, the API leaks internal implementation details. More critically, allowing a client to send an entity directly back to the server creates a security vulnerability: if the entity contains a field like `loyaltyLevel` or `accountBalance`, a malicious user could include those fields in a JSON request to escalate their privileges, even if the UI doesn't show those fields.
 
-## Worked Example: Procurement Requests
-Instead of one flat table, we use normalization. 
+To solve this, we introduce Data Transfer Objects (DTOs). A DTO is a projection of the data required for a specific use case. It is not a mirror of the database, nor is it necessarily a mirror of the UI. It is a contract. Even if a Request DTO and a Response DTO share the same fields, they should remain distinct because their evolution paths differ: one defines what the server accepts, the other defines what the server promises to provide.
 
-**Wrong (UI Mirror):**
-`Requests` table: `id`, `item_name`, `requester_name`, `dept_name`.
+## Scenario: Hotel Guest Management
 
-**Right (Normalized):**
-- `User` table: `id`, `full_name`
-- `Department` table: `id`, `dept_name`
-- `Request` table: `id`, `user_id` (FK), `dept_id` (FK), `date`
-- `RequestItem` table: `id`, `request_id` (FK), `product_name`, `quantity`
+Consider a system where a `Guest` entity contains sensitive identity data and a server-managed loyalty status. The business rules are:
+1. Guests can update their contact details (email, phone).
+2. Guests cannot modify their own `loyaltyLevel`.
+3. Public API responses must exclude the `identityDocumentNumber` for privacy.
 
-By separating these, if the UI changes to a dashboard showing all requests per department, the database doesn't need to change; you simply write a different SQL JOIN.
+### The Entity Model
 
-## Common mistake: storing a name only because it is displayed
-For current employee details, store a manager identifier and let the backend retrieve the name, then expose it through a response DTO. The browser displays that response; it should not query database tables directly. Deliberate historical snapshots are different: an invoice may retain the supplier name as it was when issued. Decide whether a field represents current master data or an immutable historical fact before choosing normalization or a snapshot.
-## Practical Exercise
-Scenario: Your UI has a 'Project' page that shows a list of 'Tasks' and the 'Employee' assigned to each. 
+```java
+@Entity
+public class Guest {
+    @Id @GeneratedValue
+    private Long id;
+    private String fullName;
+    private String email;
+    private String phone;
+    private String identityDocumentNumber;
+    private String loyaltyLevel; // Server-owned
+    // Getters, setters, etc.
+}
+```
 
-Question: Should you add `employee_name` to the `Tasks` table?
+### The Contract Design
 
-**Answer:** No. Add `employee_id` as a foreign key. The name belongs in the `Employee` table to avoid redundancy and update anomalies.
+We use Java Records for DTOs because they are immutable, concise, and perfectly suited for data carriers. We define three distinct shapes:
+
+1. **GuestUpdateRequest**: Only contains fields the user is allowed to change.
+2. **GuestResponse**: Contains public info, excluding the identity document.
+3. **GuestInternalResponse**: (Optional) For admin views, including sensitive data.
+
+```java
+// Only editable fields
+public record GuestUpdateRequest(
+    String email,
+    String phone
+) {}
+
+// Publicly visible fields
+public record GuestResponse(
+    Long id,
+    String fullName,
+    String email,
+    String phone,
+    String loyaltyLevel
+) {}
+```
+
+## Implementing the Mapping Logic
+
+Mapping is the process of transforming an entity into a DTO (and vice versa). While libraries exist, explicit mapping provides the most control over business rules.
+
+### Worked Example: The Mapping Service
+
+```java
+@Service
+public class GuestMapper {
+
+    public GuestResponse toResponse(Guest guest) {
+        return new GuestResponse(
+            guest.getId(),
+            guest.getFullName(),
+            guest.getEmail(),
+            guest.getPhone(),
+            guest.getLoyaltyLevel()
+        );
+    }
+
+    public void updateEntityFromDto(GuestUpdateRequest dto, Guest guest) {
+        // We explicitly ignore loyaltyLevel here
+        if (dto.email() != null) guest.setEmail(dto.email());
+        if (dto.phone() != null) guest.setPhone(dto.phone());
+    }
+}
+```
+
+### Trace of a Request
+
+1. **Request**: Client sends `PUT /guests/1` with body `{"email": "new@email.com", "loyaltyLevel": "PLATINUM"}`.
+2. **Binding**: Spring binds the JSON to `GuestUpdateRequest`. Because the record does not have a `loyaltyLevel` component, the extra JSON field is ignored by the message converter.
+3. **Processing**: The service fetches the `Guest` entity via `findById`. The `GuestMapper` updates only the email and phone.
+4. **Persistence**: The updated entity is saved.
+5. **Response**: The service maps the updated entity to `GuestResponse`. The `identityDocumentNumber` is never included in the record constructor, ensuring it never leaves the server.
+
+## Failure Cases and Consequences
+
+*   **The "Pass-Through" Failure**: If you use the same DTO for both request and response, you might accidentally expose the `id` as editable or require the client to send the `loyaltyLevel` back just to update a phone number.
+*   **The "Entity Leak" Failure**: Returning the `Guest` entity directly. If a new field `internalNotes` is added to the database for staff use, it is automatically leaked to the API response unless explicitly marked with `@JsonIgnore`. Using a DTO makes this leak impossible by design.
+*   **The "Null Overwrite" Failure**: In the `updateEntityFromDto` method, if you simply call `guest.setEmail(dto.email())` without a null check, a client omitting the email field in a partial update would overwrite a valid email with `null` in the database.
+
+## Exercise
+
+**Scenario**: You are adding a `GuestRegistrationRequest` DTO. The registration requires `fullName`, `email`, and `identityDocumentNumber`. However, the `GuestResponse` must still exclude the `identityDocumentNumber`.
+
+**Task**: Define the `GuestRegistrationRequest` record and explain why it cannot be reused as the `GuestResponse`.
+
+**Answer**:
+```java
+public record GuestRegistrationRequest(
+    String fullName,
+    String email,
+    String identityDocumentNumber
+) {}
+```
+It cannot be reused as the `GuestResponse` because the registration request requires the `identityDocumentNumber` for creation, but the response must exclude it for security/privacy. Reusing the record would either force the API to leak the document number or prevent the user from registering.
+
+## Further reading
+
+- [Spring Data JPA: Persisting Entities](https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html)
+- [HTTP Semantics (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html)

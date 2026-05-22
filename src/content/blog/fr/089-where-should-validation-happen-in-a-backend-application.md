@@ -1,58 +1,49 @@
 ---
-title: "Où doit se situer la validation dans une application Backend ?"
-description: "Un guide pour séparer la validation du format, l'éligibilité métier et les contraintes de base de données pour créer des systèmes robustes."
-pubDate: 2026-10-10T08:48:00.000Z
+title: "Validation des Entrées, Éligibilité Métier et Invariants de Base de Données"
+description: "Analyse approfondie des trois couches de validation via un scénario d'inscription à un atelier pour éviter les données invalides et les conditions de concurrence."
+pubDate: 2026-10-07T10:48:00.000Z
 translationKey: 089-where-should-validation-happen-in-a-backend-application
+seriesOrder: 19
 locale: fr
-tags: ["software-engineering","validation-errors","learning-series"]
+tags: ["validation-errors","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Les Trois Couches de Validation
 
-Imaginez que vous développez une application d'achats. Un demandeur soumet une requête pour 100 ordinateurs. La requête arrive sous forme d'objet JSON. Si le champ `quantity` est manquant ou est une chaîne de caractères au lieu d'un nombre, le système plante. Si la quantité est de -5, c'est logiquement impossible. Si le demandeur a déjà épuisé son budget annuel, la requête est inadmissible. Chacun de ces échecs se produit à une couche différente.
+La validation d’entrée contrôle la forme : @NotNull rejette null, @NotBlank rejette null ou une chaîne sans caractère non blanc, @Positive impose une valeur positive (ajoutez @NotNull pour un wrapper nullable). @Valid cascade la validation lorsque le mécanisme environnant s’exécute ; une annotation sur une méthode quelconque ne suffit pas à l’activer.
 
-## Validation du Format d'Entrée
-La première ligne de défense est la couche API. C'est là que l'on vérifie si les données ont la 'bonne forme'. En Java avec Jakarta Bean Validation, on utilise des annotations comme `@NotNull` ou `@NotBlank`. Il est important de noter que `@NotNull` vérifie seulement si la référence est nulle ; elle n'écartera pas une chaîne vide. Pour les chaînes, `@NotBlank` est indispensable. L'utilisation de `@Valid` dans un contrôleur déclenche une validation en cascade des champs avant même que le code n'entre dans votre méthode de service.
+L’éligibilité vérifie si l’atelier est ouvert et si l’utilisateur peut participer. Les invariants DB protègent l’état stocké face aux requêtes concurrentes. Une contrainte unique empêche les doublons, pas à elle seule la surréservation. Contraintes, mises à jour conditionnelles atomiques, verrous ou transactions sérialisables traitent des courses précises ; choisissez une transaction complète.
+## Exemple Pratique : Inscription à un Atelier
 
-## Validation de l'Éligibilité Métier
-Une fois le format validé, il faut vérifier si l'action est autorisée. Cela se passe dans la Couche Service. Pour notre application d'achats, le service vérifie si le demandeur a assez de budget. Ce n'est pas un problème de 'forme'—le nombre 100 est un entier valide—mais c'est une violation métier. Ces vérifications doivent lever des exceptions de domaine personnalisées que l'API traduira en messages d'erreur clairs, sans exposer les traces de pile (stack traces).
+La requête contient contactEmail, requestedSeats positif et workshopId. Validez-la à la frontière HTTP avec @Valid et décidez si contactEmail exige @Email ainsi qu’une normalisation explicite. @NotBlank ne valide pas à lui seul une adresse email.
 
-## Contraintes de Base de Données et Concurrence
-Même avec des vérifications de service parfaites, deux requêtes peuvent frapper le serveur à la même milliseconde. Si un utilisateur tente de créer deux requêtes avec le même identifiant unique, la couche service pourrait considérer les deux comme 'valides' car aucune n'existe encore en base. C'est pourquoi les contraintes d'unicité en base de données sont obligatoires. Elles servent de filet de sécurité final contre les conditions de concurrence.
+Une implémentation vulnérable lit la dernière place puis insère une réservation : deux requêtes passent la même lecture. Réservez plutôt les places par un UPDATE conditionnel dans la même transaction que l’insertion :
 
-## Exemple Concret : Demande d'Achat
-
-```java
-public class PurchaseRequest {
-    @NotBlank // Vérifie que ce n'est ni null ni vide
-    private String itemCode;
-
-    @NotNull // Vérifie que le champ existe
-    @Min(1)   // Vérifie que le nombre est positif
-    private Integer quantity;
-}
-
-// Logique de la Couche Service
-public void processRequest(PurchaseRequest req) {
-    if (budgetService.isExceeded(req.getUserId())) {
-        throw new BudgetExceededException("Budget insuffisant");
-    }
-    repository.save(req);
-}
+```sql
+UPDATE workshop
+SET available_seats = available_seats - :requested
+WHERE id = :workshop_id
+  AND is_open = TRUE
+  AND available_seats >= :requested;
 ```
 
-**Résultat :** Une requête avec un `itemCode` nul est rejetée immédiatement par l'API (400 Bad Request). Une requête pour 100 ordinateurs par un utilisateur avec 0€ de budget est rejetée par le Service (422 Unprocessable Entity).
+Exigez une ligne modifiée ; zéro signifie atelier absent, fermé ou capacité insuffisante, à classifier selon le contrat. Insérez ensuite la réservation avec requestedSeats et une contrainte unique sur (workshop_id, normalized_contact_email). Tout échec d’insertion doit annuler la transaction entière et restaurer les places. CHECK available_seats >= 0 ajoute une protection mais ne remplace pas la mise à jour du compteur.
 
-## Erreur Courante : Trop compter sur @Valid
-Certains développeurs pensent que `@Valid` remplace toutes les vérifications. Pourtant, `@Valid` ne peut pas interroger la base de données ni vérifier des règles métier complexes.
-**Correction :** Utilisez `@Valid` pour la syntaxe et une méthode de Service pour l'état et l'éligibilité.
+Ne traduisez pas toutes les DataIntegrityViolationException en doublon. Identifiez la contrainte connue à une frontière transactionnelle adaptée. save peut différer le SQL jusqu’au flush ou commit ; son seul try/catch peut donc manquer l’erreur. Dans PostgreSQL, une instruction échouée peut imposer un rollback. Testez deux utilisateurs visant la dernière place et le même utilisateur se réinscrivant.
+## Exercice Ciblé
 
-## Exercice Pratique
-À quelle couche doit-on vérifier si un `username` existe déjà en base de données : le Contrôleur (via `@Valid`) ou la couche Service ?
+**Scénario** : Vous créez un système où un utilisateur peut rejoindre un "Groupe Premium".
+- Le `groupCode` ne doit pas être vide.
+- L'utilisateur doit avoir au moins 18 ans (Vérification métier).
+- Un utilisateur ne peut être que dans un seul Groupe Premium à la fois (Invariant DB).
 
-**Réponse :** La couche Service (et finalement la contrainte d'unicité de la DB), car cela nécessite une lecture en base, ce qui est une règle métier et non une validation de format.
+**Question** : Quel outil/couche de validation utilisez-vous pour chaque exigence, et pourquoi ?
 
+**Réponse** :
+1. `groupCode` : `@NotBlank` dans le DTO de requête (Validation d'Entrée). C'est un simple contrôle de forme.
+2. Âge ≥ 18 : Logique de service vérifiant l'entité User (Éligibilité Métier). Cela nécessite l'accès aux données du profil.
+3. Un seul groupe : Contrainte unique sur `user_id` dans la table `group_members` (Invariant DB). Cela empêche une condition de concurrence si l'utilisateur clique deux fois rapidement sur "Rejoindre".
 
 ## Pour approfondir
 

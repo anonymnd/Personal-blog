@@ -1,45 +1,66 @@
 ---
-title: "Qu'est-ce qu'un index de base de données ?"
-description: "Un guide simple pour comprendre comment les index accélèrent la récupération des données et les compromis associés."
-pubDate: 2026-10-12T16:48:00.000Z
+title: "Conception et Lecture d'Index B-Tree pour Requêtes Réelles"
+description: "Analyse approfondie des mécanismes B-Tree, de l'ordre des colonnes composites et de la sélectivité pour l'optimisation de logs d'audit."
+pubDate: 2026-10-07T23:48:00.000Z
 translationKey: 145-what-is-a-database-index
+seriesOrder: 32
 locale: fr
-tags: ["software-engineering","persistence","learning-series"]
+tags: ["persistence","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Mécanisme B-Tree
 
-Imaginez que vous cherchiez une demande d'achat spécifique dans une archive physique de 10 000 dossiers. Sans guide, vous devez vérifier chaque dossier un par un—c'est ce que les bases de données appellent un 'Full Table Scan'. C'est lent et inefficace. Un index de base de données est comme l'index alphabétique à la fin d'un livre ; il indique à la base de données exactement où se trouvent les données pour qu'elle puisse y accéder directement.
+Un index B-Tree n'est pas un simple arbre binaire. C'est une structure équilibrée multi-voies conçue pour minimiser les entrées/sorties (I/O) disque. Au lieu de deux enfants par nœud, un nœud B-Tree contient plusieurs clés et pointeurs, permettant à la base de données de naviguer parmi des millions de lignes en très peu d'étapes.
 
-## Fonctionnement du mécanisme
-Un index est une structure de données distincte (généralement un B-Tree) qui stocke les valeurs d'une colonne spécifique et un pointeur vers la ligne réelle dans la table. Au lieu de parcourir toute la table, la base de données recherche dans l'index, qui est trié, lui permettant de trouver l'emplacement des données en une fraction du temps. Si cela accélère la lecture, cela ralentit légèrement l'écriture (INSERT, UPDATE, DELETE) car l'index doit aussi être mis à jour.
+Lors d'une recherche, le moteur part de la racine, compare la valeur cible aux clés du nœud et suit le pointeur vers la page enfant appropriée. Cela continue jusqu'à atteindre un nœud feuille, qui contient le pointeur vers la ligne réelle dans la table (le heap).
 
-## Exemple concret : Application d'achats
-Considérons une table `procurement_requests` avec les colonnes `id`, `requester_name` et `status`. Si vous exécutez souvent cette requête :
+## Sélectivité et Décision de Scan
 
-```sql
-SELECT * FROM procurement_requests WHERE requester_name = 'Alice';
-```
+Pour une requête, la sélectivité concerne la fraction estimée de lignes correspondant au prédicat ; le nombre de valeurs distinctes aide à l’estimer. Si presque toutes les lignes correspondent, un scan séquentiel peut coûter moins que de nombreux accès au heap. Si peu correspondent, un index peut aider. Aucun pourcentage n’impose un plan : taille, organisation, statistiques, cache et colonnes sélectionnées comptent aussi.
+## Index Composites : Le Problème de l'Ordre
 
-Sans index, PostgreSQL scanne chaque ligne. En créant un index :
+Dans un index composite (index sur plusieurs colonnes), l'ordre des colonnes est crucial. L'index est trié lexicographiquement. Si vous avez un index sur `(tenant_id, created_at)`, les données sont triées d'abord par tenant, puis par date à l'intérieur de chaque tenant.
 
-```sql
-CREATE INDEX idx_requester_name ON procurement_requests(requester_name);
-```
+Scénario : Un log d'audit où nous devons trouver les logs d'un tenant spécifique, filtrés par plage horaire, et triés du plus récent au plus ancien.
 
-La base de données crée une liste triée des noms. En cherchant 'Alice', elle effectue une recherche rapide dans l'index, trouve le pointeur et récupère la ligne instantanément.
+**Requête :**
+`SELECT * FROM audit_logs WHERE tenant_id = 'T1' AND created_at > '2023-01-01' ORDER BY created_at DESC;`
 
-## Erreur courante : Le sur-indexage
-Une erreur fréquente consiste à ajouter des index sur toutes les colonnes pour 'tout rendre rapide'. C'est contre-productif. Comme chaque index consomme de l'espace disque et ralentit les opérations d'écriture, trop d'index peuvent dégrader les performances de saisie de données de votre application.
+### Analyse des Options d'Indexation
 
-**Correction :** Indexez uniquement les colonnes fréquemment utilisées dans les clauses `WHERE`, les conditions de `JOIN` ou les instructions `ORDER BY`.
+1. **Index sur `(created_at)`** : Le moteur trouve la plage horaire, mais doit ensuite filtrer les logs de tous les tenants pour cette période. I/O élevé.
+2. **Index sur `(tenant_id)`** : Le moteur trouve tous les logs de 'T1', mais doit ensuite les trier par date en mémoire (filesort).
+3. **Index Composite sur `(tenant_id, created_at)`** : C'est le choix optimal. Le moteur saute directement à la section 'T1'. Comme les entrées pour 'T1' sont déjà triées par `created_at`, le moteur lit la plage et retourne les résultats sans étape de tri supplémentaire.
 
-## Exercice pratique
-Vous avez une table `orders` avec 1 million de lignes. Vous filtrez souvent par `order_date`. Quelle commande utiliseriez-vous pour optimiser cela, et quel est le compromis ?
+## Exemple Concret : Trace du Plan EXPLAIN
 
-**Réponse :** Utilisez `CREATE INDEX idx_order_date ON orders(order_date);`. Le compromis est une accélération des requêtes SELECT mais un léger ralentissement des INSERT et UPDATE pour la table `orders`.
+Supposons une table `audit_logs` avec 1 million de lignes.
+
+**Scénario A : Pas d'index ou index sur `(created_at)` uniquement**
+`EXPLAIN ANALYZE SELECT * FROM audit_logs WHERE tenant_id = 'T1' AND created_at > '2023-01-01' ORDER BY created_at DESC;`
+
+*   **Sortie :** `Seq Scan on audit_logs (cost=0.00..25000.00 rows=5000 width=120) -> Filter: (tenant_id = 'T1' AND created_at > '2023-01-01') -> Sort: created_at DESC`
+*   **Signification :** La DB a lu toute la table et a trié les résultats en RAM. C'est lent et gourmand en mémoire.
+
+**Scénario B : Index Composite sur `(tenant_id, created_at)`**
+`CREATE INDEX idx_tenant_time ON audit_logs (tenant_id, created_at);`
+`EXPLAIN ANALYZE SELECT * FROM audit_logs WHERE tenant_id = 'T1' AND created_at > '2023-01-01' ORDER BY created_at DESC;`
+
+*   **Sortie :** `Index Scan using idx_tenant_time on audit_logs (cost=0.42..800.00 rows=5000 width=120) -> Index Cond: (tenant_id = 'T1' AND created_at > '2023-01-01')`
+*   **Signification :** La DB a utilisé le B-Tree pour aller à 'T1', a scanné la plage triée et a évité l'opération de tri.
+
+## Coût d'Écriture et Compromis
+
+Les index ne sont pas gratuits. Chaque `INSERT`, `UPDATE` ou `DELETE` nécessite la mise à jour du B-Tree. Cela implique de trouver le nœud feuille correct et potentiellement de diviser des nœuds pour maintenir l'équilibre. Dans un log d'audit à fort volume d'écriture, trop d'index dégraderont les performances d'ingestion.
+
+## Exercice
+
+Avec (status, user_id), des égalités sur les deux colonnes permettent une recherche ciblée quel que soit l’ordre textuel des conditions WHERE. Le planificateur peut encore choisir autrement. Un prédicat user_id seul n’a pas l’égalité sur la colonne initiale et peut demander un scan plus large. PostgreSQL 18 peut aussi envisager un skip scan B-tree lorsque la colonne initiale a peu de valeurs distinctes. Vérifiez version et EXPLAIN plutôt que d’affirmer que l’index ne peut jamais aider.
+
+Les plans précédents sont schématiques, pas des benchmarks ni des sorties garanties. Un tri peut déborder sur disque et un index être parcouru à rebours. Des updates de colonnes non indexées peuvent parfois utiliser HOT dans PostgreSQL sans modifier chaque index. Mesurez bénéfice de lecture et coût d’écriture.
 
 ## Pour approfondir
 
 - [PostgreSQL indexes](https://www.postgresql.org/docs/current/indexes.html)
+- [PostgreSQL B-tree indexes](https://www.postgresql.org/docs/current/btree.html)

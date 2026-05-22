@@ -1,34 +1,68 @@
 ---
-title: "شنو هي الـ Database Normalization وعلاش خاصك تهتم بيها؟"
-description: "دليل للمبتدئين على كيفاش تنظم الجداول ديال قاعدة البيانات باش تحيد التكرار وتحافظ على صحة البيانات."
-pubDate: 2026-10-08T14:48:00.000Z
+title: "كيفاش تنورماليزي Database بلا ما تضيع المعنى ديال Business"
+description: "استعمال functional dependencies باش نحيدو anomalies ونحافظو على snapshots ديال الثمن في الفاكتورات."
+pubDate: 2026-10-06T23:48:00.000Z
 translationKey: 047-what-is-database-normalization-and-why-should-you-care
+seriesOrder: 8
 locale: ar
-tags: ["software-engineering","database-design","learning-series"]
+tags: ["database-design","learning-series"]
 draft: false
 ---
 
-تخيل راسك كتصاوب تطبيق ديال المشتريات (procurement app). عندك جدول واحد فيه كلشي: سمية اللي طلب، القسم ديالو، الحاجة اللي طلب، والإيميل ديال المدير. كل مرة شي واحد من قسم 'IT' كيطلب شي حاجة، كتكتب 'IT' والإيميل ديال المدير عاوتاني. إلا بدل المدير الإيميل ديالو، خاصك تبدل مئات السطور. هادشي هو اللي كنسميوه الـ data redundancy وهو مشكل كبير.
+## الخطر ديال التكرار (Redundancy)
 
-## كيفاش خدامة الـ Normalization
-الـ Normalization هي واحد الطريقة باش كنظمو الجداول ديالنا باش نقصو من تكرار المعلومات. الفكرة هي أننا كنقسمو الجداول الكبيرة والمعقدة لجداول صغيرة ومربوطة بيناتها. الهدف هو أن أي معلومة تكون مكتوبة في بلاصة وحدة فقط. هكا كنفاداو المشاكل ديال التحديث (update anomalies)، حيت ماشي ممكن تبدل معلومة في سطر وتنسى سطر آخر، وهادشي كيخلي البيانات تكون متناقضة.
+ملي كتكون عندنا table وحدة فيها بزاف ديال المعلومات اللي ما عندهاش علاقة مباشرة ببعضياتها، كيوقعو لينا مشاكل (anomalies). تخيل معايا table سميتها `RepairInvoice` فيها: `InvoiceID`, `CustomerID`, `CustomerPhone`, `PartID`, `SupplierName`, `SupplierPhone`, و `InvoicedPrice`.
 
-## من 1NF حتى لـ 3NF
-أغلب المطورين كيهدفوا يوصلوا لـ Third Normal Form (3NF). الـ 1NF كتقول بلي كل خانة خاص يكون فيها قيمة وحدة بسيطة (ماشي ليستة). الـ 2NF كتحيد الاعتماد الجزئي، يعني أي معلومة خاصها تكون تابعة للساروت (Primary Key) كامل. أما الـ 3NF، فهي كتحيد الاعتماد غير المباشر (transitive dependencies)، يعني معلومة ما خاصهاش تكون تابعة لمعلومة أخرى اللي هي ماشي ساروت.
+هنا، `CustomerPhone` كيعتمد غير على `CustomerID` (هادي سميتها functional dependency)، و `SupplierPhone` كيعتمد غير على `PartID`. حيت هاد المعلومات كيتعاودو في كل فاكتورة، كنطيحو في 3 ديال المشاكل:
 
-## مثال تطبيقي: طلبات الشراء
-بلاصة ما نديرو جدول واحد كبير، كنقسموه بحال هكا:
+1. **Update Anomaly**: إلا بدل الكليان نيميرو ديالو، خاصك تدور على كاع الفاكتورات القدام وتبدلهم. إلا نسيتي وحدة، غتولي عندك data متناقضة.
+2. **Insertion Anomaly**: ما تقدرش تزيد fournisseur جديد في السيستيم حتى تبيع شي قطعة ديالو في شي فاكتورة.
+3. **Deletion Anomaly**: إلا مسحتي الفاكتورة الوحيدة اللي فيها واحد القطعة، غتمسح معاها المعلومات ديال fournisseur كاملين.
 
-- **جدول المستخدمين (Users)**: `user_id` (PK), `username`, `dept_id` (FK)
-- **جدول الأقسام (Departments)**: `dept_id` (PK), `dept_name`, `manager_email`
-- **جدول الطلبات (Requests)**: `request_id` (PK), `user_id` (FK), `item_name`, `status`
+## الفرق بين الحالة الحالية (State) والتاريخ (History)
 
-دابا، إلا تبدل الإيميل ديال المدير، غتبدل سطر واحد فقط في جدول `Departments`. وجدول `Requests` ما غيقيسو والو حيت هو غير مرتبط بـ `user_id`.
+واحد الغلط كيديروه بزاف ديال الناس ملي كيبغيو ينورماليزيو هو كيمسحو معلومات كيبانو مكررين ولكن راهم snapshot تاريخي مهم.
 
-## غلط شائع: الـ Over-Normalization
-بزاف ديال المبتدئين كيديروا جدول لكل حاجة (مثلاً جدول خاص غير بـ 'Status' بحال 'Pending' أو 'Approved'). وخا هادشي تقنياً صحيح، ولكن كيخلي الاستعلامات (queries) تولي تقيلة بزاف حيت خاصك دير بزاف ديال الـ JOINs. الحل هو توازن بين الـ normalization والأداء ديال التطبيق.
+في المثال ديالنا، `InvoicedPrice` كيبان بحال إلا كيعتمد غير على `PartID`. ولكن الثمن كيتبدل مع الوقت. إلا حيدتي الثمن من `InvoiceLine` ودرتيه غير في table ديال `Parts` وبدلتي الثمن اليوم، غيتبدل حتى الثمن ديال فاكتورة تدارت هادي 3 سنين. هنا غتكون ضيعتي المعنى ديال business.
 
-## تمرين تطبيقي
-**الحالة**: عندك جدول `Orders(OrderID, CustomerName, CustomerAddress, ProductID, ProductPrice)`. أما قاعدة تخرقت إلا كانت `CustomerAddress` تابعة لـ `CustomerName` وماشي لـ `OrderID`؟
+- **Données Dynamiques**: نيميرو ديال الكليان (شنو كاين دابا).
+- **Données Snapshot**: الثمن باش تباعت القطعة في ديك اللحظة (حقيقة تاريخية).
 
-**الجواب**: هنا تخرقات القاعدة ديال 3NF (transitive dependency). خاصك تخرج معلومات الزبون لجدول `Customers` بوحدو.
+## الحل التطبيقي: Plan ديال Normalization
+
+باش نحيدو anomalies ونخليو الثمن التاريخي، كنقسمو table على حساب functional dependencies.
+
+### 1. تحديد التبعيات (Dependencies)
+- `InvoiceID` → `CustomerID`, `InvoiceDate`
+- `CustomerID` → `CustomerPhone`
+- `PartID` → `SupplierID`, `PartName`
+- `SupplierID` → `SupplierName`, `SupplierPhone`
+- `(InvoiceID, PartID)` → `InvoicedPrice` (الثمن مرتبط بالعملية ماشي غير بالقطعة).
+
+### 2. السكيما الجديدة (Logical Model)
+
+- **Customers**: (`CustomerID` [PK], `CustomerPhone`)
+- **Suppliers**: (`SupplierID` [PK], `SupplierName`, `SupplierPhone`)
+- **Parts**: (`PartID` [PK], `PartName`, `SupplierID` [FK])
+- **Invoices**: (`InvoiceID` [PK], `CustomerID` [FK], `InvoiceDate`)
+- **InvoiceLines**: (`InvoiceID` [FK], `PartID` [FK], `InvoicedPrice`) → PK مخلطة (`InvoiceID`, `PartID`)
+
+### 3. تحليل النتيجة
+دابا المشاكل تحلو:
+- **Update**: بدل نيميرو الكليان في بلاصة وحدة في table `Customers` وكلشي غيتحين.
+- **Insertion**: زيد fournisseur جديد بلا ما تحتاج تكون عندك فاكتورة.
+- **Deletion**: مسح فاكتورة بلا ما تضيع معلومات fournisseur.
+- **Integrity**: `InvoicedPrice` بقى في `InvoiceLines` باش التاريخ يبقى صحيح وخا يتبدل الثمن في الكاتالوغ.
+
+## تمرين
+
+**Scenario**: عندك table سميتها `ProjectAssignment` فيها: `ProjectID`, `ProjectName`, `EmployeeID`, `EmployeeName`, `Role`, و `HourlyRate`. هاد `HourlyRate` كيتفاوض عليه على حساب كل project، ماشي هو الصالير العام ديال الموظف.
+
+**المطلوب**: حدد functional dependencies وقول لينا شنو هما الحقول اللي خاصهم يبقاو في join entity باش ما نضيعوش المعنى ديال business.
+
+**الجواب**:
+- التبعيات: `ProjectID` → `ProjectName` و `EmployeeID` → `EmployeeName`.
+- الـ `Role` و `HourlyRate` كيعتمدو على الزوج `(ProjectID, EmployeeID)`.
+- باش نحافظو على المعنى، `HourlyRate` خاصو يبقى في join entity ديال `ProjectAssignment` حيت هو snapshot ديال الاتفاق على داك المشروع بالضبط، ماشي معلومة عامة على الموظف.
+
+Key ديال InvoiceLine كتفترض كل part تظهر مرة وحدة فالفاتورة؛ إلا نفس part تقدر تجي فـ lines بثمن مختلف، استعمل identifiant ديال line. تخزين InvoicedPrice كيحافظ على المعنى بلا اعتماد على الثمن الحالي، ولكن row ما كتوليش immutable تقنيا بوحدها. منع تبديل التاريخ بلا حق خاصو checks بوحدو.

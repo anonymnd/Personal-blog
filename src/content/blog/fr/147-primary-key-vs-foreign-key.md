@@ -1,47 +1,80 @@
 ---
-title: "Primary Key vs Foreign Key"
-description: "Comprendre la différence fondamentale entre l'identification unique et la liaison relationnelle dans la conception de bases de données."
-pubDate: 2026-10-12T18:48:00.000Z
+title: "Clés Primaires, Clés Étrangères et Contraintes d'Unicité : Protéger des Faits Différents"
+description: "Distinction entre l'identité d'une ligne, l'intégrité référentielle et les clés candidates dans PostgreSQL et JPA."
+pubDate: 2026-10-08T00:48:00.000Z
 translationKey: 147-primary-key-vs-foreign-key
+seriesOrder: 33
 locale: fr
-tags: ["software-engineering","persistence","learning-series"]
+tags: ["persistence","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Distinction entre Identité et Unicité
 
-Imaginez que vous développiez une application d'achats. Vous avez une table pour les `Requests` (demandes) et une table pour les `Users` (utilisateurs). Si vous n'utilisez que les noms, vous aurez des problèmes dès que deux employés nommés 'Ahmed' rejoindront l'entreprise. Vous ne pourrez pas savoir qui a soumis quelle demande. C'est là que la distinction entre Primary Key (PK) et Foreign Key (FK) devient cruciale.
+En conception de base de données, on confond souvent la Clé Primaire (PK) avec une Contrainte d'Unicité (Unique Constraint). Bien que les deux imposent l'unicité, elles protègent des faits logiques différents. Une Clé Primaire définit l'identité immuable d'une ligne. Une Contrainte d'Unicité protège une "clé candidate"—une règle métier stipulant qu'une combinaison spécifique de données ne doit pas être dupliquée.
 
-## La Primary Key : L'identifiant unique
-Une Primary Key (Clé Primaire) est une colonne (ou un ensemble de colonnes) qui identifie de manière unique chaque ligne d'une table. Dans PostgreSQL, il s'agit souvent d'une colonne `id` utilisant `SERIAL` ou `UUID`. Une PK doit être unique et ne peut pas contenir de valeurs NULL. Elle garantit que chaque enregistrement est distinct, agissant comme une empreinte numérique.
+Prenons l'exemple d'un système de vols. Un vol n'est pas identifié uniquement par son numéro, car ce numéro est réutilisé quotidiennement. Le fait métier est que pour un transporteur donné, à une date précise, il n'existe qu'un seul vol avec un numéro spécifique. Cependant, utiliser ces trois colonnes comme PK composite rendrait les références de clés étrangères lourdes et fragiles. On utilise donc une PK surrogate (UUID ou BigInt) pour l'identité et une contrainte d'unicité pour la règle métier.
 
-## La Foreign Key : Le pont relationnel
-Une Foreign Key (Clé Étrangère) est une colonne dans une table qui fait référence à la Primary Key d'une autre table. Elle crée un lien entre les deux. Alors qu'une PK identifie un enregistrement, une FK établit une relation. Par exemple, la table `Requests` n'a pas besoin de stocker le nom complet de l'utilisateur ; elle a seulement besoin du `user_id` (la FK) qui pointe vers la PK de la table `Users`.
+## Intégrité Référentielle et Clé Étrangère
 
-## Exemple concret : Flux d'achats
-Considérons ces deux définitions de table simplifiées :
+Une Clé Étrangère (FK) ne sert pas à identifier une ligne, mais à garantir une relation. Elle assure qu'un enregistrement enfant (comme un Billet) ne peut pas pointer vers un parent inexistant (un Vol).
 
-```sql
-CREATE TABLE users (
-    user_id INT PRIMARY KEY,
-    username VARCHAR(50)
-);
+Point crucial : dans PostgreSQL, la création d'une contrainte de Clé Étrangère ne crée pas automatiquement d'index sur la colonne référente. Si la PK du parent est indexée, la FK de l'enfant ne l'est pas. Cela signifie que si l'insertion d'un billet est rapide, la suppression d'un vol ou la recherche de billets pour un vol spécifique déclenchera un scan complet de la table (Sequential Scan) à moins d'ajouter manuellement un index sur la colonne FK.
 
-CREATE TABLE requests (
-    request_id INT PRIMARY KEY,
-    item_name VARCHAR(100),
-    requester_id INT REFERENCES users(user_id)
-);
+## Exemple concret : Schéma Vol et Billet
+
+Voici l'implémentation utilisant Jakarta Persistence (JPA) et la logique PostgreSQL. Nous séparons l'identité technique de l'unicité métier.
+
+```java
+@Entity
+public class Flight {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Clé Primaire : Identité de la ligne
+
+    private String carrier;
+    private String flightNumber;
+    private LocalDate departureDate;
+
+    // Règle métier : Pas deux vols pour le même transporteur/numéro/date
+    // Défini via @Table(uniqueConstraints = ...) ou DDL SQL
+}
+
+@Entity
+public class Ticket {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Identité propre du billet
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "flight_id", nullable = false)
+    private Flight flight; // Clé Étrangère : Intégrité référentielle
+
+    private String passengerName;
+    
+    @Column(unique = true)
+    private String ticketNumber; // Contrainte d'Unicité : Clé candidate
+}
 ```
-Si l'utilisateur 101 (Ahmed) demande un 'Ordinateur', la table `requests` aura une ligne où `request_id` est 5001 et `requester_id` est 101. La base de données empêche l'ajout d'une demande pour un `requester_id` 999 si cet utilisateur n'existe pas dans la table `users`.
 
-## Erreur courante : Confusion sur l'unicité
-Une erreur fréquente consiste à penser qu'une Foreign Key doit être unique. C'est faux. Dans une relation un-à-plusieurs (un utilisateur, plusieurs demandes), le `requester_id` dans la table `requests` se répétera souvent. Seule la Primary Key de sa propre table doit être unique.
+### Trace de la base de données et conséquences
 
-## Exercice pratique
-Scénario : Vous avez une table `Products` et une table `Orders`. Quelle colonne doit être la Foreign Key dans la table `Orders` pour la lier à un produit spécifique ?
+1. **Insertion Vol** : `INSERT INTO flight (carrier, flight_number, departure_date) VALUES ('LH', '400', '2023-12-01');` → Succès. PK `1` attribuée.
+2. **Vol Dupliqué** : `INSERT INTO flight (carrier, flight_number, departure_date) VALUES ('LH', '400', '2023-12-01');` → **ÉCHEC** : Violation de contrainte d'unicité. Le fait métier est protégé.
+3. **Insertion Billet** : `INSERT INTO ticket (flight_id, passenger_name) VALUES (1, 'Alice');` → Succès. La FK vérifie si le Vol `1` existe.
+4. **Billet Orphelin** : `INSERT INTO ticket (flight_id, passenger_name) VALUES (999, 'Bob');` → **ÉCHEC** : Violation de clé étrangère. L'intégrité référentielle est protégée.
+5. **Performance Requête** : `SELECT * FROM ticket WHERE flight_id = 1;` → **LENT**. PostgreSQL effectue un Sequential Scan car la FK `flight_id` n'est pas indexée par défaut.
 
-**Réponse :** La colonne `product_id` dans la table `Orders` doit être la Foreign Key référençant la Primary Key `product_id` de la table `Products`.
+## Nullabilité et Contraintes d'Unicité
+
+Une clé primaire combine unicité et NOT NULL ; l’application conserve normalement son identité stable, mais déclarer une PK ne rend pas les updates impossibles. Une contrainte unique peut autoriser null. PostgreSQL considère par défaut les nulls comme distincts pour l’unicité ; NULL = NULL et NULL <> NULL donnent tous deux unknown, pas true. NULLS NOT DISTINCT propose une autre politique explicite. Combinez UNIQUE et NOT NULL si l’identifiant métier doit exister.
+## Exercice
+
+Un numéro de siège n’est pas unique globalement : il ne peut identifier seul un ticket. Un ID de ticket surrogate est utile ; une clé composite reste valide si ses compromis conviennent. Imposez UNIQUE(flight_id, seat_number) et exigez les deux valeurs si chaque siège attribué doit être connu.
+
+PostgreSQL crée un index unique B-tree. Il convient aux recherches flight_id plus seat_number, sans garantir une recherche rapide sur seat_number seul. Ordre, version et planificateur comptent. Une FK ne crée pas automatiquement d’index côté enfant, mais un index existant peut la couvrir ; un scan de petite table n’est pas forcément lent.
+
+Pour la trace de vol en doublon, installez réellement la contrainte et les colonnes métier NOT NULL par migration. Un commentaire Java ne protège rien. L’unicité transporteur/numéro/date est une hypothèse simplifiée : vérifiez si le domaine autorise plusieurs tronçons ou départs le même jour.
 
 ## Pour approfondir
 

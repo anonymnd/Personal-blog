@@ -1,58 +1,49 @@
 ---
-title: "فين خاص تدار الـ Validation فـ Backend Application؟"
-description: "دليل باش تفرق بين الـ validation ديال الشكل ديال الداتا، وقواعد البيزنس، والـ constraints ديال قاعدة البيانات."
-pubDate: 2026-10-10T08:48:00.000Z
+title: "التحقق من المدخلات، الأهلية ديال البيزنس، وضمانات قاعدة البيانات"
+description: "شرح مفصل لثلاث ديال الطبقات ديال validation باستعمال مثال ديال التسجيل فـ workshop باش نتفاداو الداتا الغالطة و المشاكل ديال concurrency."
+pubDate: 2026-10-07T10:48:00.000Z
 translationKey: 089-where-should-validation-happen-in-a-backend-application
+seriesOrder: 19
 locale: ar
-tags: ["software-engineering","validation-errors","learning-series"]
+tags: ["validation-errors","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## الطبقات الثلاث ديال Validation
 
-تخيل كتصاوب تطبيق ديال الشراء (procurement app). واحد الموظف صيفط طلب باش يشري 100 بيسي. هاد الطلب كيوصل على شكل JSON. إلا كان الحقل ديال `quantity` ما كاينش أو صيفطوه كـ string بلاصت number، السيستيم غادي يتبلوكا. وإلا كانت الكمية -5، هادشي منطقياً غلط. وإلا كان هاد الموظف سالا الميزانية السنوية ديالو، الطلب ما مقبولش. كل مشكل من هادو خاصو يتعالج فبلاصة مختلفة.
+Input validation كتشوف الشكل: @NotNull كترفض null، @NotBlank كترفض null ولا string ما فيها حتى حرف ماشي whitespace، و@Positive كتطلب رقم موجب؛ زيد @NotNull إلا wrapper يقدر يكون null. @Valid كتدير cascade ملي mechanism ديال validation كيخدم؛ annotation فوق أي method ما كتفعلوش بوحدها.
 
-## Validation ديال شكل الداتا (Input Shape)
-أول خط دفاع هو الـ API layer. هنا كنأكدو واش الداتا 'شكلها' صحيح. فـ Java كنخدمو بـ Jakarta Bean Validation بحال `@NotNull` أو `@NotBlank`. خاصك تعرف بلي `@NotNull` كتشوف غير واش الحقل خاوي (null)، ولكن ما كترفضش string خاوية. داكشي علاش `@NotBlank` هي اللي ضرورية للـ strings. ملي كتخدم بـ `@Valid` فـ controller، هي اللي كتكلف تبدا الـ validation ديال كاع الحقول قبل ما يدخل الكود لـ service.
+Business eligibility كتشوف واش workshop محلولة وواش user مسموح ليه يسجل. Invariants ديال DB كيحميو الحالة المحفوظة مع requests متزامنين. Unique constraint كتمنع duplication ولكن ما كتضمنش seats بوحدها. Constraints ولا atomic conditional update ولا locks ولا serializable transactions كيعالجو races محددين؛ خاص transaction كاملة.
+## مثال تطبيقي: التسجيل فـ Workshop
 
-## Validation ديال قواعد البيزنس (Business Eligibility)
-ملي كيكون شكل الداتا صحيح، خاصنا نشوفو واش هاد العملية مسموح بها. هادشي كيكون فـ Service Layer. فالتطبيق ديالنا، الـ service كيشوف واش الموظف باقي عندو ميزانية. هنا المشكل ماشي فـ 'الشكل'—حيت 100 راه رقم صحيح—ولكن المشكل فـ 'القاعدة'. هاد الأخطاء خاصها تلوح (throw) exceptions ديال domain باش الـ API يرجع ميساج مفهوم للكليان بلا ما يبين ليه الـ stack trace ديال الكود.
+Request فيها contactEmail وrequestedSeats موجب وworkshopId. دير validation فـ HTTP boundary بـ @Valid وحدد واش email خاصها @Email وnormalization واضحة. @NotBlank بوحدها ما كتأكدش صيغة email.
 
-## Constraints ديال Database والـ Concurrency
-وخا يكون الـ service ناضي، يقدروا يوصلوا جوج طلبات فـ نفس الميلي-ثانية. إلا حاول شي واحد يصاوب جوج طلبات بنفس الـ ID، الـ service يقدر يشوفهم بجوج 'صحيحين' حيت مزال ما تسجلوش فـ DB. هنا فين كينفعو الـ unique constraints ديال database. هما اللي كيبقاو آخر ضمانة ضد الـ race conditions.
+Implementation ضعيفة كتقرا آخر seat ومن بعد كتدخل booking؛ جوج requests يقدرو يدوزو من نفس القراءة. عوض هادشي reserve seats بـ UPDATE conditional داخل نفس transaction ديال إدخال booking:
 
-## مثال تطبيقي: طلب شراء
-
-```java
-public class PurchaseRequest {
-    @NotBlank // باش ما يكونش null وما يكونش خاوي
-    private String itemCode;
-
-    @NotNull // باش يكون الحقل موجود
-    @Min(1)   // باش يكون الرقم موجب
-    private Integer quantity;
-}
-
-// Logic ديال Service Layer
-public void processRequest(PurchaseRequest req) {
-    if (budgetService.isExceeded(req.getUserId())) {
-        throw new BudgetExceededException("الميزانية سالات");
-    }
-    repository.save(req);
-}
+```sql
+UPDATE workshop
+SET available_seats = available_seats - :requested
+WHERE id = :workshop_id
+  AND is_open = TRUE
+  AND available_seats >= :requested;
 ```
 
-**النتيجة:** طلب فيه `itemCode` خاوي كيرجع rejected من الـ API (400 Bad Request). طلب ديال 100 بيسي لموظف ما عندوش ميزانية كيرجع rejected من الـ Service (422 Unprocessable Entity).
+خاص row وحدة تتبدل؛ صفر تقدر تعني workshop ما كايناش ولا مسدودة ولا seats ناقصين، صنفها حسب contract. من بعد دخل booking مع requestedSeats وunique constraint على (workshop_id, normalized_contact_email). إلا فشل insert، rollback transaction كاملة باش ترجع seats. CHECK available_seats >= 0 حماية إضافية، ما كتعوضش تعديل counter.
 
-## غلط شائع: الاعتماد الكلي على @Valid
-بزاف ديال المطورين كيسحاب ليهم `@Valid` كتعوض كلشي. ولكن `@Valid` ما تقدرش تشوف فـ database أو تطبق قواعد بيزنس معقدة.
-**التصحيح:** خدم بـ `@Valid` للشكل (syntax) وخدم بـ Service method للحالة (state) والأهلية.
-
+ما تعتبرش كاع DataIntegrityViolationException duplication. شوف constraint المعروفة فـ transaction boundary مناسبة. save تقدر تأخر SQL حتى flush ولا commit، وtry/catch حول save بوحدها ما يشدش الخطأ. فـ PostgreSQL، statement فاشلة تقدر تحتاج rollback. جرب جوج users على آخر seat ونفس user كيسجل جوج مرات.
 ## تمرين تطبيقي
-فـ أي layer خاصنا نتأكدو واش `username` كاين ديجا فـ database: فـ Controller (بـ `@Valid`) أو فـ Service layer؟
 
-**الجواب:** فـ Service layer (وفـ الأخير unique constraint فـ DB)، حيت خاصنا نقلبو فـ database، وهذا كيتسمى business rule ماشي validation ديال الشكل.
+**السيناريو**: بغيتي تصاوب سيستيم فين المستخدم يقدر ينضم لـ "Premium Group".
+- الـ `groupCode` خاصو ما يكونش خاوي.
+- المستخدم خاص يكون عندو 18 عام لفوق (Business check).
+- المستخدم يقدر يكون فـ مجموعة Premium وحدة فقط فـ المرة (Database invariant).
 
+**السؤال**: كل شرط من هادو، فين غادي دير ليه الـ validation وعلاش؟
+
+**الجواب**:
+1. `groupCode`: ندير ليه `@NotBlank` فـ الـ Request DTO (Input Validation). حيت مجرد تحقق من شكل الداتا.
+2. السن ≥ 18: نديرو فـ الـ Service layer من بعد ما نجيبو معلومات المستخدم (Business Eligibility). حيت خاصنا نشوفو الداتا ديال البروفايل.
+3. مجموعة وحدة: نديرو Unique constraint على `user_id` فـ جدول `group_members` (Database Invariant). باش نتفاداو race condition إلا كليكا المستخدم على "Join" جوج مرات دغيا فـ جوج tabs مختلفين.
 
 ## باش تزيد تفهم
 

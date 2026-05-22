@@ -1,47 +1,99 @@
 ---
-title: "Lazy Loading vs Eager Loading"
-description: "Apprenez à optimiser vos requêtes PostgreSQL avec JPA et Hibernate en choisissant la bonne stratégie de chargement."
-pubDate: 2026-10-12T14:48:00.000Z
+title: "Résoudre le problème des requêtes N+1 avec JPA"
+description: "Guide technique pour optimiser la récupération des données via des plans de récupération et des graphes d'entités."
+pubDate: 2026-10-07T22:48:00.000Z
 translationKey: 143-lazy-loading-vs-eager-loading
+seriesOrder: 31
 locale: fr
-tags: ["software-engineering","persistence","learning-series"]
+tags: ["persistence","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le mécanisme du N+1
 
-Imaginez que vous développez une application d'achats. Lorsqu'un manager ouvre une "Demande d'Achat" pour vérifier le montant total, l'application ralentit brusquement car elle charge chaque article, chaque commentaire et le profil complet du demandeur, alors que le manager n'a besoin que de l'en-tête de la demande. C'est le dilemme classique entre le chargement Lazy et Eager.
+Le problème N+1 survient lorsqu'une application exécute une requête pour récupérer une entité parente, puis N requêtes supplémentaires pour récupérer les entités liées pour chaque parent. Cela arrive généralement à cause du `FetchType.LAZY` (défaut pour `@OneToMany`) ou lorsque `FetchType.EAGER` (défaut pour `@ManyToOne`) déclenche des sélections individuelles lors d'une itération.
 
-## Le Mécanisme de Récupération
-Dans JPA, les stratégies de récupération déterminent quand les entités liées sont extraites de PostgreSQL. Le chargement Eager (`FetchType.EAGER`) indique à Hibernate de récupérer les données associées immédiatement via une jointure ou une requête séparée. Le chargement Lazy (`FetchType.LAZY`) crée un objet proxy ; les données réelles ne sont récupérées que lorsque vous appelez une méthode getter sur cette collection ou entité.
+Imaginons un système de tickets de support. Nous avons une entité `Ticket` et une entité `User` (le propriétaire). Si nous récupérons 10 tickets et accédons au propriétaire de chaque ticket dans une boucle, Hibernate peut exécuter 1 requête pour les tickets et 10 requêtes distinctes pour les utilisateurs.
 
-## Comportements par Défaut
-Il est essentiel de savoir que JPA a des règles par défaut. Les relations `@ManyToOne` et `@OneToOne` sont EAGER par défaut. À l'inverse, `@OneToMany` et `@ManyToMany` sont LAZY. Si vous avez une `PurchaseRequest` avec plusieurs `RequestItems`, Hibernate ne chargera pas les articles tant que vous ne le demanderez pas explicitement.
+## Exemple concret : Récupération de tickets
 
-## Exemple Concret : Flux d'Achats
-Considérons une entité `PurchaseRequest` et sa collection `RequestItem` :
+### Les Entités
 
 ```java
 @Entity
-public class PurchaseRequest {
-    @Id @GeneratedValue
+public class Ticket {
+    @Id
+    @GeneratedValue
     private Long id;
+    private String subject;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User owner;
     
-    // Par défaut c'est LAZY
-    @OneToMany(mappedBy = "request", fetch = FetchType.LAZY)
-    private List<RequestItem> items;
+    // Getters, Constructeur
+}
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue
+    private Long id;
+    private String username;
+    
+    // Getters, Constructeur
 }
 ```
 
-Si vous appelez `repository.findById(1L)`, Hibernate exécute une requête pour la demande. Si vous appelez ensuite `request.getItems().size()`, Hibernate déclenche une seconde requête pour récupérer les articles. Si vous passiez en `EAGER`, une seule requête avec une jointure récupérerait tout d'un coup.
+### Scénario A : L'échec N+1
 
-## Le Problème N+1 et Erreurs Courantes
-Une erreur fréquente consiste à tout passer en `EAGER` pour éviter la `LazyInitializationException`. Cela mène souvent au problème N+1 : charger 10 demandes (1 requête) puis déclencher 10 requêtes séparées pour les articles de chaque demande. La solution est de garder les relations en `LAZY` et d'utiliser un "JOIN FETCH" dans votre repository quand les données sont nécessaires.
+Lors de l'utilisation d'un `findAll()` standard ou d'un JPQL `SELECT t FROM Ticket t` :
 
-## Exercice Pratique
-**Scénario :** Vous avez une relation `@ManyToOne` entre `RequestItem` et `PurchaseRequest`. Par défaut, est-ce Eager ou Lazy ? Si vous voulez éviter de charger la demande complète à chaque fois que vous listez les articles, que devez-vous modifier ?
+1. `SELECT * FROM ticket;` → Retourne 10 lignes.
+2. Pour chaque ticket, le code appelle `ticket.getOwner().getUsername()`.
+3. Hibernate détecte que le proxy `User` n'est pas initialisé et déclenche : `SELECT * FROM user WHERE id = ?;` (Répété 10 fois).
 
-**Réponse :** C'est EAGER par défaut. Vous devez explicitement configurer `fetch = FetchType.LAZY` dans l'annotation `@ManyToOne`.
+**Total Requêtes : 11**
+
+### Scénario B : Le plan de récupération optimisé
+
+Pour résoudre cela, on déplace la stratégie de récupération du mapping d'entité (statique) vers la requête (dynamique) via un `JOIN FETCH`.
+
+```java
+public interface TicketRepository extends JpaRepository<Ticket, Long> {
+    @Query("SELECT t FROM Ticket t JOIN FETCH t.owner")
+    List<Ticket> findAllWithOwner();
+}
+```
+
+**Trace d'exécution :**
+1. `SELECT t.*, u.* FROM ticket t INNER JOIN user u ON t.owner_id = u.id;` → Retourne toutes les données en un seul jeu de résultats.
+
+**Total Requêtes : 1**
+
+## Pagination et multiplication des lignes
+
+Le `JOIN FETCH` résout le N+1, mais introduit un risque avec les collections `@OneToMany` (ex: `Ticket` → `Comment`). 
+
+Si vous récupérez une collection via un join, la base de données retourne un produit cartésien. Si un ticket a 5 commentaires, le résultat contient 5 lignes pour ce ticket. Si vous appliquez un `Pageable`, Hibernate ne peut pas limiter les lignes au niveau de la base de données sans tronquer la collection. Il récupère donc **toutes** les lignes en mémoire pour paginer en Java, ce qui peut causer une `OutOfMemoryError`.
+
+**Solution pour les collections :** Utiliser une récupération en deux étapes. Récupérer d'abord les IDs des parents avec pagination, puis récupérer les parents et leurs collections via une clause `IN` ou une configuration de taille de lot (batch size).
+
+## Comparaison Synthétique
+
+| Stratégie | Nb Requêtes | Impact Mémoire | Cas d'usage |
+| :--- | :--- | :--- | :--- |
+| Lazy Loading | 1 + N | Faible | Recherche d'entité unique |
+| Eager Mapping | 1 + N (souvent) | Élevé | Relations toujours requises |
+| Join Fetch | 1 | Moyen | Rapports/pages spécifiques |
+| Entity Graph | 1 | Moyen | Besoins de récupération dynamiques |
+
+## Exercice
+
+**Question :** Vous avez une entité `User` avec une relation `@OneToMany` vers `Order`. Vous devez afficher une liste paginée de 20 utilisateurs et leurs commandes. Pourquoi `@Query("SELECT u FROM User u JOIN FETCH u.orders")` avec un paramètre `Pageable` est-il dangereux, et quelle est la bonne approche ?
+
+**Réponse :** C'est dangereux car le join crée des doublons d'utilisateurs pour chaque commande, forçant Hibernate à paginer en mémoire (avertissement HHH000104). La bonne approche est de récupérer d'abord la liste paginée des IDs de `User`, puis d'exécuter une seconde requête avec `WHERE u.id IN :ids` et un `JOIN FETCH` pour récupérer les commandes de ces 20 utilisateurs.
+
+La trace de onze queries suppose dix propriétaires distincts non chargés et un contexte actif. Des propriétaires partagés ou déjà chargés réduisent le compte. EAGER exige la disponibilité, pas un JOIN précis ni N+1 universel. Un entity graph exprime un besoin sans garantir une seule query. Utilisez LEFT JOIN FETCH si les tickets sans propriétaire doivent rester. La pagination avec collection fetch peut avertir, paginer en mémoire ou échouer selon configuration ; préservez l’ordre dans les deux étapes et testez le SQL.
 
 ## Pour approfondir
 

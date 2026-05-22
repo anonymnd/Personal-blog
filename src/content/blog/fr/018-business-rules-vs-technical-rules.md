@@ -1,51 +1,51 @@
 ---
-title: "Règles Métier vs Règles Techniques"
-description: "Apprenez à séparer les politiques organisationnelles de haut niveau des contraintes d'implémentation technique de votre logiciel."
-pubDate: 2026-10-07T09:48:00.000Z
+title: "Classification des Besoins : Règles Métier, Contraintes et Qualité"
+description: "Apprenez à distinguer le comportement métier des contraintes techniques via le scénario d'un portail de rendez-vous médicaux."
+pubDate: 2026-10-06T19:48:00.000Z
 translationKey: 018-business-rules-vs-technical-rules
+seriesOrder: 4
 locale: fr
-tags: ["software-engineering","business-workflows","learning-series"]
+tags: ["business-workflows","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Piège de la Classification
 
-Imaginez que vous développiez une application d'achats. Votre responsable vous dit : « Seul un chef de département peut approuver des demandes de plus de 5 000 €. » Vous commencez immédiatement à écrire un bloc `if` dans votre contrôleur Java. Mais attendez : que se passe-t-il si l'entreprise change la limite à 7 000 € le mois prochain ? Si vous mélangez le « pourquoi » (politique métier) et le « comment » (contrainte technique), votre code devient rigide.
+Une erreur fréquente en génie logiciel consiste à qualifier toute « règle » de Besoin Non Fonctionnel (BNF). Si une règle définit le fonctionnement de l'entreprise—par exemple, « un patient ne peut pas prendre deux rendez-vous simultanément »—il s'agit d'une Règle Métier, et non d'une contrainte technique. Les règles métier dictent le *quoi* (comportement), tandis que les contraintes techniques et les exigences de qualité dictent le *comment* (performance, durabilité et environnement).
 
-## Définir les Règles Métier
-Les règles métier sont des politiques qui définissent le fonctionnement d'une entreprise, peu importe l'outil utilisé. Elles décrivent la logique du domaine. Dans notre application, une règle telle que « Un demandeur ne peut pas approuver sa propre demande » est une règle métier. C'est une politique de prévention de la fraude. Ces règles sont définies par les acteurs et les parties prenantes.
+## Règles Métier vs Contraintes Techniques
 
-## Définir les Règles Techniques
-Les règles techniques sont des contraintes imposées par la pile technologique ou l'architecture. Elles ne concernent pas l'objectif commercial, mais la stabilité du système. Par exemple, « La description de la demande doit être une chaîne UTF-8 de moins de 2000 caractères » ou « L'API doit répondre en moins de 200ms ». Ce sont des contraintes non fonctionnelles.
+**Les Règles Métier** sont des comportements observables. Elles sont souvent exprimées comme une logique devant être vraie pour qu'une transaction soit valide. On les teste via des cas de tests fonctionnels (Étant donné/Quand/Alors).
 
-## Exemple concret : Le flux d'approbation
-Considérons une entité de demande.
+**Les Contraintes Techniques** sont des limites non négociables. Cela inclut la pile technologique imposée, la conformité réglementaire (RGPD) ou les limitations matérielles. Elles sont vérifiées par des audits ou des contrôles d'environnement.
 
-**Règle Métier :** Une demande doit être approuvée par un Manager si le total est > 1 000 €.
-**Règle Technique :** Le champ `approvalDate` doit être stocké au format ISO-8601 dans la base de données.
+**Les Exigences de Qualité (BNF)** sont des attributs mesurables du fonctionnement du système. Des termes vagues comme « rapide » ou « sécurisé » sont inutiles ; ils doivent être traduits en métriques observables.
 
-```java
-// Extrait illustratif : Séparation de la logique
-public class ProcurementService {
-    public void processRequest(Request req, User user) {
-        // Règle Métier : Vérification d'autorisation
-        if (req.getAmount() > 1000 && !user.hasRole("MANAGER")) {
-            throw new UnauthorizedException("Approbation manager requise");
-        }
-        // Règle Technique : Validation
-        if (req.getDescription() == null) {
-            throw new ValidationException("La description est obligatoire");
-        }
-    }
-}
-```
+## Exemple Concret : Portail de Rendez-vous de Clinique
 
-## Erreur courante : Le codage en dur des politiques
-Une erreur fréquente est d'enfouir les règles métier dans des triggers de base de données ou dans la validation de l'interface utilisateur. Si vous placez la limite de « 1 000 € » uniquement dans le JavaScript du frontend, un utilisateur pourrait la contourner via l'API. Correction : Les règles métier doivent résider dans la couche Domaine, tandis que les règles techniques résident dans les couches Infrastructure ou Validation.
+Imaginons un portail où les patients réservent des créneaux avec des médecins. Nous devons traduire des demandes vagues en une matrice de besoins testables.
 
-## Exercice pratique
-Identifiez s'il s'agit d'une règle métier ou technique :
-1. « Le système doit supporter 500 utilisateurs simultanés. »
-2. « Un acheteur ne peut pas commander d'articles auprès d'un fournisseur blacklisté. »
+### Matrice de Traduction des Besoins
 
-**Réponse :** 1 est Technique (Performance) ; 2 est Métier (Politique d'achat).
+| Demande Client | Classification | Besoin Testable Affiné | Mesure d'Acceptation |
+| :--- | :--- | :--- | :--- |
+| "Pas de double réservation" | Règle Métier | Le système doit rejeter une réservation si l'entité Médecin a déjà un rendez-vous pour ce créneau. | Test : Tenter de réserver 10h00 pour le Dr X deux fois → la 2ème tentative échoue. |
+| "Doit être rapide" | Qualité (Perf) | Le résultat de la recherche de rendez-vous doit charger en moins de 2 secondes pour 50 utilisateurs concurrents. | Test de charge : 50 utilisateurs virtuels → 95ème percentile ≤ 2s. |
+| "Accès sécurisé" | Règle Métier (Auth) | Seuls les utilisateurs avec le rôle 'Patient' peuvent réserver ; seuls les 'Admin' peuvent annuler les rendez-vous d'autrui. | Test Auth : Patient tente d'annuler le créneau d'un Admin → 403 Forbidden. |
+| "Données sécurisées" | Qualité (Durabilité) | En cas de crash base de données, moins de 5 minutes de données de réservation peuvent être perdues. | Test récupération : Simuler crash → Vérifier RPO (Recovery Point Objective) ≤ 5 min. |
+| "Doit marcher sur tablette" | Contrainte Tech | Le frontend doit être compatible avec Chrome v110+ sur Android et iOS. | Test compatibilité : Vérification manuelle sur les versions OS/Navigateur cibles. |
+
+## Gestion des Cas d'Erreur (Unhappy Path)
+
+Les besoins doivent décrire les échecs par leurs résultats observables, sans imposer un mécanisme non justifié. Si deux patients demandent simultanément le même créneau, au plus une réservation doit réussir ; l’autre reçoit un résultat de conflit compréhensible. Une contrainte en base ou une stratégie de concurrence adaptée doit garantir cela ; un champ de version sur deux nouvelles lignes de rendez-vous indépendantes ne suffit pas.
+
+Si la clinique impose des règles d’éligibilité liées à l’assurance ou à la spécialité, faites-les préciser et confirmer. Le doctorId fourni par le client ne doit pas contourner les contrôles applicables. N’inventez pas de politique d’assurance en traduisant une demande vague.
+## Exercice
+
+**Scénario** : La clinique souhaite ajouter une « Politique d'Annulation » : *Les rendez-vous annulés moins de 24 heures avant le début sont facturés, sauf si le patient fournit un justificatif médical.*
+
+**Tâche** : Classifiez ce besoin et rédigez la mesure d'acceptation observable.
+
+**Réponse** :
+- **Classification** : Règle Métier (Logique Domaine).
+- **Mesure d'Acceptation** : Créer un test où un rendez-vous est prévu demain à 10h00. Tenter de l'annuler aujourd'hui à 11h00 (moins de 24h). Vérifier que l'entité `Frais` est créée et liée au compte `Patient`. Répéter le test en téléchargeant un document `JustificatifMedical` ; vérifier qu'aucun frais n'est généré.

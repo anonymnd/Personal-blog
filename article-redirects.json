@@ -1,0 +1,894 @@
+[
+  {
+    "from": "002-what-should-you-do-before-writing-the-first-line-of-code",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "003-why-knowing-java-and-spring-boot-is-not-enough-to-build-a-real-application",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "004-how-to-turn-an-application-idea-into-a-technical-plan",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "005-from-idea-to-features-how-software-engineers-break-down-an-application",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "006-why-starting-with-code-can-be-a-mistake",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "007-feature-first-development-vs-architecture-first-development",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "008-what-is-a-vertical-slice-in-software-development",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "009-how-to-know-what-feature-you-should-build-first",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "010-the-difference-between-coding-and-software-engineering",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "280-i-finally-understand-the-difference-between-learning-a-framework-and-engineering-software",
+    "to": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application"
+  },
+  {
+    "from": "014-how-to-find-the-main-workflow-of-a-software-system",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "015-how-to-convert-a-business-process-into-software-features",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "016-what-is-a-use-case-and-why-is-it-useful",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "017-how-to-write-use-cases-without-making-them-complicated",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "020-why-business-rules-should-come-before-database-tables",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "021-stop-thinking-in-pages-start-thinking-in-user-actions",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "022-how-user-actions-become-backend-features",
+    "to": "011-how-to-understand-a-business-workflow-before-designing-the-backend"
+  },
+  {
+    "from": "013-how-to-identify-the-actors-of-an-application",
+    "to": "012-actors-users-and-entities-what-s-the-difference"
+  },
+  {
+    "from": "019-functional-vs-non-functional-requirements",
+    "to": "018-business-rules-vs-technical-rules"
+  },
+  {
+    "from": "024-which-uml-diagram-should-you-use",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "025-use-case-diagrams-explained-simply",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "026-activity-diagrams-explained-with-real-workflows",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "027-sequence-diagrams-what-happens-after-the-user-clicks-a-button",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "028-class-diagrams-vs-database-diagrams",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "029-component-diagrams-explained-simply",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "030-deployment-diagrams-where-does-your-application-actually-run",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "031-do-you-really-need-uml-before-coding",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "032-the-uml-diagrams-that-are-actually-useful-for-developers",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "033-how-to-go-from-requirements-to-uml",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "034-how-to-go-from-a-workflow-to-a-sequence-diagram",
+    "to": "023-business-flow-diagram-vs-uml-diagram"
+  },
+  {
+    "from": "036-how-to-identify-entities-in-an-application",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "037-entity-vs-attribute-how-do-you-decide",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "038-how-to-find-relationships-between-database-entities",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "039-cardinality-explained-without-memorizing-1-n-and-n-m",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "040-how-business-rules-determine-database-relationships",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "041-how-to-design-an-mcd-from-a-business-workflow",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "042-mcd-vs-logical-data-model-vs-physical-database",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "043-how-to-convert-an-mcd-into-sql-tables",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "045-one-to-one-vs-one-to-many-vs-many-to-many",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "048-when-should-something-become-its-own-table",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "272-i-finally-understand-why-database-design-comes-before-coding-everything",
+    "to": "035-why-database-design-should-happen-before-building-too-many-features"
+  },
+  {
+    "from": "046-why-many-to-many-relationships-often-need-their-own-entity",
+    "to": "044-how-to-convert-a-database-model-into-jpa-entities"
+  },
+  {
+    "from": "138-onetomany-explained",
+    "to": "044-how-to-convert-a-database-model-into-jpa-entities"
+  },
+  {
+    "from": "139-manytoone-explained",
+    "to": "044-how-to-convert-a-database-model-into-jpa-entities"
+  },
+  {
+    "from": "140-manytomany-explained",
+    "to": "044-how-to-convert-a-database-model-into-jpa-entities"
+  },
+  {
+    "from": "057-entity-vs-dto-why-do-we-need-both",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "058-request-dto-vs-response-dto",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "059-why-returning-jpa-entities-directly-from-an-api-can-be-a-bad-idea",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "060-why-do-we-need-mapper-classes",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "061-java-records-for-dtos-when-they-make-sense",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "084-why-your-api-should-not-mirror-your-database",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "085-how-to-design-request-and-response-objects",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "265-i-finally-understand-why-we-use-dtos",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "266-i-finally-understand-why-we-need-mappers",
+    "to": "050-why-your-database-should-not-mirror-your-ui"
+  },
+  {
+    "from": "064-what-does-requestbody-actually-do",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "065-what-does-pathvariable-do",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "066-what-does-requestparam-do",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "067-how-spring-converts-json-into-java-objects",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "190-how-react-talks-to-a-spring-boot-backend",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "191-frontend-backend-and-database-are-three-separate-applications",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "193-what-happens-when-you-click-a-button-in-a-web-application",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "194-from-react-click-to-sql-query-the-full-request-journey",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "263-i-finally-understand-what-an-api-actually-is",
+    "to": "051-what-actually-happens-when-a-request-reaches-spring-boot"
+  },
+  {
+    "from": "053-why-shouldn-t-a-controller-talk-directly-to-the-database",
+    "to": "052-controller-service-and-repository-explained-simply"
+  },
+  {
+    "from": "054-how-layered-architecture-works-in-spring-boot",
+    "to": "052-controller-service-and-repository-explained-simply"
+  },
+  {
+    "from": "192-why-the-frontend-should-never-connect-directly-to-the-database",
+    "to": "052-controller-service-and-repository-explained-simply"
+  },
+  {
+    "from": "197-where-should-business-logic-live-frontend-or-backend",
+    "to": "052-controller-service-and-repository-explained-simply"
+  },
+  {
+    "from": "264-i-finally-understand-why-backends-have-controllers-services-and-repositories",
+    "to": "052-controller-service-and-repository-explained-simply"
+  },
+  {
+    "from": "056-what-is-inversion-of-control",
+    "to": "055-what-is-dependency-injection"
+  },
+  {
+    "from": "124-interfaces-explained-through-real-application-architecture",
+    "to": "055-what-is-dependency-injection"
+  },
+  {
+    "from": "125-why-interfaces-make-testing-easier",
+    "to": "055-what-is-dependency-injection"
+  },
+  {
+    "from": "063-what-happens-when-you-call-repository-save",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "068-what-generatedvalue-actually-does",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "069-what-happens-when-hibernate-saves-an-entity",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "133-jpa-vs-hibernate-vs-postgresql",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "134-how-a-java-object-becomes-a-database-row",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "135-what-is-an-orm",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "136-why-hibernate-generates-sql-for-you",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "137-how-to-read-hibernate-sql-logs",
+    "to": "062-what-does-jparepository-actually-do"
+  },
+  {
+    "from": "141-what-is-elementcollection",
+    "to": "070-why-hibernate-sometimes-creates-extra-tables"
+  },
+  {
+    "from": "142-why-elementcollection-creates-another-table",
+    "to": "070-why-hibernate-sometimes-creates-extra-tables"
+  },
+  {
+    "from": "072-how-do-you-know-which-endpoints-your-application-needs",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "073-crud-is-not-the-same-thing-as-business-logic",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "074-endpoints-should-represent-resources-not-buttons",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "075-how-to-name-rest-api-endpoints",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "083-how-to-design-a-clean-api-contract",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "086-how-many-endpoints-does-one-feature-really-need",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "087-nested-rest-resources-when-should-you-use-them",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "088-rest-api-design-mistakes-beginners-make",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "198-how-apis-separate-frontend-and-backend-teams",
+    "to": "071-how-to-turn-a-business-workflow-into-rest-endpoints"
+  },
+  {
+    "from": "077-put-vs-patch-what-s-the-real-difference",
+    "to": "076-get-post-put-patch-and-delete-explained-properly"
+  },
+  {
+    "from": "078-what-should-a-post-endpoint-return",
+    "to": "076-get-post-put-patch-and-delete-explained-properly"
+  },
+  {
+    "from": "079-what-should-an-update-endpoint-return",
+    "to": "076-get-post-put-patch-and-delete-explained-properly"
+  },
+  {
+    "from": "080-should-delete-return-200-or-204",
+    "to": "076-get-post-put-patch-and-delete-explained-properly"
+  },
+  {
+    "from": "081-http-200-vs-201-vs-204",
+    "to": "076-get-post-put-patch-and-delete-explained-properly"
+  },
+  {
+    "from": "098-when-should-an-api-return-400",
+    "to": "082-400-vs-401-vs-403-vs-404-vs-500"
+  },
+  {
+    "from": "099-when-should-an-api-return-404",
+    "to": "082-400-vs-401-vs-403-vs-404-vs-500"
+  },
+  {
+    "from": "100-why-every-error-should-not-become-http-500",
+    "to": "082-400-vs-401-vs-403-vs-404-vs-500"
+  },
+  {
+    "from": "208-401-vs-403",
+    "to": "082-400-vs-401-vs-403-vs-404-vs-500"
+  },
+  {
+    "from": "090-notblank-notnull-and-valid-explained",
+    "to": "089-where-should-validation-happen-in-a-backend-application"
+  },
+  {
+    "from": "091-input-validation-vs-business-validation",
+    "to": "089-where-should-validation-happen-in-a-backend-application"
+  },
+  {
+    "from": "092-database-constraints-vs-application-validation",
+    "to": "089-where-should-validation-happen-in-a-backend-application"
+  },
+  {
+    "from": "093-how-to-return-clean-validation-errors",
+    "to": "089-where-should-validation-happen-in-a-backend-application"
+  },
+  {
+    "from": "095-what-is-global-exception-handling-in-spring-boot",
+    "to": "094-why-you-should-create-custom-exceptions"
+  },
+  {
+    "from": "096-how-restcontrolleradvice-works",
+    "to": "094-why-you-should-create-custom-exceptions"
+  },
+  {
+    "from": "097-how-to-design-a-consistent-api-error-response",
+    "to": "094-why-you-should-create-custom-exceptions"
+  },
+  {
+    "from": "103-what-is-a-unit-test",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "113-unit-tests-vs-integration-tests",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "114-why-passing-unit-tests-does-not-mean-your-application-works",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "115-what-should-you-test-in-a-crud-feature",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "116-should-you-test-private-methods",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "118-testing-behavior-vs-testing-implementation",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "267-i-finally-understand-why-developers-write-tests",
+    "to": "101-why-should-you-test-the-service-layer"
+  },
+  {
+    "from": "104-what-is-a-mock",
+    "to": "102-junit-vs-mockito"
+  },
+  {
+    "from": "105-mock-vs-injectmocks",
+    "to": "102-junit-vs-mockito"
+  },
+  {
+    "from": "106-what-does-when-thenreturn-actually-mean",
+    "to": "102-junit-vs-mockito"
+  },
+  {
+    "from": "107-what-does-mockito-verify-actually-test",
+    "to": "102-junit-vs-mockito"
+  },
+  {
+    "from": "117-how-mocking-helps-you-isolate-bugs",
+    "to": "102-junit-vs-mockito"
+  },
+  {
+    "from": "268-i-finally-understand-mockito",
+    "to": "102-junit-vs-mockito"
+  },
+  {
+    "from": "109-how-to-test-a-create-method",
+    "to": "108-arrange-act-assert-explained"
+  },
+  {
+    "from": "110-how-to-test-an-update-method",
+    "to": "108-arrange-act-assert-explained"
+  },
+  {
+    "from": "111-how-to-test-a-delete-method",
+    "to": "108-arrange-act-assert-explained"
+  },
+  {
+    "from": "112-how-to-test-that-an-exception-is-thrown",
+    "to": "108-arrange-act-assert-explained"
+  },
+  {
+    "from": "120-why-java-packages-matter-more-than-you-think",
+    "to": "119-why-two-java-classes-with-the-same-name-can-be-different-types"
+  },
+  {
+    "from": "130-why-immutability-is-useful",
+    "to": "121-class-vs-record-in-java"
+  },
+  {
+    "from": "123-what-actually-happens-when-you-use-new-in-java",
+    "to": "122-object-vs-reference-in-java"
+  },
+  {
+    "from": "127-method-references-explained-simply",
+    "to": "126-streams-vs-loops-when-should-you-use-each"
+  },
+  {
+    "from": "132-design-patterns-when-should-you-actually-use-them",
+    "to": "131-the-observer-design-pattern-explained-simply"
+  },
+  {
+    "from": "144-what-is-the-n-1-query-problem",
+    "to": "143-lazy-loading-vs-eager-loading"
+  },
+  {
+    "from": "146-how-b-tree-indexes-work-in-simple-terms",
+    "to": "145-what-is-a-database-index"
+  },
+  {
+    "from": "148-unique-constraint-vs-primary-key",
+    "to": "147-primary-key-vs-foreign-key"
+  },
+  {
+    "from": "150-what-does-transactional-actually-do",
+    "to": "149-what-is-a-database-transaction"
+  },
+  {
+    "from": "152-why-hibernate-should-not-manage-your-production-schema",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "153-what-is-flyway",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "154-how-flyway-migration-files-work",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "155-what-do-v1-v2-and-v3-mean-in-flyway",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "156-how-database-schema-changes-reach-production",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "157-what-happens-when-a-migration-fails",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "158-ddl-auto-create-vs-update-vs-validate",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "159-why-ddl-auto-validate-is-useful",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "160-how-teams-keep-the-same-database-schema",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "271-i-finally-understand-what-a-database-migration-is",
+    "to": "151-why-do-we-need-database-migrations"
+  },
+  {
+    "from": "162-docker-image-vs-container",
+    "to": "161-why-developers-use-docker"
+  },
+  {
+    "from": "163-dockerfile-explained-line-by-line",
+    "to": "161-why-developers-use-docker"
+  },
+  {
+    "from": "174-docker-container-vs-virtual-machine",
+    "to": "161-why-developers-use-docker"
+  },
+  {
+    "from": "175-the-four-docker-concepts-you-actually-need-to-understand",
+    "to": "161-why-developers-use-docker"
+  },
+  {
+    "from": "269-i-finally-understand-what-docker-actually-solves",
+    "to": "161-why-developers-use-docker"
+  },
+  {
+    "from": "279-i-finally-understand-why-it-works-on-my-machine-is-a-real-engineering-problem",
+    "to": "161-why-developers-use-docker"
+  },
+  {
+    "from": "165-what-does-5332-5432-mean",
+    "to": "164-what-does-port-mapping-mean"
+  },
+  {
+    "from": "166-why-localhost-inside-a-container-is-different",
+    "to": "164-what-does-port-mapping-mean"
+  },
+  {
+    "from": "169-what-is-a-docker-network",
+    "to": "164-what-does-port-mapping-mean"
+  },
+  {
+    "from": "170-how-two-containers-communicate",
+    "to": "164-what-does-port-mapping-mean"
+  },
+  {
+    "from": "270-i-finally-understand-why-docker-creates-different-ports",
+    "to": "164-what-does-port-mapping-mean"
+  },
+  {
+    "from": "168-why-your-database-data-survives-container-restarts",
+    "to": "167-what-is-a-docker-volume"
+  },
+  {
+    "from": "172-docker-compose-explained-simply",
+    "to": "171-what-does-docker-exec-it-do"
+  },
+  {
+    "from": "173-how-to-run-backend-database-with-docker-compose",
+    "to": "171-what-does-docker-exec-it-do"
+  },
+  {
+    "from": "177-what-happens-when-you-run-mvn-test",
+    "to": "176-what-happens-when-you-run-mvn-clean"
+  },
+  {
+    "from": "178-what-happens-when-you-run-mvn-package",
+    "to": "176-what-happens-when-you-run-mvn-clean"
+  },
+  {
+    "from": "179-what-does-mvn-spring-boot-run-actually-do",
+    "to": "176-what-happens-when-you-run-mvn-clean"
+  },
+  {
+    "from": "180-what-is-the-target-folder",
+    "to": "176-what-happens-when-you-run-mvn-clean"
+  },
+  {
+    "from": "181-where-do-maven-test-reports-go",
+    "to": "176-what-happens-when-you-run-mvn-clean"
+  },
+  {
+    "from": "183-compile-error-vs-runtime-error-vs-test-failure",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "184-how-to-read-a-java-stack-trace",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "185-how-to-find-the-root-cause-of-an-error",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "186-why-the-error-is-sometimes-above-the-line-java-highlights",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "187-a-systematic-debugging-process-for-backend-applications",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "188-how-to-debug-instead-of-randomly-changing-code",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "189-why-learning-to-read-logs-is-a-superpower",
+    "to": "182-how-to-read-a-maven-error"
+  },
+  {
+    "from": "196-why-localhost-3000-and-localhost-8080-are-different-origins",
+    "to": "195-what-is-cors"
+  },
+  {
+    "from": "200-how-jwt-authentication-works",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "201-what-is-inside-a-jwt",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "202-why-jwt-is-called-stateless-authentication",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "203-what-happens-when-a-jwt-expires",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "204-how-spring-security-processes-a-request",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "205-what-is-a-security-filter",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "212-why-authentication-is-more-than-a-login-endpoint",
+    "to": "199-authentication-vs-authorization"
+  },
+  {
+    "from": "207-what-is-role-based-access-control",
+    "to": "206-roles-vs-permissions"
+  },
+  {
+    "from": "210-how-password-hashing-works",
+    "to": "209-why-passwords-should-never-be-stored-as-plain-text"
+  },
+  {
+    "from": "211-what-is-bcrypt",
+    "to": "209-why-passwords-should-never-be-stored-as-plain-text"
+  },
+  {
+    "from": "214-what-is-a-load-balancer",
+    "to": "213-why-run-multiple-instances-of-the-same-application"
+  },
+  {
+    "from": "215-l4-vs-l7-load-balancing",
+    "to": "213-why-run-multiple-instances-of-the-same-application"
+  },
+  {
+    "from": "216-round-robin-vs-least-connections",
+    "to": "213-why-run-multiple-instances-of-the-same-application"
+  },
+  {
+    "from": "277-i-finally-understand-why-one-application-can-have-multiple-instances",
+    "to": "213-why-run-multiple-instances-of-the-same-application"
+  },
+  {
+    "from": "278-i-finally-understand-what-a-load-balancer-does",
+    "to": "213-why-run-multiple-instances-of-the-same-application"
+  },
+  {
+    "from": "219-redis-explained-through-real-api-problems",
+    "to": "218-what-is-a-cache"
+  },
+  {
+    "from": "220-what-is-cache-aside",
+    "to": "218-what-is-a-cache"
+  },
+  {
+    "from": "221-why-you-should-not-cache-everything",
+    "to": "218-what-is-a-cache"
+  },
+  {
+    "from": "223-token-bucket-vs-leaky-bucket",
+    "to": "222-what-is-rate-limiting"
+  },
+  {
+    "from": "225-why-distributed-systems-need-circuit-breakers",
+    "to": "224-what-is-a-circuit-breaker"
+  },
+  {
+    "from": "227-why-use-messaging-instead-of-http",
+    "to": "226-what-is-kafka"
+  },
+  {
+    "from": "228-synchronous-vs-asynchronous-communication",
+    "to": "226-what-is-kafka"
+  },
+  {
+    "from": "229-what-is-event-driven-architecture",
+    "to": "226-what-is-kafka"
+  },
+  {
+    "from": "230-database-vs-cache-vs-message-broker",
+    "to": "226-what-is-kafka"
+  },
+  {
+    "from": "232-what-is-a-development-server",
+    "to": "231-what-is-a-server"
+  },
+  {
+    "from": "233-local-vs-development-vs-staging-vs-production",
+    "to": "231-what-is-a-server"
+  },
+  {
+    "from": "234-what-is-a-vps",
+    "to": "231-what-is-a-server"
+  },
+  {
+    "from": "235-how-your-code-goes-from-laptop-to-server",
+    "to": "231-what-is-a-server"
+  },
+  {
+    "from": "276-i-finally-understand-what-deployment-actually-means",
+    "to": "231-what-is-a-server"
+  },
+  {
+    "from": "237-can-you-develop-without-github",
+    "to": "236-git-vs-github"
+  },
+  {
+    "from": "238-why-version-control-is-more-than-a-backup",
+    "to": "236-git-vs-github"
+  },
+  {
+    "from": "240-continuous-integration-vs-continuous-delivery-vs-continuous-deployment",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "241-what-is-a-jenkinsfile",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "242-why-keep-ci-cd-configuration-inside-the-repository",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "243-what-happens-after-you-push-code",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "244-a-simple-spring-boot-ci-cd-pipeline",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "245-where-docker-fits-into-ci-cd",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "273-i-finally-understand-what-ci-cd-actually-does",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "275-i-finally-understand-what-happens-after-i-push-code",
+    "to": "239-what-is-ci-cd"
+  },
+  {
+    "from": "247-is-kubernetes-a-ci-cd-tool",
+    "to": "246-where-kubernetes-fits-into-ci-cd"
+  },
+  {
+    "from": "248-docker-vs-kubernetes",
+    "to": "246-where-kubernetes-fits-into-ci-cd"
+  },
+  {
+    "from": "250-what-are-kubernetes-pods",
+    "to": "246-where-kubernetes-fits-into-ci-cd"
+  },
+  {
+    "from": "274-i-finally-understand-why-kubernetes-is-not-ci-cd",
+    "to": "246-where-kubernetes-fits-into-ci-cd"
+  },
+  {
+    "from": "251-liveness-probe-vs-readiness-probe",
+    "to": "249-what-happens-when-a-kubernetes-container-crashes"
+  },
+  {
+    "from": "252-how-kubernetes-self-healing-works",
+    "to": "249-what-happens-when-a-kubernetes-container-crashes"
+  },
+  {
+    "from": "254-why-microservices-are-not-automatically-better",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "255-what-is-a-modular-monolith",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "256-feature-based-packages-vs-layer-based-packages",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "257-how-to-organize-a-large-spring-boot-project",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "258-how-to-decide-module-boundaries",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "259-what-is-separation-of-concerns",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "260-high-cohesion-and-low-coupling-explained-simply",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "261-how-architecture-evolves-as-an-application-grows",
+    "to": "253-monolith-vs-microservices"
+  },
+  {
+    "from": "262-why-good-architecture-is-about-boundaries-not-folder-names",
+    "to": "253-monolith-vs-microservices"
+  }
+]

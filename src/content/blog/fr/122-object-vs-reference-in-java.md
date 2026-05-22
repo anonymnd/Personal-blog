@@ -1,40 +1,107 @@
 ---
-title: "Object vs Reference in Java"
-description: "Comprenez la distinction critique entre un objet Java et la variable de référence utilisée pour y accéder afin d'éviter les NullPointerException."
-pubDate: 2026-10-11T17:48:00.000Z
+title: "Objets, Références et le mot-clé 'new' en Java"
+description: "Analyse approfondie de l'allocation sur le tas, l'aliasing de références et la mécanique du passage par valeur."
+pubDate: 2026-10-07T17:48:00.000Z
 translationKey: 122-object-vs-reference-in-java
+seriesOrder: 26
 locale: fr
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Allocation et Nature des Références
 
-Imaginez que vous développez une application d'achats. Vous créez un objet `PurchaseRequest`, mais lorsque vous tentez de modifier son statut dans une méthode, le changement ne semble pas persister, ou vous rencontrez soudainement une `NullPointerException`. Cela arrive généralement quand on confond l'objet réel (les données en mémoire) avec la référence (l'adresse de ces données).
+En Java, il existe une distinction fondamentale entre une variable de référence et l'objet qu'elle désigne. Lorsque vous déclarez `ShoppingBasket basket;`, vous créez une variable de référence—un emplacement mémoire capable de stocker une référence à un objet `ShoppingBasket`. À ce stade, aucun objet n'existe sur le tas (heap).
 
-## Un objet et les valeurs qui le référencent
-Un objet possède un état et une identité ; une valeur de référence permet au code Java d'y accéder. Les références ne sont pas limitées aux variables locales : un champ d'objet ou un élément de tableau peut aussi en contenir une. La JVM fournit un modèle mémoire et peut optimiser le placement physique. Il n'est pas nécessaire de connaître une adresse numérique pour comprendre les alias : deux variables peuvent référencer le même objet.
-## Le mécanisme du passage par valeur
-Une idée reçue est que Java passe les objets par référence. En réalité, Java utilise toujours le passage par valeur. Lorsque vous passez un objet à une méthode, vous passez une copie de la valeur de la référence.
+L'utilisation du mot-clé `new` déclenche trois actions distinctes :
+1. **Allocation Mémoire** : La JVM alloue l'espace nécessaire sur le tas pour tous les champs d'instance de la classe.
+2. **Initialisation** : Les champs sont mis à leurs valeurs par défaut (0, false, ou null), puis le constructeur est exécuté pour définir l'état initial.
+3. **Assignation de Référence** : L'expression `new` retourne la référence du nouvel objet, qui est ensuite stockée dans la variable.
 
-Exemple concret :
+Il est crucial de noter que les références Java ne sont pas des pointeurs comme en C++. Vous ne pouvez pas effectuer d'arithmétique de pointeurs ni voir l'adresse physique réelle. La référence est un handle opaque géré par la JVM.
+
+## Aliasing et Identité
+
+L'aliasing se produit lorsque plusieurs variables de référence pointent vers le même objet sur le tas. Comme elles partagent la même valeur de référence, toute mutation effectuée via une variable est visible via toutes les autres.
+
+L'identité est déterminée par le fait que deux références pointent vers le même objet sur le tas. On vérifie cela avec l'opérateur `==`. À l'inverse, `.equals()` est destiné à vérifier l'égalité logique (équivalence de valeur), bien qu'il se comporte comme `==` par défaut s'il n'est pas redéfini.
+
+## Passage par Valeur : Le Piège de la Référence
+
+Java utilise strictement le passage par valeur. Lorsque vous passez un objet à une méthode, vous ne passez pas l'objet lui-même, ni une référence à la variable. Vous passez une **copie de la valeur de la référence**.
+
+Considérons ce scénario : deux variables référencent le même panier. Nous en passons une à une méthode qui modifie le panier puis tente de réassigner la référence.
+
+### Exemple concret : Mutation du Panier
+
 ```java
-public void processRequest(PurchaseRequest request) {
-    request.setStatus("APPROUVÉ"); // Modifie l'objet sur le heap
-    request = new PurchaseRequest(); // Réassigne la copie locale de la référence
+import java.util.*;
+
+public class BasketDemo {
+    static class ShoppingBasket {
+        List<String> items = new ArrayList<>();
+        
+        void addItem(String item) {
+            items.add(item);
+        }
+    }
+
+    public static void main(String[] args) {
+        ShoppingBasket basketA = new ShoppingBasket();
+        ShoppingBasket basketB = basketA; // Aliasing : les deux pointent vers le même objet
+
+        System.out.println("Initial: basketA == basketB est " + (basketA == basketB));
+
+        processBasket(basketB);
+
+        System.out.println("Après méthode: basketA items: " + basketA.items);
+        System.out.println("Après méthode: basketA == basketB est " + (basketA == basketB));
+    }
+
+    static void processBasket(ShoppingBasket localBasket) {
+        // Mutation : affecte l'objet sur le tas
+        localBasket.addItem("Apple");
+
+        // Réassignation : change uniquement la copie locale de la référence
+        localBasket = new ShoppingBasket();
+        localBasket.addItem("Orange");
+        // L'orange est ajoutée à un nouvel objet qui sera ramassé par le GC
+    }
 }
 ```
-Ici, modifier le statut fonctionne car la référence originale et la copie pointent vers le même objet. Cependant, réassigner `request` à un nouvel objet ne change que la copie locale ; la variable originale à l'extérieur de la méthode pointe toujours vers le premier objet.
 
-## Null et variable locale non initialisée
-Une référence peut valoir `null` : elle ne désigne aucun objet. La déréférencer, par exemple en appelant une méthode, provoque normalement une NullPointerException. Un champ d'objet de type référence vaut null par défaut. Une variable locale déclarée par `PurchaseRequest req;` est différente : Java interdit son utilisation avant une affectation certaine, ce qui produit une erreur de compilation. Avec `PurchaseRequest req = null;`, l'affectation est faite, mais `req.setStatus(...)` échoue à l'exécution.
-## Identité et égalité définie par le type
-Pour des références, `a == b` indique si elles désignent le même objet, y compris si elles valent toutes deux null. `a.equals(b)` applique la définition d'égalité de la classe. L'implémentation héritée d'Object utilise aussi l'identité ; la classe doit redéfinir equals pour comparer des valeurs. String et les records fournissent de telles comparaisons. `Objects.equals(a, b)` gère les valeurs null. Choisissez identité ou égalité métier selon le besoin, sans remplacer systématiquement tous les ==.
-## Exercice pratique
-Si vous avez `PurchaseRequest a = new PurchaseRequest("Laptop");` et `PurchaseRequest b = a;`, qu'arrive-t-il à `a` si vous appelez `b.setAmount(1000);` ?
+**Analyse du résultat :**
+1. `Initial: basketA == basketB est true` : Les deux variables détiennent la même valeur de référence.
+2. `Après méthode: basketA items: [Apple]` : La mutation `addItem("Apple")` a eu lieu sur l'objet dans le tas. Comme `basketA` et `basketB` pointent vers cet objet, `basketA` voit le changement.
+3. `Après méthode: basketA == basketB est true` : La réassignation `localBasket = new ShoppingBasket()` a seulement modifié la variable locale `localBasket` à l'intérieur de la méthode. Elle n'a pas modifié `basketB` dans la méthode `main`.
 
-**Réponse :** `a` affichera également un montant de 1000 car `a` et `b` sont deux références pointant vers le même objet unique sur le heap.
+## Variables Locales Non Initialisées et Nulls
 
+Les variables de champ (instance) sont initialisées automatiquement. Cependant, les **variables locales** (dans les méthodes) ne le sont pas. Tenter d'utiliser une variable locale non initialisée provoque une erreur de compilation.
+
+`null` est une valeur de référence spéciale indiquant que la variable ne pointe vers aucun objet. Appeler une méthode sur une référence `null` déclenche une `NullPointerException` car il n'y a aucun objet sur le tas pour exécuter l'appel.
+
+## Exercice
+
+Étant donné le code suivant, quel est l'état final de `list1` et `list2` ?
+
+```java
+List<Integer> list1 = new ArrayList<>(List.of(1, 2));
+List<Integer> list2 = list1;
+modify(list1, list2);
+
+void modify(List<Integer> a, List<Integer> b) {
+    a.add(3);
+    a = new ArrayList<>();
+    b.add(4);
+}
+```
+
+**Réponse :**
+`list1` et `list2` contiendront toutes deux `[1, 2, 3, 4]`. 
+- `a.add(3)` mute l'objet partagé.
+- `a = new ArrayList<>()` réassigne seulement la copie locale `a` ; aucun effet sur `list1`.
+- `b.add(4)` mute l'objet partagé car `b` pointe toujours vers la liste originale.
 
 ## Pour approfondir
 

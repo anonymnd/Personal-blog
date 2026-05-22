@@ -1,53 +1,106 @@
 ---
-title: "Class vs Record in Java"
-description: "Apprenez quand utiliser une classe Java traditionnelle par rapport à un Record pour gérer des objets centrés sur les données."
-pubDate: 2026-10-11T16:48:00.000Z
+title: "Records et Objets de Valeur Immuables : Qu'est-ce qui est Vraiment Immuable ?"
+description: "Analyse de l'immuabilité superficielle vs profonde dans les records Java, avec focus sur la copie défensive des collections."
+pubDate: 2026-10-07T16:48:00.000Z
 translationKey: 121-class-vs-record-in-java
+seriesOrder: 25
 locale: fr
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## L'illusion de l'immuabilité des Records
 
-Imaginez que vous développiez une application d'achat où un demandeur soumet une `PurchaseRequest`. Vous devez transporter ces données vers le manager. Si vous utilisez une classe standard, vous passez la moitié de votre temps à écrire des getters, `equals()`, `hashCode()` et `toString()` simplement pour que la logique d'approbation compare correctement les demandes. Ce code répétitif masque la logique métier.
+Les records Java sont souvent présentés comme des transporteurs de données immuables. S'il est vrai que les composants d'un record sont marqués `final`, cela ne procure qu'une **immuabilité superficielle** (shallow immutability). Un record n'est réellement immuable que si tous ses composants le sont également. Si un record contient une référence vers un objet mutable, comme une `List` ou une `Map`, la référence elle-même ne peut pas être changée, mais le contenu de cette liste peut toujours être modifié.
 
-## La différence fondamentale
-Une classe ordinaire peut être mutable ou immuable : vous choisissez ses champs, constructeurs et comportements. Un record est une classe restreinte destinée aux porteurs de données transparents. Les records sont apparus en preview dans Java 14 et ont été finalisés dans Java 16. Le compilateur fournit les composants, le constructeur canonique, les accesseurs, equals, hashCode et toString. Un record peut déclarer une validation et des méthodes, mais ne peut pas étendre une autre classe ni ajouter des champs d'instance arbitraires.
-## Mécanisme des Records
-Les records sont immuables superficiellement (shallowly immutable). Cela signifie que les références qu'ils détiennent ne peuvent pas être modifiées après l'assignation, mais si un record contient une `List`, le contenu de cette liste peut toujours être modifié. Ils sont `final` par défaut.
+## Immuabilité Superficielle vs Profonde
 
-## Exemple concret : Demande d'achat
-Voici comment modéliser une demande avec les deux approches. Remarquez comment le record élimine le bruit.
+L'immuabilité superficielle signifie que les champs de l'objet ne peuvent pas être réassignés. L'immuabilité profonde signifie que tout le graphe d'objets accessible depuis cet objet est inchangé.
+
+Considérons un `RouteSummary` qui suit des noms d'arrêts. Si nous utilisons une `java.util.List` standard, nous créons une faille dans notre contrat d'immuabilité.
+
+### Implémentation Vulnérable (Illustratif)
 
 ```java
-// Approche Classe Traditionnelle
-public class RequestDTO {
-    private final String item;
-    private final int quantity;
+import java.util.*;
 
-    public RequestDTO(String item, int quantity) {
-        this.item = item;
-        this.quantity = quantity;
-    }
-    public String getItem() { return item; }
-    public int getQuantity() { return quantity; }
-    // equals(), hashCode(), et toString() seraient ici
-}
+public record RouteSummary(String routeId, List<String> stops) {}
 
-// Approche Record
-public record RequestRecord(String item, int quantity) {}
+// Utilisation
+List<String> myStops = new ArrayList<>(List.of("Casablanca", "Rabat"));
+RouteSummary summary = new RouteSummary("R-101", myStops);
+
+// La faille : modifier la liste originale affecte le record
+myStops.add("Tanger"); 
+System.out.println(summary.stops()); // Résultat: [Casablanca, Rabat, Tanger]
 ```
 
-Résultat : `RequestRecord` offre la même fonctionnalité que `RequestDTO` en une seule ligne. Si vous comparez deux objets `RequestRecord` avec les mêmes valeurs, `equals()` renvoie `true` automatiquement.
+Dans cet exemple, le record `RouteSummary` est superficiellement immuable. Le champ `stops` ne peut pas être remplacé par une nouvelle liste, mais l' `ArrayList` vers laquelle il pointe est mutable. Cela rompt la promesse fondamentale d'un Objet de Valeur : que son état reste constant durant tout son cycle de vie.
 
-## Erreur courante : immuabilité superficielle ou profonde
-Un composant de record ne peut plus être réaffecté après construction, mais l'objet référencé peut rester mutable. Dans un constructeur compact, `List.copyOf(items)` protège la liste contre des modifications structurelles effectuées via la référence d'origine. La copie est non modifiable, pas profondément immuable : ses éléments mutables peuvent encore changer. Utilisez des types d'éléments immuables ou des copies défensives si le domaine exige cette garantie.
-## Exercice pratique
-Créez un record nommé `Order` avec un `String orderId` et un `double totalAmount`. Comment accédez-vous à l' `orderId` d'une instance nommée `myOrder` ?
+## Protéger l'État : Les Copies Défensives
 
-**Réponse :** On utilise la méthode d'accès `myOrder.orderId()` (notez que les records n'utilisent pas le préfixe `get`).
+Pour atteindre l'immuabilité profonde, nous devons nous assurer qu'aucune référence mutable ne s'échappe de l'objet ou n'est acceptée de l'extérieur sans être copiée. Pour les records, cela se fait en surchargeant le constructeur canonique.
 
+L'utilisation de `List.copyOf()` (introduite dans Java 10) est l'approche standard. Elle retourne une liste non modifiable. Si la liste fournie est déjà une liste non modifiable produite par `List.copyOf`, elle retourne l'originale pour éviter des copies inutiles.
+
+### Implémentation Robuste (Illustratif)
+
+```java
+import java.util.*;
+
+public record RouteSummary(String routeId, List<String> stops) {
+    public RouteSummary {
+        // Copie défensive pour garantir l'immuabilité profonde
+        stops = List.copyOf(stops);
+    }
+}
+
+// Utilisation
+List<String> myStops = new ArrayList<>(List.of("Casablanca", "Rabat"));
+RouteSummary summary = new RouteSummary("R-101", myStops);
+
+// Ceci lancera désormais une UnsupportedOperationException
+try {
+    summary.stops().add("Tanger");
+} catch (UnsupportedOperationException e) {
+    System.out.println("Immuable ! Impossible de modifier la liste.");
+}
+
+// Modifier la liste source n'affecte plus le record
+myStops.add("Tanger");
+System.out.println(summary.stops()); // Résultat: [Casablanca, Rabat]
+```
+
+## Immuabilité dans les Classes Standards
+
+Les records simplifient la syntaxe, mais les classes peuvent être tout aussi immuables. Pour rendre une classe immuable, vous devez :
+1. Déclarer la classe comme `final` pour empêcher l'héritage.
+2. Rendre tous les champs `private` et `final`.
+3. Ne fournir aucun setter.
+4. Effectuer des copies défensives des champs mutables dans le constructeur et les getters.
+
+## Conséquences pour l'Égalité
+
+Les records implémentent automatiquement `equals()` et `hashCode()` basés sur l'état de leurs composants. Si un record contient une liste mutable qui est modifiée (cas de l'immuabilité superficielle), le `hashCode` du record change. C'est dangereux si le record est utilisé comme clé dans une `HashMap`, car l'objet devient "perdu" dans la map puisqu'il est désormais associé à un bucket différent.
+
+## Exercice
+
+**Scénario :** Vous avez un record `UserPreferences` contenant un `Set<String>` de tags. L'implémentation actuelle permet de modifier les tags depuis l'extérieur du record.
+
+**Tâche :** Réécrire le record pour garantir que le `Set` est profondément immuable.
+
+**Réponse :**
+```java
+import java.util.*;
+
+public record UserPreferences(String userId, Set<String> tags) {
+    public UserPreferences {
+        tags = Set.copyOf(tags);
+    }
+}
+```
+
+copyOf rend la collection non modifiable, pas ses éléments mutables profondément immuables. Les String sécurisent ces exemples ; des valeurs mutables imbriquées demandent autre chose. Ces factories rejettent null et peuvent réutiliser une instance adaptée : ne dépendez pas de son identité.
 
 ## Pour approfondir
 

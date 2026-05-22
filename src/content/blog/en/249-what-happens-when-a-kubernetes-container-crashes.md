@@ -1,52 +1,84 @@
 ---
-title: "What Happens When a Kubernetes Container Crashes?"
-description: "An exploration of the Kubernetes self-healing mechanism and how the kubelet handles container failures."
-pubDate: 2026-10-17T00:48:00.000Z
+title: "Diagnose Kubernetes Restarts and Traffic Readiness"
+description: "A deep dive into the mechanics of kubelet restarts, probe interactions, and the critical distinction between traffic removal and container recycling."
+pubDate: 2026-10-08T23:48:00.000Z
 translationKey: 249-what-happens-when-a-kubernetes-container-crashes
+seriesOrder: 56
 locale: en
-tags: ["software-engineering","deployment-devops","learning-series"]
+tags: ["deployment-devops","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The Mechanics of Recovery: Kubelet vs. Controller
 
-Imagine you have a procurement application where the 'Request Service' is running. Suddenly, a memory leak causes the container to crash. You might worry that the entire system is down, but in Kubernetes, a crash isn't the end of the story; it is the start of a recovery workflow.
+The kubelet is a node agent, not a control-plane controller. It restarts a container according to restartPolicy when the process exits or probes meet their failure thresholds; Always also covers successful process exits. A container restart normally keeps the existing Pod identity.
 
-## The Role of the Kubelet
-When a container crashes, the first responder is the kubelet, the agent running on each node. The kubelet monitors the container runtime. If a process exits with a non-zero status, the kubelet detects this failure immediately. It doesn't guess why it happened; it simply looks at the `restartPolicy` defined in the Pod specification.
+For Deployment workloads, ReplicaSet reconciliation creates replacement Pods after deletion or recognized node loss, and the scheduler chooses eligible placement. Node-loss detection and eviction take time. Replacement creates a new Pod UID and potentially another IP; StatefulSets may reuse a stable Pod name. Do not equate container restart, Pod replacement and recovery of lost application state.
+## Probe Dynamics: Startup, Readiness, and Liveness
 
-## Understanding Restart Policies
-Kubernetes uses three main policies to decide the next move:
-- `Always`: The container is restarted regardless of the exit code.
-- `OnFailure`: Restarted only if the container exited with an error.
-- `Never`: The container stays in a terminated state.
+Probes are the primary mechanism for self-healing, but misconfiguring them can lead to "death spirals" where a Pod is killed just as it is about to become healthy.
 
-## Liveness vs. Readiness
-While a crash is a hard failure, sometimes a container is 'alive' but broken (e.g., a deadlock). This is where probes come in. A Liveness Probe tells Kubernetes if the container is healthy. If the probe fails, Kubernetes kills the container and restarts it. A Readiness Probe, however, only controls whether the container receives traffic from a Service; it doesn't trigger a restart.
+1. **Startup Probe**: This disables liveness and readiness checks until the container has successfully started. It is essential for legacy applications or heavy media processors that perform cache warming or schema validation on boot.
+2. **Readiness Probe**: This determines if the Pod should receive traffic from a Service. If it fails, the Pod is removed from the Endpoints list. The container continues to run, but no new requests are routed to it.
+3. **Liveness Probe**: This determines if the container is in a broken state (e.g., a deadlock). If it fails, the kubelet kills the container and restarts it.
 
-## Worked Example: Procurement Request Pod
-Consider a Pod with this excerpt:
+## Scenario: The Media Processor Failure
+
+Consider a media-processing Pod that takes 60 seconds to load ML models into memory and occasionally loses connection to a remote storage bucket.
+
+### The Harmful Configuration (The Restart Loop)
+If we only use a liveness probe that checks the storage bucket connection, we create a dangerous loop:
+- The Pod boots. 
+- The liveness probe fails because the storage bucket is temporarily unreachable.
+- Kubelet kills the container.
+- The Pod restarts, spending another 60 seconds loading models, only to be killed again.
+
+### The Correct Configuration (Traffic Isolation)
+Instead, we separate the "boot" phase from the "dependency" phase.
+
+**Worked Configuration Example (Illustrative):**
 ```yaml
-spec:
-  containers:
-  - name: request-app
-    image: procurement-req:v1
-    livenessProbe:
-      httpGet:
-        path: /healthz
-        port: 8080
-    restartPolicy: Always
+# Snippet of a Pod spec for a media processor
+startupProbe:
+  httpGet:
+    path: /health/startup
+    port: 8080
+  failureThreshold: 30
+  periodSeconds: 10 # Gives 300s to boot
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080
+  periodSeconds: 5
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+  periodSeconds: 20
 ```
-If the `request-app` crashes due to a segmentation fault, the kubelet sees the process exit and restarts it. If the app freezes but stays running, the `/healthz` probe fails, and Kubernetes forces a restart to restore service.
 
-## Common Mistake: The CrashLoopBackOff
-A common error is ignoring the `CrashLoopBackOff` status. This happens when a container crashes immediately after starting. Kubernetes doesn't restart it instantly in a tight loop; it adds a delay (10s, 20s, 40s...) to prevent overloading the node.
-**Correction:** Do not just keep restarting the Pod. Check the logs using `kubectl logs <pod-name>` to find the root cause (e.g., a missing environment variable).
+**Analysis of the Outcome:**
+- **During Boot**: The `startupProbe` runs. Liveness and Readiness are ignored. The Pod is not killed if it takes 2 minutes to load models.
+- **Dependency Loss**: If the storage bucket goes down, the `/health/ready` endpoint returns a 500 error. The `readinessProbe` fails. Kubernetes removes the Pod from the Service. The Pod stays alive, allowing it to recover the connection without wasting time reloading models from disk.
+- **Deadlock**: If the Java process freezes entirely, the `/health/live` endpoint stops responding. The `livenessProbe` fails, and the kubelet restarts the container to clear the hang.
 
-## Practical Exercise
-If a Pod has `restartPolicy: OnFailure` and the application exits with code 0 (success), will Kubernetes restart the container?
+## Failure Limits and Rollouts
 
-**Answer:** No, because code 0 indicates a successful completion, not a failure.
+Rollout settings limit planned unavailability; they do not prevent every outage caused by cluster failure, bad probes or shared dependencies. progressDeadlineSeconds can report a stalled Deployment but does not itself perform automatic rollback. Define alerts and a recovery action.
+
+Place the probe fields beneath a container in spec.containers, not at the Pod-spec root. Readiness failure changes ready endpoints after the configured threshold and propagation; it does not guarantee immediate cancellation of existing connections or stop a background worker consuming a queue. A media worker needs its own pause/admission policy for dependency outages.
+## Exercise
+
+**Scenario**: You have a Pod that crashes every 10 minutes due to a memory leak. You implement a liveness probe that checks memory usage and restarts the Pod when it exceeds 80%. 
+
+1. Is this a correct use of self-healing?
+2. What happens to the traffic during the restart?
+3. How does this differ from a Readiness probe failure?
+
+**Answer**:
+1. No. Liveness probes should detect unrecoverable states (deadlocks), not manage resource leaks. This is a "band-aid" for a bug, not true self-healing. The correct fix is adjusting memory limits or fixing the leak.
+2. Traffic is cut off immediately as the container is killed, and the Pod becomes unavailable until the new container passes its readiness check.
+3. A readiness failure would stop traffic but keep the process running, allowing you to exec into the Pod to debug the leak. A liveness failure destroys the evidence by restarting the process.
 
 ## Further reading
 

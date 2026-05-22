@@ -1,53 +1,105 @@
 ---
-title: "Checked vs Unchecked Exceptions"
-description: "Apprenez à choisir entre les exceptions vérifiées et non vérifiées pour créer des applications Java plus robustes."
-pubDate: 2026-10-12T00:48:00.000Z
+title: "Exceptions Vérifiées et Non Vérifiées : Exprimer les Contrats de Gestion"
+description: "Analyse approfondie des hiérarchies d'exceptions Java pour distinguer les échecs métier récupérables des erreurs de programmation via un outil d'importation."
+pubDate: 2026-10-07T20:48:00.000Z
 translationKey: 129-checked-vs-unchecked-exceptions
+seriesOrder: 29
 locale: fr
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## La Hiérarchie des Exceptions comme Contrat
 
-Imaginez que vous développiez une application d'achats où un demandeur soumet une requête. Vous écrivez une méthode pour sauvegarder cette requête dans un fichier. Soudain, le compilateur vous oblige à entourer votre code d'un bloc try-catch ou à ajouter une clause 'throws', même si vous savez que le fichier existe. C'est là tout l'enjeu entre les exceptions checked et unchecked.
+RuntimeException est une sous-classe d’Exception. Les exceptions vérifiées excluent RuntimeException et ses sous-classes ; le compilateur impose de capturer ou déclarer celles qui peuvent sortir d’une méthode. RuntimeException et les sous-classes d’Error sont non vérifiées.
 
-## Ce que signifie checked
-Une exception checked appartient à la branche Exception sans être une RuntimeException. Lors d'un appel susceptible de la lever, Java exige de la capturer ou de la déclarer dans throws. Cette vérification concerne une obligation d'API à la compilation, pas la probabilité de l'échec ni sa possibilité de récupération. IOException en est un exemple. Déclarer throws propage l'obligation : cela ne traite pas l'échec et ne décide pas du message à afficher.
-## Unchecked ne signifie pas irrécupérable
-Les sous-types de RuntimeException et d'Error sont unchecked : le compilateur n'impose ni catch ni throws. NullPointerException signale souvent un défaut de programmation, mais un refus métier ou un échec temporaire d'infrastructure peut aussi être représenté par une RuntimeException. L'application peut les traiter à une frontière adaptée. Error représente généralement des problèmes graves du runtime que le code métier ne doit pas tenter de masquer globalement. Récupération et classification sont des questions de conception distinctes.
-## Exemple : un choix explicite d'API
-Ce service illustratif choisit une exception checked pour une infrastructure indisponible et une exception unchecked pour un argument invalide. D'autres API peuvent utiliser des exceptions unchecked pour l'infrastructure : Java n'impose pas la signification métier.
+Cette distinction définit une obligation du compilateur, pas la possibilité de récupération. Une erreur métier peut être non vérifiée ; une exception vérifiée peut être impossible à réparer localement. Choisissez explicitement contrat et frontière de récupération. Les Error indiquent généralement des situations graves ; évitez de les masquer.
+## Scénario : L'Outil d'Importation de Données
+
+Imaginons un outil qui importe des données métier depuis un fichier. Nous rencontrons trois types d'échecs :
+1. **Fichier d'entrée manquant** : Le fichier n'est pas à l'endroit prévu. C'est un problème environnemental externe que l'utilisateur peut corriger. C'est une **Exception Vérifiée**.
+2. **Lignes métier malformées** : Le fichier existe, mais une ligne contient du texte là où un nombre est attendu. C'est un échec de validation métier. C'est une **Exception Vérifiée**.
+3. **Null Pointer dans le parseur** : Un développeur a oublié d'initialiser un objet utilitaire. C'est un bug. C'est une **Exception Non Vérifiée**.
+
+## Implémentation Concrète
+
+Voici comment modéliser ces contrats pour s'assurer que l'appelant sait exactement quoi gérer.
 
 ```java
-class ServiceUnavailableException extends Exception {
-    ServiceUnavailableException(String message) { super(message); }
+import java.io.*;
+import java.util.*;
+
+// Vérifiée : L'appelant DOIT décider comment informer l'utilisateur que le fichier manque
+class ImportFileNotFoundException extends Exception {
+    public ImportFileNotFoundException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
 
-class ApprovalService {
-    void approve(long requestId, boolean available)
-            throws ServiceUnavailableException {
-        if (!available) {
-            throw new ServiceUnavailableException("Service unavailable");
+// Vérifiée : L'appelant DOIT décider s'il ignore la ligne ou arrête tout l'import
+class MalformedRowException extends Exception {
+    private final int rowNumber;
+    public MalformedRowException(String message, int rowNumber) {
+        super(message);
+        this.rowNumber = rowNumber;
+    }
+    public int getRowNumber() { return rowNumber; }
+}
+
+class DataImporter {
+    public void importData(String path) throws ImportFileNotFoundException, MalformedRowException {
+        File file = new File(path);
+        if (!file.exists()) {
+            // Préserver la cause en passant le contexte original
+            throw new ImportFileNotFoundException("Fichier cible manquant : " + path, null);
         }
-        if (requestId <= 0) {
-            throw new IllegalArgumentException("Invalid request ID");
+
+        // Logique de parsing illustrative
+        List<String> rows = List.of("ValidRow", "BadRow", "ValidRow");
+        for (int i = 0; i < rows.size(); i++) {
+            String row = rows.get(i);
+            if ("BadRow".equals(row)) {
+                throw new MalformedRowException("Format de données invalide", i + 1);
+            }
+            // RuntimeException potentielle ici si un helper était null
+            // helper.process(row); 
         }
+    }
+}
+
+public class ImportRunner {
+    public static void main(String[] args) {
+        DataImporter importer = new DataImporter();
+        try {
+            importer.importData("data.csv");
+        } catch (ImportFileNotFoundException e) {
+            System.err.println("Veuillez vérifier le chemin du fichier : " + e.getMessage());
+        } catch (MalformedRowException e) {
+            System.err.println("Erreur à la ligne " + e.getRowNumber() + ": " + e.getMessage());
+        } 
+        // Les RuntimeExceptions (comme NullPointerException) ne sont pas capturées ici
+        // car elles doivent être corrigées dans le code de DataImporter.
     }
 }
 ```
 
-L'appelant doit capturer ou déclarer ServiceUnavailableException. Un contrôleur ou une autre frontière applicative peut ensuite produire une réponse adaptée. Cette décision est distincte de la hiérarchie d'exceptions.
-## Erreur courante : Le sur-capturage
-Une erreur fréquente est de capturer `Exception` (la classe parente) pour faire taire les erreurs. Cela masque les exceptions non vérifiées comme `NullPointerException`, rendant le débogage presque impossible car l'application échoue silencieusement.
+## Analyse du Mécanisme
 
-**Correction :** Capturez toujours l'exception la plus spécifique possible. Au lieu de `catch (Exception e)`, utilisez `catch (IOException e)`.
+### Préservation des Causes
+Dans le constructeur de `ImportFileNotFoundException`, nous acceptons un `Throwable cause`. C'est crucial. Si une `java.io.IOException` a déclenché notre exception personnalisée, passer cet argument à `super(message, cause)` garantit que la trace d'pile originale est préservée. Sans cela, on perd l'origine réelle de la panne.
 
-## Exercice pratique
-Un refus d'autorisation prévisible doit-il forcément être une exception checked ?
+### Le Sophisme de la Récupérabilité
+Une erreur courante est de supposer que les exceptions vérifiées *garantissent* la possibilité de récupération. C'est faux. Elles garantissent seulement la *visibilité*. Une `MalformedRowException` est vérifiée, mais la seule "récupération" possible est peut-être de logger l'erreur et d'arrêter le programme. La distinction porte sur le **contrat de l'API**, pas sur la possibilité technique d'un correctif.
 
-**Réponse :** Non. Choisissez une politique cohérente pour les exceptions métier et traitez-les à la bonne frontière. Une authentification manquante peut produire 401 ; un accès sans permission après authentification peut produire 403. Aucun de ces statuts n'impose le caractère checked ou unchecked de l'exception Java.
+### Cas d'Échec
+- **Abus d'Exceptions Vérifiées** : Si chaque méthode lance cinq exceptions vérifiées, le code devient saturé de blocs `try-catch`, poussant les développeurs vers le `catch (Exception e) {}` (absorption d'exception), un anti-pattern dangereux.
+- **Utilisation du Non Vérifié pour le Métier** : Si `MalformedRowException` était une `RuntimeException`, l' `ImportRunner` pourrait oublier de la gérer, provoquant un crash inattendu de l'application dès l'apparition d'une ligne erronée.
 
+## Exercice
+
+Pour une base indisponible, suivez le contrat de la bibliothèque : JDBC utilise SQLException vérifiée pour de nombreux échecs, tandis que Spring traduit généralement les erreurs de persistance en exceptions non vérifiées. Une panne temporaire peut être réessayable même avec RuntimeException. Une erreur de syntaxe peut arriver sous forme de SQLException vérifiée tout en nécessitant une correction du code.
+
+Décidez des retries d’après la panne réelle, la sécurité de l’opération et la politique, pas d’après l’héritage checked/unchecked. Conservez la cause et limitez les tentatives ; ne réessayez pas indéfiniment une erreur de syntaxe déterministe.
 
 ## Pour approfondir
 

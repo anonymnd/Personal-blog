@@ -1,48 +1,91 @@
 ---
-title: "علاش خاصنا مانهزوش المودباسات (Passwords) كما هما فـ Base de données"
-description: "شرح علاش تخزين المودباسات كـ Plain Text خطر وكيفاش كنخدمو بـ Hashing و Salting باش نحميو المعلومات."
-pubDate: 2026-10-15T08:48:00.000Z
+title: "كيفاش تخزن passwords بـ Salted, Slow Hashes"
+description: "طريقة تخزين passwords آمنة باستعمال BCrypt و Argon2id، مع التركيز على الـ salt وكيفاش تدير migration ليهم."
+pubDate: 2026-10-08T12:48:00.000Z
 translationKey: 209-why-passwords-should-never-be-stored-as-plain-text
+seriesOrder: 45
 locale: ar
-tags: ["software-engineering","security","learning-series"]
+tags: ["security","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## كيفاش كيخدم الـ One-Way Hashing
 
-تخيل معايا واحد المطور كيصاوب تطبيق ديال الشراء (procurement app) فين الموظفين كيصيفطو طلبات. باش يسهل على راسو، دار المودباسات فـ column سميتها `password` كتبقى كيفما هي (plain text). إلا شي هكر قدر يدخل لـ base de données عن طريق SQL injection، غادي يلقى كاع المودباسات باينين. ما غاديش يحتاج يقلب عليهم، غادي غير يقراهم ويتحكم فكاع الحسابات.
+باش تخزن passwords، خاصك تستعمل تحويل كيمشي فجهة وحدة (one-way). هادشي ماشي هو encryption حيت encryption كيرجع الأصل ديالو بـ key، ولكن hashing هو « فخ » رياضي. باش يكون الـ hash آمن، خاصو يكون تقيل فالحساب (computationally expensive) باش اللي بغا يسرقو بـ brute-force ياخد وقت طويل، وخاصو يكون مختلف من مستخدم لآخر باش نحبسو الـ rainbow tables (ليستات ديال hashes واجدين).
 
-## خطر الـ Plain Text
-تخزين المودباسات بلا تشفير هو غلط كبير حيت كيرد السيستيم ضعيف بزاف. إلا تسربات الداتا، ما كيبقاش عندك حتى شي خط دفاع آخر. وزيد عليها أن الناس غالباً كيستعملو نفس المودباس فبزاف ديال السيتات، يعني إلا تسرب المودباس من تطبيق الشراء، يقدر الهكر يدخل حتى للإيميل ديال الخدمة ولا الحساب البنكي ديال المستخدم.
+### الـ Salts و Work Factors
 
-## الفرق بين Hashing و Encryption
-بزاف كيغلطو وكيقولو خاصنا نديرو Encryption للمودباسات. الـ Encryption هو طريق فجوج اتجاهات؛ يعني إلا عندك الساروت (key) تقدر ترجع المودباس كيف كان. ولكن المودباسات خاصهم يدوزو من Hashing. الـ Hashing هو عملية فجهة وحدة (one-way)؛ كتحول المودباس لواحد السلسلة ديال الحروف والأرقام، ولكن مستحيل ترجعها للمودباس الأصلي حسابياً.
+Library كتولد salt عشوائية وكتستعملها كـ input منفصلة ديال algorithm. BCrypt وArgon2 encoded strings غالبا فيهم salt وparameters بلا column منفصلة. Salts مختلفة كتعطي hashes مختلفين لنفس password باحتمال كبير بزاف.
 
-## شنو هو الـ Salting؟
-الـ Hashing بوحدو ما كافيش حيت كاينين شي لستات واجدين سميتهم Rainbow Tables فيهم المودباسات المشهورين والـ hash ديالهم. باش نحبسو هادشي، كنستعملو الـ Salt: وهو واحد النص عشوائي كنزيدوه للمودباس قبل ما نديرو ليه الـ hash. هكذا، وخا جوج ناس عندهم نفس المودباس، الـ hash اللي غيتخزن فـ base de données غيكون مختلف تماماً.
+الـ work factor (أو cost) هو اللي كيحدد شحال من مرة الـ algorithm كيعاود العملية. كلما زاد الـ hardware فـ السرعة، حنا كنطلعو الـ work factor باش يبقى الوقت ديال الـ hashing ثابت (مثلا ~100ms)، وهكدا كنصعبوها على الـ hackers.
 
-## مثال تطبيقي
-فـ Spring applications، كنستعملو `BCryptPasswordEncoder` حيت هو اللي كيتكلف بالـ salt بوحدو.
+## اختيار الـ Algorithm والمشاكل ديالو
+
+### BCrypt
+Limit العادي BCrypt هو72 bytes، ماشي count ديال UTF-8 characters. حسب implementation، الطويل يقدر يترفض ولا يتقطع. تبع library behavior وpolicy موثقين بلا pre-hashing عشوائية.
+
+### Argon2id
+بالنسبة للأنظمة الجديدة، OWASP كتنصح بـ Argon2id. هو أحسن حيت كيصعب الخدمة على الـ GPUs حيت كيستهلك الـ memory (memory-hard). BCrypt كيخدم غير بـ CPU، ولكن Argon2id كيخليك تـ configurer الـ memory، الـ parallelism، والـ iterations.
+
+## مثال تطبيقي: Migration وقت الـ Login
+
+تخيل عندك forum بغيتي تبدل الـ cost ديال BCrypt من 10 لـ 12، أو تحول لـ Argon2id. ما تقدرش تبدل كاع الـ hashes دقة وحدة حيت ما عندكش الـ passwords فـ texte clair. الحل هو تبدل الـ hash غير فاش يدخل المستخدم (login).
+
+### الكود ديال المقارنة
 
 ```java
-// مثال توضيحي باستعمال Spring Security
-BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-String rawPassword = "SecurePass123!";
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.Optional;
 
-// هاد النتيجة هي اللي كتخزن فـ DB
-String hashedPassword = encoder.encode(rawPassword);
+public record UserAccount(Long id, String username, String passwordHash, String algorithm) {}
 
-// باش نتأكدو من المودباس فاش كيبغي يدخل المستخدم:
-boolean isMatch = encoder.matches(rawPassword, hashedPassword);
+public class PasswordMigrationService {
+    private final PasswordEncoder bCrypt10 = new BCryptPasswordEncoder(10);
+    private final PasswordEncoder bCrypt12 = new BCryptPasswordEncoder(12);
+
+    public boolean authenticateAndUpgrade(UserAccount user, String rawPassword) {
+        boolean matches = false;
+        boolean needsUpgrade = false;
+
+        // 1. كنـ verify على حساب الـ algorithm اللي مخزن
+        if ("BCRYPT_10".equals(user.algorithm())) {
+            matches = bCrypt10.matches(rawPassword, user.passwordHash());
+            needsUpgrade = true; // خاصنا نطلعوه لـ BCrypt 12
+        } else if ("BCRYPT_12".equals(user.algorithm())) {
+            matches = bCrypt12.matches(rawPassword, user.passwordHash());
+        } 
+
+        // 2. إلا كان الـ password صحيح وخاصو upgrade، كنـ re-hash ونسجلوه
+        if (matches && needsUpgrade) {
+            String newHash = bCrypt12.encode(rawPassword);
+            updateUserHash(user.id(), newHash, "BCRYPT_12");
+        } 
+
+        return matches;
+    }
+
+    private void updateUserHash(Long id, String hash, String alg) {
+        // Illustrative: تحديث الـ record فـ database
+        System.out.println("Updating user " + id + " to " + alg);
+    }
+}
 ```
 
-## غلط شائع: استعمال Hash سريع
-كاين اللي كيستعمل MD5 ولا SHA-256 حيت خفاف. ولكن فـ security، السرعة هي نقطة ضعف. الهكر يقدر يجرب ملايير ديال الـ hashes فالثانية. داكشي علاش كنستعملو Argon2id ولا BCrypt حيت تقال بالعاني باش يصعبو المأمورية على أي واحد باغي يسرق المودباسات.
 
-## تمرين تطبيقي
-**الحالة:** لقيتي فـ base de données جوج ديال المستخدمين عندهم نفس الـ hash هو `5e884898da28...`. شنو اللي ناقص فـ هاد السيستيم؟
 
-**الجواب:** ناقص الـ Salting. حيت كون كان كاين salt لكل مستخدم، كون لقيتي hash مختلف وخا يكون المودباس هو نفسه.
+BCrypt hash encoded فيها salt وcost. BCryptPasswordEncoder.matches كتقراهم، يعني نفس encoder تقدر تتحقق من costs مختلفة مخزنة؛ configured cost كتحدد بالأساس encodings الجدد. Algorithm migration كتحتاج version واضحة ولا prefix مع delegating encoder maintained. دير authentication أولا وعاد upgrade بـ raw password ديال request الناجحة. حمي DB update باش ما تغطيش password reset متزامنة.
+
+Limit العادي 72 bytes ماشي characters؛ library تقدر ترفض ولا تقطع الطويل. حدد policy موثقة بلا silent truncation ولا SHA-256 pre-hash مخترعة. Salt input ديال algorithm، ماشي دائما string كتزيدها application. قيس memory/time parameters وحدد login attempts. Hash one-way ولكن تخمين password ضعيفة يبقى ممكن.
+## حالات الفشل
+- **تزيار بزاف (Over-tuning)**: إلا درتي work factor عالي بزاف، تقدر تسبب DoS. إلا كان الـ hash كياخد 2 ثواني، أي واحد يقدر يطيح ليك السيرفر غير بـ شوية ديال requests ديال login.
+- Limit العادي BCrypt هو72 bytes، ماشي count ديال UTF-8 characters. حسب implementation، الطويل يقدر يترفض ولا يتقطع. تبع library behavior وpolicy موثقين بلا pre-hashing عشوائية.
+
+## تمرين
+
+فالـ legacy plaintext account، ما تخمنش format حيت BCrypt verification فشلات: تقدر تولي تقبل hash المخزنة كـ password. استعمل format metadata موثوقة وmigration محدودة بوضوح. إلا plaintext فعلا موجودة، تقدر تدير secured batch hashing وتحيدها؛ dormant accounts يقدرو يحتاجو reset.
+
+للـ BCrypt hashes استعمل matcher الصحيحة. ملي login تنجح، encode raw password المستلمة بـ algorithm الحالية وعدل format وhash atomically، مع check ديال hash/version القديمة باش ما تغطيش reset. Failure ما كتبدلش format وما كتجربش plaintext fallback. ما تسجلش passwords فالـ logs، عالج copies القديمة حسب recovery policy وجرب بجوج paths.
 
 ## باش تزيد تفهم
 

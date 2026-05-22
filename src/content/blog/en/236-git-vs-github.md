@@ -1,35 +1,82 @@
 ---
-title: "Git vs GitHub"
-description: "A clear distinction between the local version control system and the cloud-based hosting platform."
-pubDate: 2026-10-16T11:48:00.000Z
+title: "Use Git for History and GitHub for Collaboration"
+description: "Distinguishing local version control from remote hosting through a community directory scenario."
+pubDate: 2026-10-08T20:48:00.000Z
 translationKey: 236-git-vs-github
+seriesOrder: 53
 locale: en
-tags: ["software-engineering","deployment-devops","learning-series"]
+tags: ["deployment-devops","learning-series"]
 draft: false
 ---
 
-Imagine you are working on a procurement application. You have spent hours writing the logic for a requester to submit a purchase request. Suddenly, you make a change that breaks the entire submission flow, and you realize you cannot remember exactly what the code looked like twenty minutes ago. This is where version control becomes essential, but beginners often confuse the tool that saves the work with the place where the work is stored.
+## Distributed Version Control vs. Centralized Hosting
 
-## Understanding Git as the Engine
-Git is a local distributed version control system. It is software that you install on your own computer. Git tracks the history of your files, allowing you to create 'snapshots' (commits) of your project. Because it is distributed, every developer has a full copy of the project history on their machine. You do not need an internet connection to commit changes, create branches for new features, or revert to a previous version of your procurement logic.
+A common misconception is that Git and GitHub are the same tool. Git is a distributed version control system (DVCS) that runs locally on your machine. It tracks changes to files, allows you to jump back to previous states, and manages different lines of development (branches). GitHub is a cloud-based hosting service that stores Git repositories. 
 
-## Understanding GitHub as the Hub
-GitHub is a cloud-based hosting service that manages Git repositories. If Git is like a document editor that tracks changes, GitHub is like Google Drive or Dropbox specifically designed for Git. It provides a graphical interface, user management, and collaboration tools like Pull Requests. While Git handles the technical versioning, GitHub allows a manager to review the code before a buyer's ordering module is merged into the main project.
+You can develop entirely without GitHub. Because Git is distributed, every contributor has a full copy of the project history on their hard drive. This allows for offline operation: you can commit changes, create branches, and view logs while on a plane or in a remote area without internet access. GitHub simply acts as a common synchronization point (a remote) where contributors push their local history to share it with others.
 
-## A Worked Example: The Procurement Flow
-Suppose you are developing the `RequestService.java` class:
+## Why History is Not a Backup
 
-1. **Local Action (Git):** You write the code and run `git commit -m "Add request submission logic"`. This saves the state locally.
-2. **Remote Action (GitHub):** You run `git push origin main`. This uploads your local commit to the GitHub server so your teammates can see it.
-3. **Collaboration (GitHub):** Your lead developer opens a Pull Request on GitHub to review your changes before they are merged.
+While Git stores every version of every file, it is not a replacement for a backup strategy. A Git repository tracks the evolution of the source code, but it does not protect against hardware failure of the local disk or accidental deletion of the entire `.git` directory. Furthermore, Git is designed for text-based source files; storing large binary blobs in Git history bloats the repository size for every single person who clones it, as they must download the entire history.
 
-## Common Mistake: "GitHub is down, I can't commit"
-Many beginners think that if they lose internet access or if GitHub is offline, they cannot save their work. This is incorrect. Since Git is local, you can continue to commit, branch, and merge on your machine. You only need GitHub when you want to share your code or back it up remotely.
+## Worked Scenario: The Community Directory
 
-## Practical Exercise
-Which tool would you use to create a new branch called `feature-manager-approval` while offline?
+Two volunteers, Alice and Bob, are maintaining a `directory.txt` file containing community contact info. 
 
-**Answer:** Git. Branching is a local operation handled by the Git software on your machine.
+### 1. Local Initialization and First Commit
+Alice starts the project locally. She creates the file and initializes the repository.
+
+```bash
+# Illustrative: Alice's local setup
+git init -b main community-dir
+cd community-dir
+echo "Alice: 555-0101" > directory.txt
+git add directory.txt
+git commit -m "Initial directory setup"
+```
+
+### 2. Branching for New Features
+Bob wants to add a category for "Local Businesses" but doesn't want to break the main list until it is verified. He creates a feature branch.
+
+```bash
+# Illustrative: Bob creates a separate line of work
+git checkout -b add-businesses
+echo "Bakery: 555-0202" >> directory.txt
+git add directory.txt
+git commit -m "Add bakery contact"
+```
+
+### 3. Reviewing the Diff
+Before merging, Bob reviews exactly what changed. The `diff` command shows the precise lines added or removed.
+
+```bash
+# Illustrative: Checking changes against the main branch
+git diff main add-businesses
+```
+**Output Meaning:** The output shows a `+` sign next to "Bakery: 555-0202", indicating this line exists in the feature branch but not in the main branch.
+
+### 4. Remote Synchronization
+To share the work, they use a GitHub repository as the remote. Alice pushes the main branch, and Bob pushes his feature branch for review.
+
+```bash
+# Illustrative: Connecting local to remote
+git remote add origin https://github.com/user/community-dir.git
+git push -u origin main
+# Bob pushes his branch
+git push origin add-businesses
+```
+
+## Consequences of the Workflow
+
+By using branches, Bob avoided "breaking" the main directory. If he had committed directly to `main` and made a mistake, he would have to navigate the history to revert. By pushing to a remote, Alice can now `git fetch` Bob's changes, review them, and merge them into `main` only after verification.
+
+## Exercise
+
+Distinguish two situations. To discard an uncommitted working-tree edit, git restore config.json normally restores from the index; inspect git diff and git diff --cached first because staged content may differ from HEAD. To explicitly restore the committed version into the working tree, use git restore --source=HEAD -- config.json after confirming you want to discard that edit.
+
+If the mistaken change was already committed and shared, git revert <commit> creates a new inverse commit and preserves history. For only one file from an earlier version, restore from a chosen known commit, review the diff and commit the correction. A restore does not itself undo an existing commit.
+
+Bob needs a clone or an agreed shared local checkout before the branch steps; the example omits that setup. Git records committed snapshots, not every untracked or ignored file. Shallow and partial clones may not include all history. Branches help isolate changes but do not prove correctness without review.
 
 ## Further reading
 

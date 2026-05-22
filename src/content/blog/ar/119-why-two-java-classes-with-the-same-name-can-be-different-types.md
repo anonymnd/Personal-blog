@@ -1,56 +1,95 @@
 ---
-title: "علاش جوج ديال لي كلاس فـ Java عندهم نفس السمية ولكن كيتعتبرو أنواع مختلفة"
-description: "فهم كيفاش الـ packages و الـ class loaders كيمنعو تداخل السميات و كيديرو أنواع مختلفة فـ JVM."
-pubDate: 2026-10-11T14:48:00.000Z
+title: "الهوية ديال الـ Types في Java: الـ Packages والـ Class Loaders"
+description: "علاش جوج classes عندهم نفس السمية كيتعتابرو أنواع مختلفة وكيفاش تحول بيناتهم بلا مشاكل."
+pubDate: 2026-10-07T15:48:00.000Z
 translationKey: 119-why-two-java-classes-with-the-same-name-can-be-different-types
+seriesOrder: 24
 locale: ar
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## كيفاش Java كتعرف الـ Type
 
-تخيل راسك خدام على تطبيق ديال الشراء (procurement app). عندك كلاس سميتها `Request` فـ package سميتو `com.app.requester` وكلاس أخرى بنفس السمية `Request` فـ package سميتو `com.app.manager`. جيتي تصيفط الـ request ديال requester لواحد الـ method ديال manager، ولكن الـ compiler عطاك error ديال Type Mismatch. واخا بجوجهم سميتهم `Request` ولكن Java كتشوفهم بحال جوج حوايج مختلفين تماماً.
+في Java، الـ class ما كيتعرفش غير بالسمية ديالو البسيطة (مثلاً `Money`)، ولكن بـ Fully Qualified Name (FQN). الـ FQN هو السمية ديال الـ package متبوعة بسمية الـ class. إلا كانو جوج classes عندهم نفس السمية ولكن في packages مختلفين، الـ JVM كيشوفهم بحال جوج أنواع ما عندهم حتى علاقة بيناتهم.
 
-## الدور ديال Fully Qualified Names
-فـ Java، السمية ديال الكلاس ماشي هي غير داك الاسم اللي كتشوف فـ الملف. الهوية الحقيقية هي الـ Fully Qualified Name (FQN)، اللي هي عبارة على الطريق ديال الـ package متبوعة بسمية الكلاس. يعني `com.app.requester.Request` و `com.app.manager.Request` مختلفين بحال `String` و `Integer`. الـ package كايخدم بحال واحد الـ namespace باش كل موديل يقدر يستعمل سميات عادية بلا ما يتصادمو.
+هاد الهوية مرتبطة حتى بـ ClassLoader. أي class كيتحدد بـ FQN ديالو والـ ClassLoader اللي شارجاه. إلا شارجيتي نفس الـ `.class` file بجوج ClassLoaders مختلفين، غادي يولي عندك جوج objects ديال `Class` مختلفين، وإلا حاولتي دير cast من واحد لواحد، غادي تطلع ليك `ClassCastException`.
 
-## الـ Class Loaders والهوية فـ Runtime
-من غير الـ packages، الـ JVM كتستعمل Class Loaders باش تطلع الـ bytecode. أي كلاس كتعرف بـ FQN ديالها ومع الـ Class Loader اللي طلعها. إلا كانو جوج ديال class loaders مختلفين طلعو نفس الملف `.class` من بلايص مختلفين، الـ JVM كتعبرهم جوج أنواع مختلفة. هادشي كيوقع بزاف فـ الـ plugins ولا السيرفورات ديال التطبيقات.
+## السيناريو: مشكل مع SDK قديم
 
-## مثال تطبيقي: مشكل فـ طلبات الشراء
-شوف هاد المثال فين كنحاولو نسيرو طلب شراء:
+تخيل عندك application فيها record سميتو `Money` للخدمة الداخلية، وفي نفس الوقت خاصك تخدم بـ SDK قديم حتى هو فيه class سميتها `Money`. حيت هادو أنواع مختلفة، ما تقدرش تستعمل cast باش تحول بيناتهم، واخا يكونو عندهم نفس الـ fields.
+
+### مثال تطبيقي
 
 ```java
-package com.app.requester;
-public class Request { public String item = "Laptop"; }
+// Type ديال application
+package com.app.domain;
 
-package com.app.manager;
-public class Request { public boolean approved = false; }
+public record Money(java.math.BigDecimal amount, String currency) {}
 
-public class ProcurementService {
-    public void process(com.app.manager.Request mgrReq) {
-        System.out.println("Processing...");
+// Type ديال SDK القديم
+package com.legacy.sdk;
+
+public class Money {
+    private final java.math.BigDecimal value;
+    private final String isoCode;
+
+    public Money(java.math.BigDecimal value, String isoCode) {
+        this.value = value;
+        this.isoCode = isoCode;
     }
 
-    public void run() {
-        com.app.requester.Request req = new com.app.requester.Request();
-        // process(req); // هنا غادي يوقع error فـ الـ compilation
+    public java.math.BigDecimal getValue() { return value; }
+    public String getIsoCode() { return isoCode; }
+}
+```
+
+## التحويل الآمن (Boundary-Safe Mapping)
+
+باش تنقل الداتا من الـ SDK لـ application ديالك، خاصك دير mapping صريح. الـ cast ما خدامش حيت الـ JVM كيقلب على الهوية ديال الـ type (FQN + ClassLoader) فاش كيكون البرنامج خدام.
+
+### مثال ديال الـ Mapping
+
+```java
+package com.app.service;
+
+import java.util.Optional;
+import com.app.domain.Money; // Type ديال application
+
+public class CurrencyConverter {
+    
+    public com.app.domain.Money mapToDomain(com.legacy.sdk.Money sdkMoney) {
+        if (sdkMoney == null) return null;
+        
+        // تحويل صريح: كنخدو القيم باش نصاوبو instance جديدة
+        return new com.app.domain.Money(
+            sdkMoney.getValue(), 
+            sdkMoney.getIsoCode()
+        );
+    }
+
+    public void processPayment(com.legacy.sdk.Money sdkMoney) {
+        // هادي غادي تلوح ClassCastException:
+        // com.app.domain.Money domainMoney = (com.app.domain.Money) sdkMoney;
+        
+        com.app.domain.Money domainMoney = mapToDomain(sdkMoney);
+        System.out.println("Processed: " + domainMoney.amount());
     }
 }
 ```
-النتيجة: الـ method اللي سميتها `process` كتسنى `manager.Request`. إلا عطيتيها `requester.Request` ما غاديش تخدم حيت الـ FQN مختلف، وهكا Java كتضمن أن المنطق ديال manager ما يغلطش ويخدم بـ data ديال requester.
 
-## غلط شائع: تداخل الـ Imports
-بزاف ديال المبرمجين كيديرو `import com.app.requester.*;` و `import com.app.manager.*;` فـ نفس الملف. إلا كانو بجوج فيهم كلاس سميتها `Request` واستعملتي كلمة `Request` بوحدها، الـ Java ما غاديش تعرف شكون فيهم وكيعطيك ambiguity error.
+### تحليل الطريقة
+1. **التعامل مع FQN**: الـ compiler كيستعمل الـ imports باش يفرق بين `com.app.domain.Money` و `com.legacy.sdk.Money`. إلا كنتي محتاجهم بجوج في نفس الـ file، خاصك تكتب المسار الكامل ديالهم.
+2. **Allocation في الذاكرة**: الميثود `mapToDomain` كتصاوب object جديد في الـ heap. ما كتبدلش الهوية ديال الـ object اللي جاي من الـ SDK، ولكن كتاخد المعلومات ديالو وتحطها في type اللي كتفهمو الـ application.
+3. **حالة الفشل**: إلا حاول شي واحد يستعمل reference ديال `Object` جاي من الـ SDK ويدير ليه cast لـ `Money` ديال الـ domain، الـ JVM غادي يلقى بلي الـ class مشارجية من package `com.legacy.sdk` وغادي يرفض الـ cast، واخا يكونو السميات ديال الـ fields بحال بحال.
 
-**التصحيح:** استعمل الـ FQN كامل وسط الكود (مثلاً `com.app.requester.Request req = new ...`) أو دير import لواحد منهم والآخر استعمل ليه الـ FQN.
+## تمرين
 
-## تمرين تطبيقي
-إلا كان عندك `package a.User` و `package b.User` واش تقدر دير cast لـ instance ديال `a.User` باش تولي `b.User` باستعمال `(b.User) myUser`؟
+**سؤال**: عندك class سميتها `com.util.Config` و وحدة أخرى `com.internal.Config`. وصلك object من نوع `Object` وعارفو راه `com.util.Config`. شنو يوقع إلا درتي `(com.internal.Config) receivedObject`؟ وكيفاش تنقل الداتا من config ديال util لـ config ديال internal بطريقة صحيحة؟
 
-**الجواب:** لا، غادي يوقع `ClassCastException` فـ الـ runtime حيت هما أنواع مختلفة واخا عندهم نفس السمية.
+**الجواب**: غادي تطلع `ClassCastException` حيت الـ FQN مختلف. باش تنقل الداتا، خاصك تستعمل mapper صريح: تصاوب instance جديدة من `com.internal.Config` وتعمرها بالقيم اللي كتجيبهم من `com.util.Config` باستعمال الـ getters.
 
+Package declarations اللي فالمثال خاصهم files منفصلين. Java ما فيهاش import alias. Cast مباشر بين final types بلا علاقة يقدر يترفض فـ compilation؛ cast عبر Object يقدر يدوز ومن بعد يفشل فـ runtime. ClassLoader اللي كيهم هو defining loader؛ جوج initiating loaders يقدرو يفوضو لنفس definition ويجيبو نفس type.
 
 ## باش تزيد تفهم
 

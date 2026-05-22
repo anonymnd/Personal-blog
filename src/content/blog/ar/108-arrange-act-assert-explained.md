@@ -1,63 +1,158 @@
 ---
-title: "شرح ديال Arrange, Act, Assert"
-description: "دليل باش تعلم كيفاش تنظم tests unitaires باستعمال طريقة AAA باش يكون الكود ديالك نقي وسهل فالفهم."
-pubDate: 2026-10-11T03:48:00.000Z
+title: "تست ديال CUD كـ Observable Behaviors"
+description: "شرح مفصل ديال Arrange-Act-Assert باش تستي الـ Create, Update, و Delete باستعمال scenario ديال reading-list service."
+pubDate: 2026-10-07T14:48:00.000Z
 translationKey: 108-arrange-act-assert-explained
+seriesOrder: 23
 locale: ar
-tags: ["software-engineering","backend-testing","learning-series"]
+tags: ["backend-testing","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## كيفاش نشوفو CUD كـ Behaviors ماشي غير كود
 
-بزاف ديال المبرمجين كيبداو يكتبو tests مخلطين، كيديرو setup و assertions فدقة وحدة، وهادشي كيخلي الـ test يولي بحال 'سباغيتي' وما كتعرفش بالضبط شنو اللي كيتستى. ملي كيوقع error، كتضيع الوقت باش تفهم الـ test شنو بغا يدير عوض ما تصلح المشكل. هنا فين كتنفع طريقة Arrange, Act, Assert (AAA) حيت كتعطي نظام واضح.
+بزاف ديال المطورين كيوقعو فغلط فاش كيسيتييو الـ Create, Update, و Delete (CUD)، كيديرو غير « mirror testing »: يعني كيعيطو للميثود وكيتأكدو بلي الـ mock تعيط ليه. ولكن باش التست يكون عندو قيمة، خاصنا نشوفو هاد العمليات كـ observable behaviors: يعني يلا كانت عندنا حالة معينة، واش السيستيم كيعطي النتيجة اللي بغينا ولا كيمنع شي حاجة غلط؟
 
-## الركائز ديال AAA
+فهاد الـ scenario، عندنا `ReadingListService` كيسير لستات ديال الكتوبة. وعندو 3 ديال القواعد:
+1. الكتوبة خاص يكونو unique فكل لستة.
+2. اللستات اللي archived (مؤرشفة) ممنوع تتبدل.
+3. يلا بغيتي تمسح كتاب ما كاينش، خاص السيستيم يتعامل مع هاد الحالة بشكل صريح.
 
-**Arrange** هي المرحلة الأولى. هنا كتوجد كاع داكشي اللي غتحتاج: objects، mocks، و data. مثلا كتحدد شنو خاص Mockito يرجع باستعمال `when()`.
+## القاعدة ديال Arrange-Act-Assert (AAA)
 
-**Act** هي المرحلة ديال التنفيذ. هنا كتعيط للميثود (method) اللي بغيتي تستي. من الأحسن تكون هاد المرحلة فيها غير سطر واحد باش يبقى التركيز على حاجة وحدة.
+أي تست خاصو يتبع هاد الترتيب باش يكون واضح وسهل فالتعديل:
+- **Arrange**: كتوجد فيه الـ objects، كتحدد شنو غادي يرجع الـ mock، وكتصاوب الحالة الأولية.
+- **Act**: كتنفذ الميثود اللي بغيتي تستي.
+- **Assert**: كتأكد من النتيجة، واش الحالة تبدلات، ولا واش تلوحات (thrown) شي exception.
 
-**Assert** هي المرحلة ديال التأكد. هنا كتشوف واش النتيجة اللي خرجت هي اللي كنتي كتسنى باستعمال JUnit assertions أو `verify()` ديال Mockito باش تأكد بلي واحد الـ interaction وقعات.
+## مثال تطبيقي: ReadingListService
 
-## مثال تطبيقي: Approval ديال طلب شراء
-
-تخيل عندنا application ديال procurement، والمدير خاصو يوافق على طلب. بغينا نتأكدو بلي status كتولي 'APPROVED'.
+هاد الـ test suite كاملة. كنفرضوا بلي `ReadingListRepository` مخدوم بـ Mockito. رد البال بلي `@InjectMocks` غير كتصاوب الـ service وكتدخل فيه الـ mocks، ولكن ما كتشعلش Spring context.
 
 ```java
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.Optional;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
-class ProcurementServiceTest {
+class ReadingListServiceTest {
+
     @Mock
-    private RequestRepository repository;
+    private ReadingListRepository repository;
+
     @InjectMocks
-    private ProcurementService service;
+    private ReadingListService service;
+
+    // --- CREATE BEHAVIOR ---
 
     @Test
-    void testApproveRequest() {
+    void createList_ShouldReturnSavedList_WhenValid() {
         // Arrange
-        Request request = new Request(1L, "Laptop", "PENDING");
-        when(repository.findById(1L)).thenReturn(Optional.of(request));
+        ReadingList input = new ReadingList("Java Mastery", false);
+        ReadingList saved = new ReadingList(1L, "Java Mastery", false);
+        when(repository.save(any(ReadingList.class))).thenReturn(saved);
 
         // Act
-        service.approve(1L);
+        ReadingList result = service.createList(input);
 
         // Assert
-        assertEquals("APPROVED", request.getStatus());
-        verify(repository).save(request);
+        assertNotNull(result.id());
+        assertEquals("Java Mastery", result.name());
+        verify(repository).save(input);
+    }
+
+    @Test
+    void createList_ShouldThrowException_WhenBookAlreadyExists() {
+        // Arrange
+        ReadingList list = new ReadingList(1L, "Java Mastery", false);
+        when(repository.findById(1L)).thenReturn(Optional.of(list));
+        // كنقولو بلي الكتاب ديجا كاين فـ اللستة
+        when(repository.containsBook(1L, "Effective Java")).thenReturn(true);
+
+        // Act & Assert
+        assertThrows(DuplicateBookException.class, () -> {
+            service.addBookToList(1L, "Effective Java");
+        });
+    }
+
+    // --- UPDATE BEHAVIOR ---
+
+    @Test
+    void updateList_ShouldUpdateName_WhenNotArchived() {
+        // Arrange
+        ReadingList existing = new ReadingList(1L, "Old Name", false);
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        // Act
+        ReadingList updated = service.updateListName(1L, "New Name");
+
+        // Assert
+        assertEquals("New Name", updated.name());
+    }
+
+    @Test
+    void updateList_ShouldThrowException_WhenArchived() {
+        // Arrange
+        ReadingList archived = new ReadingList(1L, "Old Name", true);
+        when(repository.findById(1L)).thenReturn(Optional.of(archived));
+
+        // Act & Assert
+        assertThrows(ArchivedListException.class, () -> {
+            service.updateListName(1L, "New Name");
+        });
+        verify(repository, never()).save(any());
+    }
+
+    // --- DELETE BEHAVIOR ---
+
+    @Test
+    void deleteList_ShouldCallRepository_WhenPresent() {
+        // Arrange
+        when(repository.existsById(1L)).thenReturn(true);
+
+        // Act
+        service.deleteList(1L);
+
+        // Assert
+        verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void deleteList_ShouldThrowException_WhenAbsent() {
+        // Arrange
+        when(repository.existsById(1L)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> {
+            service.deleteList(1L);
+        });
+        verify(repository, never()).deleteById(anyLong());
     }
 }
 ```
 
-## غلط شائع: التخليط بين المراحل
+## تحليل النتائج ديال التستات
 
-واحد الغلط كيديروه بزاف هو كيبقاو يديرو Act و Assert بزاف دالمرات فـ test واحد. مثلا كيعيط لميثود، كيدير assert، ومن بعد كيعيط لميثود أخرى ويدير assert تانية. هادشي كيصعب معرفة فين كاين المشكل بالضبط. الحل هو تقسم هادشي لـ tests صغار، كل واحد متبع نظام AAA.
+Create test بـ mock كتثبت أن service رجعات id وname اللي عطا stub ديال repository؛ ما كتثبتش persistence حقيقية. Test ديال archived list كتثبت أن هاد branch كترمي exception قبل save؛ ما كتجربش dirty checking ولا كاع paths ديال persistence.
 
-## تمرين تطبيقي
+زيد tests كيخلقو ويرجعو يقراو ويبدلو ويحيدو من DB حقيقية إلا هادا هو risk. حذف book ما كايناش ماشي هو حذف list ما كايناش. Test ديال mocks خاصها تبين بالضبط value ولا rule ولا interaction اللي كتراقب.
+## تمرين
 
-**السيناريو:** كتب test لميثود `reject()` اللي خاصها ترد الـ status هي 'REJECTED'.
+**Scenario**: زيد ميزة بلي اللستة ما يمكنش تمسح يلا كان فيها كتر من 100 كتاب (باش ما يتمسحوش لستات كبار بالغلط).
 
-**التأكد:** واش درتي `when()` فـ Arrange، و `service.reject()` فـ Act، و `assertEquals` فـ Assert؟ إذا كان الجواب نعم، راك طبقتي القاعدة صحيحة.
+**المطلوب**: كتب خطوات Arrange, Act, و Assert لتست كيتأكد بلي `MassDeletionException` كتلوح فاش كنبغيو نمسحو لستة فيها 101 كتاب.
 
+**الجواب**:
+- **Arrange**: دير mock لـ `repository.findById(id)` يرجع `ReadingList` فيها 101 كتاب، و `repository.existsById(id)` يرجع `true`.
+- **Act**: عيط لـ `service.deleteList(id)` وسط `assertThrows(MassDeletionException.class, ...)`.
+- **Assert**: تأكد بلي `repository.deleteById(id)` ما تعيطش ليه نهائياً (`never()`).
 
 ## باش تزيد تفهم
 

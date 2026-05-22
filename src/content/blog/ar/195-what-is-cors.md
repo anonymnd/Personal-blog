@@ -1,45 +1,72 @@
 ---
-title: "شنو هو CORS؟"
-description: "شرح مبسط على CORS وكيفاش المتصفح كيتحكم في السيكوريتي ملي كيكون الـ frontend والـ backend في دومينات مختلفين."
-pubDate: 2026-10-14T18:48:00.000Z
+title: "فهم الـ Origins و CORS وكيفاش كيتحكم المتصفح في الوصول"
+description: "شرح مفصل على Same-Origin Policy، كيفاش كيخدم الـ preflight، والفرق الكبير بين CORS والـ authentication."
+pubDate: 2026-10-08T09:48:00.000Z
 translationKey: 195-what-is-cors
+seriesOrder: 42
 locale: ar
-tags: ["software-engineering","web-communication","learning-series"]
+tags: ["web-communication","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
-
-تخايل معايا عندك تطبيق ديال المشتريات (procurement app)، الـ frontend خدام في `http://localhost:3000` والـ backend API في `http://localhost:8080`. كتبتي كود `fetch()` ناضي باش تصيفط طلب شراء، ولكن المتصفح حبس ليك الـ réponse وعطاك error بالحمراء فيها كلمة 'CORS'. هادشي كيوقع بسبب واحد الحاجة سميتها Same-Origin Policy، وهي سيكوريتي ك تمنع أي سكريبت من موقع باش يقرا بيانات من موقع آخر إلا إذا كان مسموح ليه.
-
 ## شنو هي الـ Origin؟
-الـ Origin ك يتكون من تلاتة ديال الحوايج: الـ scheme (http ولا https)، الـ host (الدومين)، والـ port. إلا تبدلات وحدة فيهم، كتولي requête cross-origin. مثلا، `http://api.app.com` و `https://api.app.com` ماشي بحال بحال حيت الـ scheme مختلف.
 
-## كيفاش كيخدم CORS؟
-CORS هو واحد السيستيم كيخدم بـ HTTP headers باش يقول للمتصفح بلي السيرفر كيسمح لشي origin معينة باش تاخد البيانات. ملي المتصفح كيصيفط requête cross-origin، كيقلب في الـ réponse على واحد الـ header سميتو `Access-Control-Allow-Origin`. إلا لقى فيه الـ origin ديال الـ frontend أو لقى علامة `*` (wildcard)، كيخلي الـ frontend يقرا البيانات.
+السيكوريتي في المتصفح (browser) كتبدا بـ Same-Origin Policy (SOP). الـ "origin" ماشي غير الدومين، بل هي مجموعة (tuple) فيها تلاتة ديال الحوايج: **البروتوكول (Scheme)، الهوست (Host)، والـ Port**. إلا كان شي واحد فيهم مختلف، المتصفح كيعتبر الطلب cross-origin.
 
-## الـ Preflight Requests
-ملي كتكون الـ requête 'معقدة' (مثلا كتخدم بـ `PUT` أو `DELETE` أو headers ديال JSON)، المتصفح كيصيفط أولا واحد الـ requête سميتها `OPTIONS`. هادي بحال إلا كيسول السيرفر: "واش مسموح ليا نصيفط هاد الـ requête؟". السيرفر خاصو يجاوب بـ 200 OK ويحدد شنو هما الـ methods والـ origins اللي مسموح بيهم.
+نشوفو المثال ديالنا: واحد الـ dashboard خدام في `http://localhost:3000` وبغا يعيط لـ backend في `http://localhost:8080`.
 
-## مثال تطبيقي: موافقة المدير
-نفترضو مدير بغا يوافق على طلب شراء من frontend في `https://manager.app`. الـ backend (Jakarta EE) خاصو يضيف هاد الـ headers:
+*   **البروتوكول:** `http` == `http` (متطابقين)
+*   **الهوست:** `localhost` == `localhost` (متطابقين)
+*   **الـ Port:** `3000` != `8080` (مختلفين)
 
-```java
-// مثال بسيط ديال filter
-response.setHeader("Access-Control-Allow-Origin", "https://manager.app");
-response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-response.setHeader("Access-Control-Allow-Headers", "Content-Type");
-```
-النتيجة: المتصفح كيشوف بلي الـ header مطابق لـ `https://manager.app` وكيخلي الـ UI تقرا تأكيد الموافقة.
+حيت الـ ports مختلفين، هادو كيتعبروا origins مختلفين. نفس الشيء كيوقع مع الـ subdomains: `dashboard.example.com` و `api.example.com` كيتعبروا origins مختلفين حيت الهوست ماشي هو هو.
 
-## غلط شائع: خلط CORS مع الـ Auth
-بزاف كيصحابلهم بلي CORS هو حيط ديال السيكوريتي كيمنع الـ requête توصل للسيرفر. في الحقيقة، CORS ك يتحكم غير في *قراءة* الـ réponse في المتصفح. الـ requête تقدر توصل للسيرفر وتبدل بيانات في الـ database وخا المتصفح يبلوكي الـ réponse. داكشي علاش ضروري دير authentication و authorization في السيرفر.
+## SOP مقابل CORS: سياسة القراءة
 
-## تمرين تطبيقي
-إلا كان الـ frontend ديالك في `http://localhost:3000` والسيرفر صيفط `Access-Control-Allow-Origin: http://localhost:8080` واش المتصفح غادي يخلي الـ frontend يقرا البيانات؟
+بزاف كيغلطو وكيصحاب ليهم بلي SOP كتمنع *إرسال* الطلبات. في الحقيقة، SOP كتمنع أساساً *قراءة* الجواب (response). في بزاف ديال الحالات، المتصفح كيصيفط الداتا للسيرفر، والسيرفر كيجاوب، ولكن المتصفح كيمنع الكود ديال JavaScript باش يقرا داك الجواب، إلا إذا كان السيرفر عاطي الإذن صراحة عن طريق Cross-Origin Resource Sharing (CORS).
 
-**الجواب:** لا، حيت الـ origin اللي في الـ header خاصها تكون هي نفسها ديال اللي صيفط الطلب (`localhost:3000`) أو تكون `*`.
+## الطلبات البسيطة (Simple) والـ Preflight
 
+ماشي كاع الطلبات cross-origin كيتعاملو بنفس الطريقة. المتصفح كيقسمهم لـ "Simple" و "Preflighted".
+
+### الطلبات البسيطة (Simple Requests)
+الطلبات اللي كتخدم بـ `GET` أو `POST` أو `HEAD` ومعاها headers عادية (بحال `Accept` أو `Content-Type: application/x-www-form-urlencoded`) كيتصيفطو مباشرة. المتصفح كيشوف الـ header ديال `Access-Control-Allow-Origin` في الجواب. إلا مالقاش فيه الـ origin اللي صيفطت الطلب، كيطلع error ديال CORS وكيخبي الجواب على الكود.
+
+### طلبات الـ Preflight (OPTIONS)
+إلا كان الطلب كيخدم بـ `PUT` أو `DELETE` أو كان فيه header بحال `Content-Type: application/json` المتصفح كيصيفط أولاً طلب `OPTIONS`. هادشي هو اللي كنسميوه "Preflight". بحال إلا كيقول للسيرفر: "راني ناوي نصيفط طلب PUT فيه JSON، واش مسموح لي؟"
+
+إلا جاوب السيرفر بـ `200 OK` وعطاه الـ `Access-Control-Allow-Methods` و `Access-Control-Allow-Headers` المناسبين، عاد المتصفح كيصيفط الطلب الحقيقي.
+
+## الـ Credentials وفخ الـ Wildcard
+
+للـ cross-origin cookies، client كتحتاج credentials: include ولا withCredentials، وresponse خاصها Access-Control-Allow-Credentials: true وorigin صريحة مسموحة بلا *. Domain وSameSite وbrowser policies يقدرو يبقاو يمنعو cookies.
+
+Authorization header اللي كتزيدها يدويا حالة أخرى: صيفطها بوضوح وسمح ليها فـ preflight headers؛ credentials: include ماشي ضرورية غير باش تصيفط هاد header. ما تخلطش bearer token مع cookies. Reflecting أي Origin عشوائيا كتفسد allowlist.
+## مثال تطبيقي: تحليل المشكل (Diagnosis)
+
+Dashboard كتبعث JSON POST مع cookies. Preflight فيها Origin وAccess-Control-Request-Method: POST وAccess-Control-Request-Headers: content-type. خاص permissions مناسبة للـ origin وcredentials وheaders. نقص Allow-Headers: content-type كيحبس JSON request. POST نفسها safelisted، يعني غير غياب Allow-Methods ماشي مثال صحيح ديال failure هنا.
+
+Actual response حتى هي خاصها explicit origin وcredential permission. Allow-Origin: * مع include كيخلي response ما تتقراش. Preflight بـ204 تقدر تنجح؛ ماشي غير 200.
+## CORS ماشي هي السيكوريتي
+
+الـ CORS هي ميكانيزم كيديرو المتصفح باش يحمي الداتا ديال المستخدم من سكريبتات خايبة في tabs خرين. ولكن CORS **ماشي** بديل لـ:
+*   **Authentication:** CORS ما كتعرفش شكون هو المستخدم.
+*   **Authorization:** CORS ما كتشوفش واش المستخدم عندو الحق يمسح شي حاجة.
+*   **CSRF Protection:** حيت الطلبات البسيطة (simple requests) كيتصيفطو *قبل* ما يتشيكا الـ CORS، يعني شي موقع خايب يقدر يدير CSRF attack ويصيفط POST request تبدل الداتا، وخا ما يقدرش يقرا الجواب.
+
+## تمرين
+
+**السؤال:** عندك بيئة production فيها frontend في `https://app.example.com` و API في `https://api.example.com`. الـ frontend كيصيفط طلب `DELETE` مع header خاص سميتو `X-Request-ID` ومعاه cookies ديال session. شنو هما الـ headers اللي خاص السيرفر يرجعهم في الـ preflight وفي الجواب الحقيقي باش يخدم هادشي؟
+
+**الجواب:**
+1.  **في الـ Preflight (OPTIONS):**
+    *   `Access-Control-Allow-Origin: https://app.example.com`
+    *   `Access-Control-Allow-Methods: DELETE`
+    *   `Access-Control-Allow-Headers: X-Request-ID`
+    *   `Access-Control-Allow-Credentials: true`
+2.  **في الجواب الحقيقي (DELETE):**
+    *   `Access-Control-Allow-Origin: https://app.example.com`
+    *   `Access-Control-Allow-Credentials: true`
 
 ## باش تزيد تفهم
 

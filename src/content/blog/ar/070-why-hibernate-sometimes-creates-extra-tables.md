@@ -1,56 +1,112 @@
 ---
-title: "علاش Hibernate كيكريي طابلات زايدين"
-description: "فهم كيفاش طرق الربط ديال collections و l'héritage كتخلي Hibernate يكريي tables de jointure بلا ما تطلب منهم."
-pubDate: 2026-10-09T13:48:00.000Z
+title: "علاش الـ Value Collections والـ Associations كيحتاجو جداول زايدة"
+description: "شرح معمق لـ @ElementCollection و الـ embeddables والفرق بين الـ value types والـ entities في JPA."
+pubDate: 2026-10-07T06:48:00.000Z
 translationKey: 070-why-hibernate-sometimes-creates-extra-tables
+seriesOrder: 15
 locale: ar
-tags: ["software-engineering","spring-architecture","learning-series"]
+tags: ["spring-architecture","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## الفرق بين الـ Value Types والـ Entities
 
-تخايل راسك درتي علاقة `@ManyToMany` عادية ف الكود Java ديالك، ولكن ملي مشيتي تشوف la base de données، لقيتي واحد الطابلة تالتة ما كرييتيهاش نتا. كيبان بحال إلا Hibernate كيدير اللي بغا، ولكن هاد الطابلات الزايدين هما الطريقة باش كيتعالج الربط بين البيانات (relational mapping).
+في JPA، كاين فرق كبير بين **Entity** و **Value Type**. الـ Entity عندها هوية (Identity) يعني Primary Key اللي كيخلينا نتبعوها، نعدلوها، ونرجعو ليها من أي بلاصة في السيستيم. أما الـ Value Type، فهي كتعرف غير بالمعلومات اللي فيها. إلا لقيتي جوج Value Types عندهم نفس الداتا، راه كيتعبرو نفس الحاجة.
 
-## ميكانيزم ديال Join Table
-ف la base de données، العلاقة ديال many-to-many ما يمكنش تدار غير بـ column وحدة ف وحدة من الطابلات. باش ما يكونش تكرار ديال البيانات وتبقى la base normalisée، Hibernate كيكريي 'Join Table'. هاد الطابلة كتخدم بحال قنطرة، فيها غير les clés primaires ديال جوج ديال entities. إلا خدمتي بـ `@ManyToMany` بلا ما تحدد `@JoinTable` annotation، Hibernate كيكرييها راسو بسمية افتراضية بحال `Entity1_Entity2`.
+تخيل معايا `Product` (منتج). الـ `Supplier` (المورد) هو Entity حيت المورد كاين بوحدو وخا ميكونش مرتبط بشي منتج معين، وعندو ID ديالو. ولكن `Dimensions` (العبارات: الطول، العرض، العمق) أو لستة ديال `ColorLabels` (الألوان: أحمر، زرق) راهم Value Types. ما عندهم حتى معنى إلا إذا كانوا مرتبطين بمنتج معين.
 
-## الربط ديال l'héritage
-حاجة أخرى كتخلي Hibernate يكريي طابلات زايدين هي `@Inheritance`. إلا خدمتي بـ `InheritanceType.JOINED`، Hibernate كيكريي طابلة أساسية لـ parent class وطابلات بوحدهم لكل subclass. كل طابلة ديال subclass كيكون فيها غير داكشي اللي خاص بها و foreign key كيرجع لـ parent. هاد الطريقة مزيانة من ناحية التنظيم ولكن كتزيد عدد الطابلات ف la base.
+## الدور ديال @ElementCollection
 
-## مثال تطبيقي: App ديال الشراء
-تخايل عندنا système ديال الشراء فين `PurchaseRequest` تقدر يكون فيها بزاف ديال `Item`s، و `Item` واحد يقدر يكون ف بزاف ديال requests.
+Mapping العادي ديال @ElementCollection كيخزن basic values ولا embeddables فجدول مربوط بالـ owner. هادا اختيار ديال mapping، ماشي أن DB ما تقدرش تخزن array ولا JSON فعمود واحد؛ هاد البدائل عندها mapping وtrade-offs ديال queries مختلفين.
+
+Association كتشير لـ entities عندهم هوية مستقلة. Collection ديال values ما كتعطيش هوية entity مستقلة لكل قيمة؛ كيتبعو owner. الجدول ديالهم يقدر يبقى عندو primary key وunique constraints وindexes. حذف parent عبر lifecycle ديال entity كيحذف values التابعة؛ bulk ولا native deletes خاصك تراجع constraints والتنظيف ديالهم.
+## مثال تطبيقي: عبارات وألوان المنتج
+
+ها كيفاش كنصاوبو منتج فيه مجموعة ديال الألوان (Strings) ومجموعة ديال العبارات (Dimensions).
 
 ```java
+import jakarta.persistence.*;
+import java.util.*;
+
+@Embeddable
+public record Dimensions(double height, double width, double depth) {}
+
 @Entity
-public class PurchaseRequest {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class Product {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToMany
-    private List<Item> items;
+
+    private String name;
+
+    @ElementCollection
+    @CollectionTable(name = "product_colors", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "color")
+    private Set<String> colors = new HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(name = "product_dimensions", joinColumns = @JoinColumn(name = "product_id"))
+    private Set<Dimensions> dimensions = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Supplier supplier;
+
+    // Getters, Constructor
 }
 
 @Entity
-public class Item {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class Supplier {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
+    private String companyName;
+    // Getters, Constructor
 }
 ```
 
-**النتيجة:** Hibernate غادي يكريي 3 ديال الطابلات: `purchase_request` و `item` وواحد الطابلة مخبية سميتها `purchase_request_items`. هادي هي اللي كتربط بين الطلبات والسلع.
+### كيفاش كيبان هادشي في Database
 
-## غلط شائع: استعمال ManyToMany بزاف
-بزاف ديال developers كيخدمو بـ `@ManyToMany` وخا تكون `@OneToMany` كافية. هادشي كيكريي طابلات زايدين اللي كيتقلو les requêtes.
+إلا سجلنا منتج عندو ID `101` وألوان `{"Red", "Blue"}` وعبارات `Dimensions(10, 20, 30)`، الداتا غتكون بحال هكا:
 
-**التصحيح:** إلا كانت العلاقة فعلاً one-to-many (مثلاً Request فيها بزاف ديال LineItems، ولكن LineItem كينتمي لـ Request وحدة)، خدم بـ `@OneToMany` و `@ManyToOne`. هكدا foreign key كيكون نيشان ف الطابلة ديال child، وما كتحتاجش لديك الطابلة القنطرة.
+**جدول `product`**
+| id | name | supplier_id |
+| :--- | :--- | :--- |
+| 101 | Desk | 50 |
 
-## تمرين تطبيقي
-إلا كان عندك entity `User` و entity `Role` بيناتهم `@ManyToMany` وبغيتي الطابلة ديال الربط تكون سميتها `user_roles` ماشي السمية اللي كيعطي Hibernate، شنو هي l'annotation اللي خاصك تزيد؟
+**جدول `product_colors`**
+| product_id | color |
+| :--- | :--- |
+| 101 | Red |
+| 101 | Blue |
 
-**الجواب:** خاصك تزيد `@JoinTable(name = "user_roles")` فوق الـ collection field ف l'entity.
+**جدول `product_dimensions`**
+| product_id | height | width | depth |
+| :--- | :--- | :--- |
+| 101 | 10.0 | 20.0 | 30.0 |
+
+**جدول `supplier`**
+| id | company_name |
+| :--- | :--- | 
+| 50 | OfficeCorp |
+
+### شنو كتعني الجداول
+
+هاد rows كيوصفو values تابعين للـ product، ماشي entities عندهم id مستقل. نسخ لون لمنتج آخر كيصاوب occurrence أخرى ديال القيمة، ما كينقلش هوية entity. SQL بالضبط وconstraints كيتعلقو بالـ mapping.
+
+## مشاكل شائعة (Pitfalls)
+
+إلا categories خاصهم id مشترك وتعديل مستقل وreferences من بزاف products، صاوب Category كـ entity. Relation تقدر تكون many-to-one ولا many-to-many ولا link entity، حسب domain. String label مكررة بوحدها ما كتفرضش entity.
+
+بدل collection managed الموجودة بحذر بلا ما تبدل wrapper ديال Hibernate عشوائيا. تكلفة SQL كتعلق بنوع collection وequality ديال values وmapping ونسخة provider. clear/addAll ماشي دائما أسرع، وحذف قيمة وحدة فـ Java ما كيضمنش DELETE وحدة فـ SQL. شوف logs ديال تغييرات ممثلة قبل optimization.
+## تمرين
+
+Product كيخزن وصف ديال garantie بحال 12 شهر للقطع و36 شهر للخدمة. فهاد model هما values بلا id ديال عقد ولا lifecycle مستقل. اختار WarrantyPeriod كـ embeddable فيه durationMonths وcoverageType داخل @ElementCollection.
+
+إلا حيدتي period من collection managed داخل transaction، من بعد flush وcommit خاص القيم المحفوظة توافق اللي بقاو. SQL ديال الحذف ولا إعادة الإدخال كتعلق بالـ mapping؛ راقبها بلا ما تضمن statement معينة. إلا garantie ولات عقد زبون كيتدار بشكل مستقل، عاود فكر فـ entity identity.
+
+المثال كيستعمل record embeddable اللي كيدعمو Hibernate 6.6؛ راجع provider وspecification قبل ما تنقلو. Snippets ديال entities هما files منفصلين وناقصين accessors وhelpers ديال construction. فـ PostgreSQL، foreign key ما كتخلقش index بوحدها على referencing columns. شوف keys الموجودة وquery plans قبل ما تزيد index على product_id؛ scan ديال table صغيرة يقدر يبقى فعال.
 
 ## باش تزيد تفهم
 
 - [Spring Data JPA: Persisting Entities](https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html)
+- [Spring declarative transactions](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-decl-explained.html)

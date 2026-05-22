@@ -1,59 +1,98 @@
 ---
-title: "Optional Expliqué Sans se Compliquer la Vie"
-description: "Apprenez à utiliser Java Optional pour gérer les valeurs nulles de manière sécurisée et expressive dans vos types de retour."
-pubDate: 2026-10-11T23:48:00.000Z
+title: "Utiliser Optional comme Contrat d'Absence Clair"
+description: "Apprenez à utiliser Optional pour signaler l'absence potentielle de valeur et gérer les replis coûteux via l'évaluation paresseuse."
+pubDate: 2026-10-07T19:48:00.000Z
 translationKey: 128-optional-explained-without-overcomplicating-it
+seriesOrder: 28
 locale: fr
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Contrat d'Absence
 
-Imaginez que vous développez une application d'achats. Un demandeur soumet une requête, et vous devez trouver le manager assigné à son département. Si le département existe mais qu'aucun manager n'est encore nommé, votre code pourrait retourner `null`. Si vous appelez immédiatement `.getName()` sur ce résultat, votre application plante avec une `NullPointerException` (NPE). C'est l'erreur classique que `Optional` tente de résoudre.
+En Java, retourner `null` est un signal ambigu. Cela force l'appelant à deviner si la valeur nulle est un résultat légitime, une erreur ou un état non initialisé. `java.util.Optional<T>` transforme cette ambiguïté en un contrat au niveau du type. Lorsqu'une méthode retourne un `Optional`, elle indique explicitement au développeur : "Cette valeur peut être absente ; vous devez décider comment gérer cette absence avant d'accéder aux données."
 
-## Qu'est-ce que Optional exactement ?
-`Optional<T>` est un objet conteneur qui peut ou non contenir une valeur non nulle. Ce n'est pas un remplacement pour chaque référence nulle dans votre code ; c'est plutôt un signal clair dans le type de retour d'une méthode. Cela dit au développeur : "Attention, cette méthode pourrait ne pas trouver ce que vous cherchez. Vous devez gérer le cas où c'est vide."
+## Le Danger de l'Accès Aveugle
 
-## La bonne manière de l'utiliser
-Au lieu de retourner `null`, vous retournez `Optional.ofNullable(value)`. L'appelant utilise ensuite des méthodes fonctionnelles pour décider de la suite. Évitez d'appeler `.get()` directement, car cela lance une exception si la valeur est absente, ce qui annule tout l'intérêt de l'outil.
+L'utilisation de `Optional.get()` sans vérification préalable via `isPresent()` revient pratiquement à déréférencer un pointeur nul, mais avec une exception différente (`NoSuchElementException`). Cela annule l'intérêt du type. L'objectif est de passer d'une "vérification de nullité" à la "définition d'un pipeline pour la valeur".
 
-## Exemple concret : Recherche de Manager
-Voici comment implémenter la recherche de manager dans un système d'achats :
+## Replis : Eager vs Lazy
+
+L'une des distinctions les plus critiques de l'API `Optional` se trouve entre `orElse()` et `orElseGet()`.
+
+- `orElse(T other)` : L'argument est évalué de manière **impatiente (eager)**. Même si l'Optional contient une valeur, l'expression à l'intérieur de `orElse()` est exécutée.
+- `orElseGet(Supplier<? extends T> other)` : L'argument est évalué de manière **paresseuse (lazy)**. La fonction supplier n'est invoquée que si l'Optional est vide.
+
+Dans les scénarios impliquant des opérations coûteuses — comme une recherche en base de données ou un appel API distant — l'utilisation de `orElse()` peut entraîner une dégradation significative des performances car le repli est calculé à chaque fois.
+
+## Exemple Concret : Recherche d'Édition de Catalogue
+
+Imaginons un catalogue de livres où nous cherchons d'abord une "Édition Préférée" (ex: version numérique). Si elle est absente, nous effectuons une recherche coûteuse pour toute édition physique disponible.
 
 ```java
-public class ProcurementService {
-    public Optional<Manager> findManagerByDept(String deptId) {
-        Manager manager = database.lookup(deptId); 
-        return Optional.ofNullable(manager);
+import java.util.Optional;
+import java.util.logging.Logger;
+
+public class CatalogService {
+    private static final Logger logger = Logger.getLogger(CatalogService.class.getName());
+
+    public record BookEdition(String isbn, String format) {}
+
+    // Simulation d'un findById qui retourne un Optional
+    public Optional<BookEdition> findPreferredEdition(String bookId) {
+        return Optional.empty(); 
     }
+
+    public BookEdition findAnyEditionExpensive(String bookId) {
+        logger.info("Exécution de la recherche coûteuse pour : " + bookId);
+        return new BookEdition("123-456", "Relié");
+    }
+
+    public BookEdition getEdition(String bookId) {
+        return findPreferredEdition(bookId)
+            // Transformer la valeur si présente
+            .map(edition -> {
+                logger.info("Édition préférée trouvée !");
+                return edition;
+            })
+            // Repli paresseux : findAnyEditionExpensive n'est appelé QUE si preferred est vide
+            .orElseGet(() -> findAnyEditionExpensive(bookId));
+    }
+
+    public void processEdition(String bookId) {
+        // Utilisation de orElseThrow pour signaler un échec métier
+        BookEdition edition = findPreferredEdition(bookId)
+            .orElseThrow(() -> new RuntimeException("Aucune édition disponible pour " + bookId));
+    }
+}
+```
+
+### Analyse de l'Exécution
+1. **Le Pipeline** : `findPreferredEdition` retourne un `Optional.empty()`.
+2. **Le Map** : Le bloc `.map()` est totalement ignoré car l'Optional est vide.
+3. **Le Repli** : `orElseGet()` déclenche le `Supplier`. Le log "Exécution de la recherche coûteuse" apparaît exactement une fois.
+4. **Cas d'Échec** : Si nous avions utilisé `.orElse(findAnyEditionExpensive(bookId))`, la méthode coûteuse s'exécuterait à chaque fois, peu importe l'existence d'une édition préférée.
+
+## Chaînage Fonctionnel avec flatMap
+
+Alors que `map` transforme la valeur à l'intérieur de l'Optional, `flatMap` est utilisé lorsque la fonction de transformation retourne elle-même un `Optional`. Cela évite la création d'un `Optional<Optional<T>>` imbriqué.
+
+## Exercice
+
+**Scénario** : Vous avez un record `User`. Un `User` peut avoir un `Optional<Profile>`, et un `Profile` peut avoir un `Optional<Address>`. Écrivez une méthode qui récupère l' `Address` d'un `User`, en retournant un Optional vide si une étape de la chaîne est manquante, et en levant une `CustomException` si le résultat final est vide.
+
+**Réponse**:
+```java
+public Optional<Address> getAddress(User user) {
+    return user.getProfile() // retourne Optional<Profile>
+              .flatMap(Profile::getAddress); // retourne Optional<Address>
 }
 
 // Utilisation
-ProcurementService service = new ProcurementService();
-service.findManagerByDept("IT_DEPT")
-       .map(Manager::getName)
-       .ifPresentOrElse(
-           name -> System.out.println("Le manager est " + name),
-           () -> System.out.println("Aucun manager assigné à ce département")
-       );
+Address addr = getAddress(user)
+    .orElseThrow(CustomException::new);
 ```
-Ici, `map` transforme le manager en nom seulement s'il existe, et `ifPresentOrElse` gère les deux scénarios sans aucun test `if (x == null)`.
-
-## Erreur courante : Le Get aveugle
-Une erreur fréquente est d'utiliser `Optional` comme enveloppe mais d'appeler quand même `.get()` sans vérifier `.isPresent()`. 
-
-**Faux :** `Optional<Manager> opt = service.findManagerByDept("HR");
-`String name = opt.get().getName(); // Plante si vide !`
-
-**Correction :** Utilisez `.orElse()` ou `.orElseThrow()` pour fournir une valeur par défaut ou une erreur explicite.
-`Manager m = opt.orElseThrow(() -> new NoSuchElementException("Manager non trouvé"));`
-
-## Exercice pratique
-Écrivez une ligne de code qui prend un `Optional<String> requestStatus` et retourne la chaîne "PENDING" si l'Optional est vide.
-
-**Réponse :** `String status = requestStatus.orElse("PENDING");`
-
 
 ## Pour approfondir
 

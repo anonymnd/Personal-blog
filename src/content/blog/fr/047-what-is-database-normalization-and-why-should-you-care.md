@@ -1,34 +1,68 @@
 ---
-title: "Qu'est-ce que la Normalisation de Base de Données et Pourquoi est-ce Important ?"
-description: "Un guide pour débutants sur l'organisation des tables de base de données afin d'éliminer la redondance et garantir l'intégrité des données."
-pubDate: 2026-10-08T14:48:00.000Z
+title: "Normaliser une Base de Données sans Perdre le Sens Métier"
+description: "Utilisation des dépendances fonctionnelles pour éliminer les anomalies tout en préservant les instantanés historiques dans les factures de réparation."
+pubDate: 2026-10-06T23:48:00.000Z
 translationKey: 047-what-is-database-normalization-and-why-should-you-care
+seriesOrder: 8
 locale: fr
-tags: ["software-engineering","database-design","learning-series"]
+tags: ["database-design","learning-series"]
 draft: false
 ---
 
-Imaginez que vous créez une application d'achats. Vous avez une seule table où chaque ligne contient le nom du demandeur, son département, l'article demandé et l'e-mail du manager. Chaque fois qu'un utilisateur du département 'IT' fait une demande, vous saisissez à nouveau 'IT' et l'e-mail du manager. Si le manager change d'adresse e-mail, vous devez mettre à jour des centaines de lignes. C'est le cauchemar de la redondance des données.
+## Le Danger de la Redondance
 
-## Le Mécanisme de la Normalisation
-La normalisation est le processus de structuration d'une base de données relationnelle pour réduire la duplication. Cela consiste à diviser de grandes tables confuses en tables plus petites et liées. L'objectif est de s'assurer que chaque donnée est stockée à un seul endroit. Cela évite les 'anomalies de mise à jour', où l'on modifie une donnée dans une ligne mais on oublie de le faire dans une autre.
+Lorsqu'une table stocke plusieurs faits distincts dans une seule ligne, elle génère des anomalies de mise à jour, d'insertion et de suppression. Prenons une table `FactureReparation` contenant : `IDFacture`, `IDClient`, `TelClient`, `IDPiece`, `NomFournisseur`, `TelFournisseur` et `PrixFacturé`.
 
-## De la 1NF à la 3NF
-La plupart des développeurs visent la Troisième Forme Normale (3NF). La Première Forme Normale (1NF) exige que chaque colonne contienne des valeurs atomiques (pas de listes dans une cellule). La Deuxième Forme Normale (2NF) élimine les dépendances partielles ; chaque colonne non-clé doit dépendre de l'intégralité de la clé primaire. La Troisième Forme Normale (3NF) élimine les dépendances transitives.
+Dans cette structure, le `TelClient` dépend uniquement de l' `IDClient`, et le `TelFournisseur` dépend uniquement de l' `IDPiece` (en supposant un fournisseur par pièce). Ce sont des dépendances fonctionnelles. Comme ces informations sont répétées à chaque facture, nous rencontrons trois risques :
 
-## Exemple Concret : Demandes d'Achats
-Au lieu d'une table géante, nous séparons les données :
+1. **Anomalie de Mise à Jour** : Si un client change de numéro, il faut modifier chaque facture historique. Un oubli crée une incohérence des données.
+2. **Anomalie d'Insertion** : Impossible d'enregistrer les coordonnées d'un nouveau fournisseur tant qu'on n'a pas vendu une de ses pièces sur une facture.
+3. **Anomalie de Suppression** : Supprimer la seule facture contenant une pièce spécifique entraîne la perte totale des coordonnées du fournisseur.
 
-- **Table Users** : `user_id` (PK), `username`, `dept_id` (FK)
-- **Table Departments** : `dept_id` (PK), `dept_name`, `manager_email`
-- **Table Requests** : `request_id` (PK), `user_id` (FK), `item_name`, `status`
+## Distinguer l'État de l'Historique
 
-Désormais, si l'e-mail du manager change, vous ne modifiez qu'une seule ligne dans la table `Departments`. La table `Requests` reste inchangée car elle ne fait que référencer l'utilisateur.
+Une erreur courante lors de la normalisation est de supprimer des données qui semblent redondantes mais sont en réalité des instantanés (snapshots) historiques.
 
-## Erreur Courante : La Sur-Normalisation
-Les débutants créent souvent une nouvelle table pour chaque attribut (par exemple, une table pour les statuts 'En attente' ou 'Approuvé'). Bien que normalisé, cela provoque une 'explosion de jointures', où une requête simple nécessite six JOIN, dégradant les performances. La solution est d'équilibrer la normalisation avec les besoins réels d'accès.
+Dans notre scénario, le `PrixFacturé` semble dépendre de l' `IDPiece`. Cependant, les prix évoluent. Si vous déplacez le prix vers une table `Pieces` et le supprimez de la `LigneFacture`, modifier le prix aujourd'hui modifiera rétroactivement le total d'une facture d'il y a trois ans. C'est une perte de sens métier.
 
-## Exercice Pratique
-**Scénario** : Vous avez une table `Orders(OrderID, CustomerName, CustomerAddress, ProductID, ProductPrice)`. Quelle règle est violée si `CustomerAddress` dépend de `CustomerName` mais pas de `OrderID` ?
+- **Données Dynamiques** : Le téléphone du client (état actuel).
+- **Données Snapshot** : Le prix au moment de la vente (fait historique).
 
-**Réponse** : Cela viole la 3NF (dépendance transitive). Vous devez déplacer les infos client dans une table `Customers` séparée.
+## Solution Travaillée : Le Plan de Normalisation
+
+Pour résoudre les anomalies tout en préservant le prix, nous décomposons la table selon les dépendances fonctionnelles.
+
+### 1. Identification des Dépendances
+- `IDFacture` → `IDClient`, `DateFacture`
+- `IDClient` → `TelClient`
+- `IDPiece` → `IDFournisseur`, `NomPiece`
+- `IDFournisseur` → `NomFournisseur`, `TelFournisseur`
+- `(IDFacture, IDPiece)` → `PrixFacturé` (Le prix est lié à la transaction, pas seulement à la pièce).
+
+### 2. Schéma Résultant (Modèle Logique)
+
+- **Clients** : (`IDClient` [PK], `TelClient`)
+- **Fournisseurs** : (`IDFournisseur` [PK], `NomFournisseur`, `TelFournisseur`)
+- **Pieces** : (`IDPiece` [PK], `NomPiece`, `IDFournisseur` [FK])
+- **Factures** : (`IDFacture` [PK], `IDClient` [FK], `DateFacture`)
+- **LignesFacture** : (`IDFacture` [FK], `IDPiece` [FK], `PrixFacturé`) → PK Composite (`IDFacture`, `IDPiece`)
+
+### 3. Analyse du Résultat
+En séparant les tables, nous traitons les anomalies :
+- **Mise à jour** : On change le téléphone une seule fois dans la table `Clients`.
+- **Insertion** : On ajoute un fournisseur sans avoir besoin de facture.
+- **Suppression** : On supprime une ligne de facture sans perdre l'existence du fournisseur.
+- **Intégrité** : Le `PrixFacturé` reste dans `LignesFacture`, garantissant que les archives sont immuables malgré les hausses de prix futures.
+
+## Exercice
+
+**Scénario** : Vous avez une table `AffectationProjet` : `IDProjet`, `NomProjet`, `IDEmploye`, `NomEmploye`, `Role`, et `TauxHoraire`. Le `TauxHoraire` est négocié spécifiquement pour cette affectation, et non le salaire général de l'employé.
+
+**Tâche** : Identifiez les dépendances fonctionnelles et précisez quels champs doivent rester dans l'entité de jointure pour ne pas perdre le sens métier.
+
+**Réponse** :
+- Dépendances : `IDProjet` → `NomProjet` ; `IDEmploye` → `NomEmploye`.
+- Le `Role` et le `TauxHoraire` dépendent de la combinaison `(IDProjet, IDEmploye)`.
+- Pour préserver le sens métier, le `TauxHoraire` doit rester dans l'entité de jointure `AffectationProjet` car c'est un snapshot de l'accord pour ce projet précis, et non un attribut global de l'employé.
+
+La clé de ligne suppose une occurrence de chaque pièce par facture ; utilisez un identifiant de ligne distinct si une pièce peut apparaître à plusieurs prix. Le prix facturé conserve son sens indépendamment du catalogue, sans rendre techniquement la ligne immuable. Contrôlez séparément les modifications de l’historique.

@@ -1,41 +1,85 @@
 ---
-title: "GET, POST, PUT, PATCH et DELETE Expliqués Correctement"
-description: "Un guide complet pour comprendre les différences sémantiques et l'utilisation correcte des méthodes HTTP standards dans la conception d'API REST."
-pubDate: 2026-10-09T19:48:00.000Z
+title: "Méthodes HTTP et Réponses Succès : Guide Cohérent"
+description: "Analyse approfondie des sémantiques de sécurité et d'idempotence pour POST, PUT, PATCH et DELETE via une API de playlists."
+pubDate: 2026-10-07T08:48:00.000Z
 translationKey: 076-get-post-put-patch-and-delete-explained-properly
+seriesOrder: 17
 locale: fr
-tags: ["software-engineering","rest-api","learning-series"]
+tags: ["rest-api","learning-series"]
 draft: false
 ---
 
-Imaginez que vous développez un système d'approvisionnement. Vous avez une demande pour un nouvel ordinateur, mais vous hésitez entre PUT ou PATCH pour modifier la quantité, ou si POST est la seule option pour créer la demande. Choisir la mauvaise méthode rend les API imprévisibles et casse la logique de mise en cache ou de tentative de reconnexion.
+## Sémantique de Sécurité et d'Idempotence
 
-## Le duo Lecture et Création : GET et POST
-`GET` est utilisé pour récupérer des données. Il est considéré comme « sûr » car il ne doit jamais modifier l'état du serveur. Il est également idempotent, ce qui signifie que l'appeler dix fois produit le même résultat. `POST` est généralement utilisé pour créer une nouvelle ressource. Contrairement à GET, POST n'est ni sûr ni idempotent ; envoyer la même requête POST deux fois crée généralement deux enregistrements identiques.
+La sécurité décrit l’opération demandée : un GET ne doit pas demander une modification de playlist, même si des journaux sont écrits. L’idempotence concerne l’effet attendu de répétitions, pas des réponses identiques ni l’absence de logs. PUT et DELETE sont idempotents par leur sémantique ; POST ne le garantit pas, mais une API peut définir une déduplication. PATCH dépend de l’opération et du format du patch.
+## L'API Playlist : Exemple Concret
 
-## Le débat sur la mise à jour : PUT vs PATCH
-`PUT` sert au remplacement complet. Si vous mettez à jour une demande d'achat via PUT, vous devez envoyer l'objet entier. Si vous omettez un champ, le serveur pourrait le mettre à null. Il est idempotent car remplacer une ressource par les mêmes données répétitivement ne change pas l'état final. `PATCH` est destiné aux mises à jour partielles. Vous envoyez uniquement le champ à modifier (ex: juste le statut). PATCH n'est pas intrinsèquement idempotent car certaines opérations (comme l'incrémentation) modifient l'état à chaque appel.
+Considérons une ressource Playlist. Le client possède la représentation de la playlist (titre, description et liste d'IDs de pistes).
 
-## Suppression de ressources : DELETE
-`DELETE` supprime une ressource. Il est idempotent concernant l'état du serveur : une fois la ressource disparue, elle le reste. Cependant, le code de réponse peut varier (204 No Content la première fois, 404 Not Found ensuite), mais l'état final du serveur demeure identique.
+### 1. Création (POST)
+Lorsqu'un client crée une playlist, il envoie un `POST` vers `/playlists`. Le serveur attribue l'ID.
 
-## Exemple concret : Demande d'achat
+**Requête :** `POST /playlists` 
+**Corps :** `{"title": "Chill Vibes", "tracks": [101, 102]}`
 
-| Action | Méthode | Endpoint | Payload | Résultat attendu |
-| :--- | :--- | :--- | :--- | :--- |
-| Voir demande | GET | `/requests/123` | Aucun | 200 OK + JSON |
-| Créer demande | POST | `/requests` | `{ "item": "Laptop" }` | 201 Created |
-| Remplacer demande | PUT | `/requests/123` | `{ "item": "MacBook", "qty": 1 }` | 200 OK |
-| Modifier statut | PATCH | `/requests/123` | `{ "status": "Approved" }` | 200 OK |
-| Annuler demande | DELETE | `/requests/123` | Aucun | 204 No Content |
+**Réponse Succès :** `201 Created`. 
+Le serveur doit impérativement inclure un en-tête `Location` : `Location: /playlists/789`. Cela indique au client où se trouve exactement la nouvelle ressource.
 
-## Erreur courante : Tout faire avec POST
-Les développeurs utilisent souvent POST pour les mises à jour par simplicité. Cependant, cela ignore la sémantique REST. Si un client renvoie une requête POST échouée, il risque de créer des commandes en double. L'utilisation de PUT pour les remplacements garantit que les tentatives de renvoi sont sûres.
+### 2. Remplacement Complet (PUT)
+`PUT` est utilisé pour remplacer l'intégralité de la ressource cible. Le client envoie la représentation complète mise à jour.
 
-## Exercice pratique
-Quelle méthode devez-vous utiliser pour modifier uniquement l'adresse de livraison d'une commande existante sans envoyer le reste des détails de la commande ?
+**Requête :** `PUT /playlists/789` 
+**Corps :** `{"title": "Chill Vibes Updated", "tracks": [101, 102, 103]}`
 
-**Réponse :** `PATCH`, car il est conçu pour les modifications partielles.
+**Réponse Succès :** `200 OK` (en retournant la playlist mise à jour) ou `204 No Content` (si le client n'a pas besoin du corps).
+
+### 3. Modification Partielle (PATCH)
+`PATCH` est utilisé pour des modifications. Contrairement à `PUT`, le client n'envoie que les champs à modifier.
+
+**Requête :** `PATCH /playlists/789` 
+**Corps :** `{"title": "Midnight Jazz"}`
+
+**Réponse Succès :** `200 OK` avec la représentation modifiée.
+
+### 4. Suppression (DELETE)
+`DELETE` supprime la ressource identifiée par l'URI.
+
+**Requête :** `DELETE /playlists/789` 
+**Réponse Succès :** `204 No Content`. C'est le standard pour les suppressions réussies sans retour de corps.
+
+## Contraste : L'Idempotence en Action
+
+Avec un format de patch documenté qui affecte un titre, répéter la modification a le même effet attendu. JSON Patch utilise application/json-patch+json et un tableau d’opérations. Pour ajouter en fin de tracks, utilisez /- :
+
+```json
+[{"op":"add","path":"/tracks/-","value":104}]
+```
+
+La répétition ajoute un autre morceau si les doublons sont autorisés. Un add sur /tracks remplacerait le membre entier plutôt que d’ajouter dans son tableau ; distinguez ces chemins.
+## Traitement Asynchrone (202 Accepted)
+Si la création d'une playlist nécessite un traitement lourd (ex: valider 1 000 pistes via une base de droits d'auteur), le serveur ne doit pas maintenir la connexion ouverte. Il retourne alors `202 Accepted`. Cela indique que la requête est valide et a été acceptée pour traitement, mais que le résultat final n'est pas encore connu. La réponse inclut généralement un en-tête `Location` pointant vers une URI de suivi du statut.
+
+## Tableau Récapitulatif des Réponses Succès
+
+| Statut | Signification | Cas d'utilisation typique |
+| :--- | :--- | :--- |
+| 200 OK | Succès | Résultats `GET`, mises à jour `PUT`/`PATCH` avec corps |
+| 201 Created | Ressource Créée | Création `POST`, création `PUT` (si autorisé) |
+| 202 Accepted | Traitement Lancé | Tâches longues, jobs asynchrones |
+| 204 No Content | Succès, Sans Corps | Succès `DELETE`, mise à jour `PUT` sans corps |
+
+## Exercice Ciblé
+
+**Scénario :** Vous concevez un endpoint pour « Archiver » une playlist. L'archivage est une transition métier qui marque la playlist comme inactive mais conserve les données. Vous voulez que l'opération soit idempotente.
+
+1. Quelle méthode HTTP utiliseriez-vous si vous traitez « archived » comme une propriété de la ressource ?
+2. Quel code de statut retourneriez-vous si la playlist était déjà archivée et qu'aucun changement n'a eu lieu ?
+3. Si le processus d'archivage déclenche un nettoyage de fichiers en cache qui prend 30 secondes, quel code de statut est le plus approprié ?
+
+**Réponse :**
+1. `PATCH` (pour mettre à jour le statut `archived` à `true`) ou `PUT` (si on envoie la représentation complète).
+2. `200 OK` ou `204 No Content`. Comme la méthode est idempotente, l' *effet* est le même (elle est archivée), donc la requête est réussie même si aucun changement d'état n'a eu lieu lors de cet appel précis.
+3. `202 Accepted`.
 
 ## Pour approfondir
 

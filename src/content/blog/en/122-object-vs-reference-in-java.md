@@ -1,40 +1,107 @@
 ---
-title: "Object vs Reference in Java"
-description: "Understand the critical distinction between a Java object and the reference variable used to access it to avoid common NullPointerException and logic bugs."
-pubDate: 2026-10-11T17:48:00.000Z
+title: "Objects, References and new in Java"
+description: "A deep dive into heap allocation, reference aliasing, and the mechanics of pass-by-value in Java."
+pubDate: 2026-10-07T17:48:00.000Z
 translationKey: 122-object-vs-reference-in-java
+seriesOrder: 26
 locale: en
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## Allocation and the Nature of References
 
-Imagine you are building a procurement app. You create a `PurchaseRequest` object, but when you try to update its status in a method, the change doesn't seem to persist, or you suddenly encounter a `NullPointerException`. This usually happens because developers confuse the actual object (the data in memory) with the reference (the address to that data).
+In Java, there is a fundamental distinction between a reference variable and the object it points to. When you declare `ShoppingBasket basket;`, you have created a reference variable—a slot in memory capable of holding a reference to a `ShoppingBasket` object. At this stage, no object exists on the heap.
 
-## An object and the values that refer to it
-An object has state and identity; a reference value lets Java code access it. References are not limited to local variables: an object field or an array element can hold a reference too. The JVM presents objects through its runtime memory model, and optimizations can change their physical placement. You do not need an exposed numeric memory address to reason about aliasing. Two variables can hold reference values referring to the same object.
-## Pass-by-Value Mechanism
-A common misconception is that Java passes objects by reference. In reality, Java is always pass-by-value. When you pass an object to a method, you are passing a copy of the reference value. 
+Using the `new` keyword triggers three distinct actions:
+1. **Memory Allocation**: The JVM allocates space on the heap for all instance fields of the class.
+2. **Initialization**: Fields are set to their default values (0, false, or null), and the constructor is executed to set the initial state.
+3. **Reference Assignment**: The `new` expression returns the reference of the newly created object, which is then stored in the variable.
 
-Consider this example:
+Crucially, Java references are not pointers in the C++ sense. You cannot perform pointer arithmetic or see the actual physical memory address. The reference is an opaque handle managed by the JVM.
+
+## Aliasing and Identity
+
+Aliasing occurs when multiple reference variables point to the same object on the heap. Because they share the same reference value, any mutation performed through one variable is visible through all others.
+
+Identity is determined by whether two references point to the same object on the heap. This is checked using the `==` operator. In contrast, `.equals()` is intended to check for logical equality (value equivalence), though it defaults to identity unless overridden.
+
+## Pass-by-Value: The Reference Trap
+
+Java is strictly pass-by-value. When you pass an object to a method, you are not passing the object itself, nor are you passing a reference to the variable. You are passing a **copy of the reference value**.
+
+Consider this scenario: two variables reference the same basket. We pass one to a method that both mutates the basket and attempts to reassign the reference.
+
+### Worked Example: The Basket Mutation
+
 ```java
-public void processRequest(PurchaseRequest request) {
-    request.setStatus("APPROVED"); // Modifies the object on the heap
-    request = new PurchaseRequest(); // Reassigns the local copy of the reference
+import java.util.*;
+
+public class BasketDemo {
+    static class ShoppingBasket {
+        List<String> items = new ArrayList<>();
+        
+        void addItem(String item) {
+            items.add(item);
+        }
+    }
+
+    public static void main(String[] args) {
+        ShoppingBasket basketA = new ShoppingBasket();
+        ShoppingBasket basketB = basketA; // Aliasing: both point to the same object
+
+        System.out.println("Initial: basketA == basketB is " + (basketA == basketB));
+
+        processBasket(basketB);
+
+        System.out.println("After method: basketA items: " + basketA.items);
+        System.out.println("After method: basketA == basketB is " + (basketA == basketB));
+    }
+
+    static void processBasket(ShoppingBasket localBasket) {
+        // Mutation: This affects the object on the heap
+        localBasket.addItem("Apple");
+
+        // Reassignment: This only changes the local copy of the reference
+        localBasket = new ShoppingBasket();
+        localBasket.addItem("Orange");
+        // The 'Orange' is added to a new object that will be garbage collected
+    }
 }
 ```
-In the code above, changing the status works because both the original and the copied reference point to the same object. However, reassigning `request` to a new object only changes the local copy; the original variable outside the method still points to the first object.
 
-## Null versus an uninitialized local variable
-A reference can have the value `null`, meaning it refers to no object. Dereferencing it, for example calling a method, normally throws a NullPointerException. An object field of reference type defaults to null unless initialized. A local variable declared as `PurchaseRequest req;` is different: Java will not let you use it before definite assignment, so you get a compile error. Writing `PurchaseRequest req = null;` assigns a value, but calling `req.setStatus(...)` then fails at runtime.
-## Identity versus equality defined by the type
-For references, `a == b` asks whether both refer to the same object, including the case where both are null. `a.equals(b)` asks the equality question implemented by the class. The inherited Object implementation also uses identity; a class must override equals to define value equality. String and records provide useful value comparisons. `Objects.equals(a, b)` is a null-safe way to invoke the appropriate equality logic. Choose identity or value equality according to the domain, rather than always replacing every == comparison.
-## Practical Exercise
-If you have `PurchaseRequest a = new PurchaseRequest("Laptop");` and `PurchaseRequest b = a;`, what happens to `a` if you call `b.setAmount(1000);`?
+**Analysis of the Output:**
+1. `Initial: basketA == basketB is true`: Both variables hold the same reference value.
+2. `After method: basketA items: [Apple]`: The mutation `addItem("Apple")` happened to the object on the heap. Since `basketA` and `basketB` both point there, `basketA` sees the change.
+3. `After method: basketA == basketB is true`: The reassignment `localBasket = new ShoppingBasket()` only changed the local variable `localBasket` inside the method. It did not change `basketB` in the `main` method.
 
-**Answer:** `a` will also reflect the amount as 1000 because both `a` and `b` are references to the same single object on the heap.
+## Uninitialized Locals and Nulls
 
+Field variables (instance variables) are automatically initialized to defaults. However, **local variables** (inside methods) are not. Attempting to use an uninitialized local variable results in a compile-time error.
+
+`null` is a special reference value indicating that the variable does not currently point to any object. Calling a method on a `null` reference triggers a `NullPointerException` because there is no object on the heap to dispatch the method call to.
+
+## Exercise
+
+Given the following code, what is the final state of `list1` and `list2`?
+
+```java
+List<Integer> list1 = new ArrayList<>(List.of(1, 2));
+List<Integer> list2 = list1;
+modify(list1, list2);
+
+void modify(List<Integer> a, List<Integer> b) {
+    a.add(3);
+    a = new ArrayList<>();
+    b.add(4);
+}
+```
+
+**Answer:**
+Both `list1` and `list2` will contain `[1, 2, 3, 4]`. 
+- `a.add(3)` mutates the shared object.
+- `a = new ArrayList<>()` only reassigns the local copy `a`; it has no effect on `list1`.
+- `b.add(4)` mutates the shared object because `b` still points to the original list.
 
 ## Further reading
 
