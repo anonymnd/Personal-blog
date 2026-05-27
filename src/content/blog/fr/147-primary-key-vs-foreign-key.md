@@ -51,7 +51,7 @@ public class Ticket {
     private Flight flight; // Clé Étrangère : Intégrité référentielle
 
     private String passengerName;
-    
+
     @Column(unique = true)
     private String ticketNumber; // Contrainte d'Unicité : Clé candidate
 }

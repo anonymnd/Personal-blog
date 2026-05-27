@@ -11,7 +11,7 @@ draft: false
 
 ## Distributed Version Control vs. Centralized Hosting
 
-A common misconception is that Git and GitHub are the same tool. Git is a distributed version control system (DVCS) that runs locally on your machine. It tracks changes to files, allows you to jump back to previous states, and manages different lines of development (branches). GitHub is a cloud-based hosting service that stores Git repositories. 
+A common misconception is that Git and GitHub are the same tool. Git is a distributed version control system (DVCS) that runs locally on your machine. It tracks changes to files, allows you to jump back to previous states, and manages different lines of development (branches). GitHub is a cloud-based hosting service that stores Git repositories.
 
 You can develop entirely without GitHub. Because Git is distributed, every contributor has a full copy of the project history on their hard drive. This allows for offline operation: you can commit changes, create branches, and view logs while on a plane or in a remote area without internet access. GitHub simply acts as a common synchronization point (a remote) where contributors push their local history to share it with others.
 
@@ -21,7 +21,7 @@ While Git stores every version of every file, it is not a replacement for a back
 
 ## Worked Scenario: The Community Directory
 
-Two volunteers, Alice and Bob, are maintaining a `directory.txt` file containing community contact info. 
+Two volunteers, Alice and Bob, are maintaining a `directory.txt` file containing community contact info.
 
 ### 1. Local Initialization and First Commit
 Alice starts the project locally. She creates the file and initializes the repository.

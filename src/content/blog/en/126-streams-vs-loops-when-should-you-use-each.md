@@ -15,7 +15,7 @@ When processing collections in Java, the choice between a `for-each` loop and a 
 
 ## Scenario: Sensor Data Summarization
 
-Consider a system receiving sensor readings. We need to filter out invalid readings (null or negative) and count how many times the temperature exceeded a specific threshold. 
+Consider a system receiving sensor readings. We need to filter out invalid readings (null or negative) and count how many times the temperature exceeded a specific threshold.
 
 ### The Imperative Approach (Loop)
 

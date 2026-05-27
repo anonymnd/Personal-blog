@@ -18,13 +18,13 @@ A common realization for developers is that a project can have 100% test coverag
 To build a resilient portfolio, you must assign each potential failure to the specific test level capable of detecting it. Consider a currency conversion feature: it calculates a value based on a remote rate feed, applies rounding logic, and saves the transaction history to a database.
 
 ### 1. Unit Tests: Logic and Edge Cases
-Unit tests should target the 'pure' logic. In our scenario, the rounding logic is the highest risk. Does it round half-up? Does it handle negative amounts? 
+Unit tests should target the 'pure' logic. In our scenario, the rounding logic is the highest risk. Does it round half-up? Does it handle negative amounts?
 
 **What it detects:** Algorithmic errors, off-by-one mistakes, and null pointer exceptions in business logic.
 **What it misses:** Database constraint violations, network timeouts, or incorrect JSON parsing from the API.
 
 ### 2. Integration Tests: The Boundaries
-Integration tests validate the contract between your code and an external system (Database, API, Message Broker). 
+Integration tests validate the contract between your code and an external system (Database, API, Message Broker).
 
 **What it detects:** Incorrect SQL syntax, missing database columns, mismatched JSON field names from the rate feed, or transaction rollback failures.
 **What it misses:** Complex business logic permutations (which would make the test suite too slow if tested here).
@@ -63,10 +63,10 @@ public class CurrencyService {
     public ConversionResult convert(BigDecimal amount, String from, String to) {
         BigDecimal rate = rateClient.getRate(from, to);
         BigDecimal result = amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
-        
+
         var entity = new ConversionEntity(result, from, to);
         repository.save(entity);
-        
+
         return new ConversionResult(result, LocalDateTime.now());
     }
 }

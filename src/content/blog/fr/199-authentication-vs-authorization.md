@@ -62,16 +62,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         String authHeader = request.getHeader("Authorization");
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-        
+
         // Frontière de confiance : validation de la signature, exp, iss et aud
         Optional<UserPrincipal> principal = tokenProvider.validateAndParseToken(token);
 

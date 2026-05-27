@@ -51,7 +51,7 @@ public class Ticket {
     private Flight flight; // Foreign Key: سلامة العلاقة
 
     private String passengerName;
-    
+
     @Column(unique = true)
     private String ticketNumber; // Unique Constraint: مفتاح بديل
 }

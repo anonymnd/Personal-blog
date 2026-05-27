@@ -36,7 +36,7 @@ draft: false
 ```groovy
 pipeline {
     agent any
-    
+
     environment {
         REGISTRY = "my-company-registry.io"
         IMAGE_NAME = "billing-report-service"

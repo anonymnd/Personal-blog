@@ -67,10 +67,10 @@ public class TimezoneReproducer {
 ## تمرين
 
 **السيناريو:** لقيتي هادشي في الـ logs ديالك:
-`Caused by: java.lang.NullPointerException: Cannot invoke "com.myapp.User.getName()" for null` 
+`Caused by: java.lang.NullPointerException: Cannot invoke "com.myapp.User.getName()" for null`
 `at com.myapp.InvoiceService.generateInvoice(InvoiceService.java:115)`
 
-**السؤال:** 
+**السؤال:**
 1. واش هادا compile-time error ولا runtime error؟
 2. شنو هو السبب المرجح في السطر 115؟
 3. شنو هي أول خطوة ديرها باش تديبيغي بلا ما تبدل الكود؟

@@ -22,7 +22,7 @@ For normal Compose bridge networking, 5332:5432 publishes host port 5332 to the 
 Use 127.0.0.1:5332:5432 for a host-local development database; an unqualified mapping may publish on all host interfaces. Containers sharing the Compose network reach db:5432 directly through service discovery and do not need a published DB port. This description assumes the ordinary bridge configuration, not host networking or shared network namespaces.
 ## Service Discovery and Internal Communication
 
-While port mapping is essential for the developer or the end-user, it is irrelevant for communication between containers on the same Docker network. 
+While port mapping is essential for the developer or the end-user, it is irrelevant for communication between containers on the same Docker network.
 
 When using Docker Compose, Docker creates a default bridge network. Every service defined in the `docker-compose.yml` is assigned a DNS entry corresponding to its service name. Containers communicate using these names and their **internal** ports, bypassing the host's network stack entirely.
 
@@ -68,7 +68,7 @@ services:
 
 **Scenario:** You have a service `cache` running on port `6379` and a service `app` running on port `80`. You want the `app` to reach the `cache`, and you want to be able to run `redis-cli` from your host machine to inspect the cache.
 
-**Question:** 
+**Question:**
 1. What should the `ports` mapping for the `cache` service be in `docker-compose.yml`?
 2. What connection string should the `app` use to reach the `cache`?
 3. If you change the mapping to `7000:6379`, does the `app` connection string change?

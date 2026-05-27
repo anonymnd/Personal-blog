@@ -54,13 +54,13 @@ public class PasswordMigrationService {
             needsUpgrade = true; // Migration vers le standard actuel (BCrypt 12)
         } else if ("BCRYPT_12".equals(user.algorithm())) {
             matches = bCrypt12.matches(rawPassword, user.passwordHash());
-        } 
+        }
 
         // 2. Si le mot de passe est correct et nécessite une mise à jour, on re-hache
         if (matches && needsUpgrade) {
             String newHash = bCrypt12.encode(rawPassword);
             updateUserHash(user.id(), newHash, "BCRYPT_12");
-        } 
+        }
 
         return matches;
     }

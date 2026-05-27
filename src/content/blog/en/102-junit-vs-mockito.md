@@ -19,10 +19,10 @@ When using `@Mock` and `@InjectMocks`, it is vital to remember that this is not 
 
 ## Stubbing vs. Verification
 
-Confusion often arises between `when(...).thenReturn(...)` and `verify(...)`. 
+Confusion often arises between `when(...).thenReturn(...)` and `verify(...)`.
 
 1. **Stubbing (Outcomes):** `when()` configures a simulated response. It tells the mock: "When this method is called with these arguments, return this specific value." This is about providing the inputs necessary for the logic under test to proceed.
-2. **Verification (Interactions):** `verify()` checks if a method was actually called. It does not check if the data was saved to a database or if a file was written; it only proves that the Java method was invoked. 
+2. **Verification (Interactions):** `verify()` checks if a method was actually called. It does not check if the data was saved to a database or if a file was written; it only proves that the Java method was invoked.
 
 Crucially, verifying a call to `repository.save(entity)` does not prove the entity is persisted in a real DB. It only proves the code attempted to call the save method. ORM mappings, SQL constraints, and transaction boundaries remain untested until you move to integration tests.
 
@@ -103,7 +103,7 @@ class NotificationDispatcherTest {
     @Test
     void shouldNotUseFallbackOnSuccess() {
         Message msg = new Message("user@test.com", "Hello");
-        
+
         dispatcher.dispatch(msg);
 
         verify(primary).send(msg);
@@ -132,7 +132,7 @@ class NotificationDispatcherTest {
 
 ## Exercise
 
-**Scenario:** Modify the `NotificationDispatcher` so that if the `FallbackProvider` also fails, a `CriticalNotificationException` is thrown. 
+**Scenario:** Modify the `NotificationDispatcher` so that if the `FallbackProvider` also fails, a `CriticalNotificationException` is thrown.
 
 **Task:** Write a test case that stubs both `primary` and `fallback` to throw `TemporaryFailureException` and asserts that the `CriticalNotificationException` is thrown, while still verifying that the `audit.recordRequest()` was called.
 

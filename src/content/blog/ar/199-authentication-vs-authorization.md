@@ -62,16 +62,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         String authHeader = request.getHeader("Authorization");
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-        
+
         // هنا فين كاينة حدود الثقة: كنفييريفيو signature, exp, iss, و aud
         Optional<UserPrincipal> principal = tokenProvider.validateAndParseToken(token);
 

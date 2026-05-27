@@ -54,7 +54,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### تجربة التشغيل (Execution Trace)
 باش نخدمو هاد الـ converter على ملف سميتو `data.csv` كاين في الدوسي الحالي:
-`docker run --rm --mount "type=bind,source=$PWD,target=/inputs,readonly" csv-converter /inputs/data.csv` 
+`docker run --rm --mount "type=bind,source=$PWD,target=/inputs,readonly" csv-converter /inputs/data.csv`
 
 *ملاحظة: الـ flag `--rm` كيخلي الـ container يتمسح ملي يسالي، باش ما يبقاوش عندنا بزاف ديال containers واقفين في الماكينة.*
 
@@ -73,7 +73,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 **السؤال**: كيفاش تبدل الـ Dockerfile باش تستعمل الـ layer caching وتفادى تعاود تيليشارجي الـ dependencies في كل مرة؟
 
-**الجواب**: 
+**الجواب**:
 خاصك تفرق بين مرحلة جلب الـ dependencies ومرحلة كومبيلاسيون ديال الكود. كوبي `pom.xml` هو الأول، دير command ديال download، وعاد كوبي السورس كود.
 
 ```dockerfile

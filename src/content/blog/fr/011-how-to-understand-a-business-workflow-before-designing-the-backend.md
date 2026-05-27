@@ -69,5 +69,5 @@ Cette approche évite l'erreur classique de coder le 'Chemin Heureux' en premier
 | Condition | Règle 1 | Règle 2 | Règle 3 | Règle 4 |
 | :--- | :---: | :---: | :---: | :---: |
 | Jours de Retard | 1-3 | 4-7 | 4-7 | 8+ |
-| Type de Membre | Standard | Standard | Premium | N'importe | 
+| Type de Membre | Standard | Standard | Premium | N'importe |
 | **Appliquer Amende ?** | **Non** | **Oui** | **Non** | **Oui** |

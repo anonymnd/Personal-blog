@@ -28,7 +28,7 @@ Consider a media-processing Pod that takes 60 seconds to load ML models into mem
 
 ### The Harmful Configuration (The Restart Loop)
 If we only use a liveness probe that checks the storage bucket connection, we create a dangerous loop:
-- The Pod boots. 
+- The Pod boots.
 - The liveness probe fails because the storage bucket is temporarily unreachable.
 - Kubelet kills the container.
 - The Pod restarts, spending another 60 seconds loading models, only to be killed again.
@@ -69,7 +69,7 @@ Rollout settings limit planned unavailability; they do not prevent every outage 
 Place the probe fields beneath a container in spec.containers, not at the Pod-spec root. Readiness failure changes ready endpoints after the configured threshold and propagation; it does not guarantee immediate cancellation of existing connections or stop a background worker consuming a queue. A media worker needs its own pause/admission policy for dependency outages.
 ## Exercise
 
-**Scenario**: You have a Pod that crashes every 10 minutes due to a memory leak. You implement a liveness probe that checks memory usage and restarts the Pod when it exceeds 80%. 
+**Scenario**: You have a Pod that crashes every 10 minutes due to a memory leak. You implement a liveness probe that checks memory usage and restarts the Pod when it exceeds 80%.
 
 1. Is this a correct use of self-healing?
 2. What happens to the traffic during the restart?

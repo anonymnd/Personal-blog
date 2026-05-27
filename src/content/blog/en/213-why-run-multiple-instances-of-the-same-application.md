@@ -11,16 +11,16 @@ draft: false
 
 ## The Problem with Vertical Scaling
 
-When a single instance of a service reaches its CPU or memory limit, the traditional response is to add more resources (vertical scaling). However, this has a hard ceiling and creates a single point of failure. Horizontal scaling—running multiple identical instances of the same application—allows us to distribute the load. 
+When a single instance of a service reaches its CPU or memory limit, the traditional response is to add more resources (vertical scaling). However, this has a hard ceiling and creates a single point of failure. Horizontal scaling—running multiple identical instances of the same application—allows us to distribute the load.
 
-But moving from one instance to many introduces a critical challenge: **State**. If a user uploads a document to Instance A and then requests the status of that render from Instance B, Instance B will have no record of the job if the state is stored in local memory or a local disk. To scale, the application must be stateless. All durable state (session data, job status, uploaded files) must be moved to an external shared store, such as a database or a distributed cache. 
+But moving from one instance to many introduces a critical challenge: **State**. If a user uploads a document to Instance A and then requests the status of that render from Instance B, Instance B will have no record of the job if the state is stored in local memory or a local disk. To scale, the application must be stateless. All durable state (session data, job status, uploaded files) must be moved to an external shared store, such as a database or a distributed cache.
 
 ## L4 vs L7 Load Balancing
 
 To distribute incoming traffic across these instances, we use a Load Balancer (LB). The choice between Layer 4 (Transport) and Layer 7 (Application) routing depends on how much the LB needs to "understand" the traffic.
 
 ### Layer 4 (L4) Load Balancing
-L4 operates at the TCP/UDP level. It looks only at the IP address and port. It does not inspect the contents of the packet. 
+L4 operates at the TCP/UDP level. It looks only at the IP address and port. It does not inspect the contents of the packet.
 - **Mechanism**: It simply forwards TCP packets to the backend instances.
 - **Pros**: Extremely fast, low CPU overhead, as it doesn't decrypt SSL/TLS or parse HTTP headers.
 - **Cons**: Blind to the request content. It cannot route based on a URL path or a cookie.
@@ -38,7 +38,7 @@ Round robin spreads routing selections; it does not equalize CPU cost. L4 normal
 Least connections uses connection count as a proxy, not a measurement of actual load. A connection may carry many HTTP/2 streams, one long render or only idle keep-alive traffic. Compare representative traffic, backend concurrency and queue depth before choosing. Weighted routing and bounded per-instance concurrency can help avoid assigning more work than a render process can safely perform.
 ## Worked Example: Document Rendering Service
 
-Imagine a service with two types of traffic: 
+Imagine a service with two types of traffic:
 1. `GET /status/{id}` (Fast, low CPU)
 2. `POST /render` (Slow, high CPU)
 

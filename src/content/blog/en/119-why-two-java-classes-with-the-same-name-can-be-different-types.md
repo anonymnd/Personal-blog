@@ -11,7 +11,7 @@ draft: false
 
 ## The Definition of a Type in Java
 
-In Java, a class is not identified by its simple name (e.g., `Money`), but by its Fully Qualified Name (FQN). The FQN consists of the package name and the class name. If two classes share the same simple name but reside in different packages, the JVM treats them as entirely unrelated types. 
+In Java, a class is not identified by its simple name (e.g., `Money`), but by its Fully Qualified Name (FQN). The FQN consists of the package name and the class name. If two classes share the same simple name but reside in different packages, the JVM treats them as entirely unrelated types.
 
 Type identity is further tied to the ClassLoader. A class is uniquely identified by the combination of its FQN and the ClassLoader that defined it. If the same `.class` file is loaded by two different ClassLoaders, the resulting `Class` objects are distinct, and attempting to cast one to the other will trigger a `ClassCastException`.
 
@@ -58,13 +58,13 @@ import com.app.domain.Money; // Application type
 
 
 public class CurrencyConverter {
-    
+
     public com.app.domain.Money mapToDomain(com.legacy.sdk.Money sdkMoney) {
         if (sdkMoney == null) return null;
-        
+
         // Explicit conversion: Extracting values to build a new instance
         return new com.app.domain.Money(
-            sdkMoney.getValue(), 
+            sdkMoney.getValue(),
             sdkMoney.getIsoCode()
         );
     }
@@ -72,7 +72,7 @@ public class CurrencyConverter {
     public void processPayment(com.legacy.sdk.Money sdkMoney) {
         // This would throw ClassCastException:
         // com.app.domain.Money domainMoney = (com.app.domain.Money) sdkMoney;
-        
+
         com.app.domain.Money domainMoney = mapToDomain(sdkMoney);
         System.out.println("Processed: " + domainMoney.amount());
     }

@@ -22,7 +22,7 @@ Before diving into logs, you must distinguish where the failure occurs. A mistak
 When a runtime failure occurs, the JVM produces a stack trace. Reading it linearly from top to bottom is often misleading because framework wrappers (Spring, Hibernate, Tomcat) bury the actual cause.
 
 ### The "Caused By" Chain
-Modern Java frameworks wrap exceptions. You will see a `ServletException` caused by a `RuntimeException`, which is caused by a `DataAccessException`, which is finally caused by a `SQLException`. 
+Modern Java frameworks wrap exceptions. You will see a `ServletException` caused by a `RuntimeException`, which is caused by a `DataAccessException`, which is finally caused by a `SQLException`.
 
 **The Golden Rule:** Scroll to the *last* `Caused by` section. This is usually the root cause. Once you find the root exception, look for the first line that references your own package (e.g., `com.myapp.service`). This is the exact line of code that triggered the failure.
 
@@ -67,10 +67,10 @@ Resolve the requirement before changing code: require an explicit offset or docu
 ## Exercise
 
 **Scenario:** You see this in your logs:
-`Caused by: java.lang.NullPointerException: Cannot invoke "com.myapp.User.getName()" for null` 
+`Caused by: java.lang.NullPointerException: Cannot invoke "com.myapp.User.getName()" for null`
 `at com.myapp.InvoiceService.generateInvoice(InvoiceService.java:115)`
 
-**Question:** 
+**Question:**
 1. Is this a compile-time or runtime error?
 2. What is the most likely cause at line 115?
 3. What is the first step to debug this without changing code?

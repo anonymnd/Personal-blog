@@ -11,9 +11,9 @@ draft: false
 
 ## Synchronous vs. Asynchronous Trade-offs
 
-When a client sends a request to an API, the server has two choices: complete all side effects before responding (Synchronous) or acknowledge receipt and process the work later (Asynchronous). 
+When a client sends a request to an API, the server has two choices: complete all side effects before responding (Synchronous) or acknowledge receipt and process the work later (Asynchronous).
 
-In a synchronous flow, if the label printing service is down, the entire order request fails, even though the order was successfully saved to the database. This creates tight coupling where the availability of the system is the product of the availability of every single dependency. 
+In a synchronous flow, if the label printing service is down, the entire order request fails, even though the order was successfully saved to the database. This creates tight coupling where the availability of the system is the product of the availability of every single dependency.
 
 Asynchronous communication via a message broker like Kafka breaks this chain. The API saves the order and produces a message. The API can then return a `202 Accepted` to the client. The label printer and analytics engine consume this message at their own pace. If the printer is offline for ten minutes, the messages simply queue up in Kafka; they are not lost, and the customer's order process is not blocked.
 

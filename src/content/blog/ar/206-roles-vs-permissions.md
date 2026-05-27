@@ -33,9 +33,9 @@ public record Permission(Long id, String code) {}
 
 // هادي هي اللي كتحكم فـ شكون مول الـ resource
 public record ResourceAssignment(
-    Long userId, 
-    Long resourceId, 
-    String resourceType, 
+    Long userId,
+    Long resourceId,
+    String resourceType,
     String accessLevel // مثلاً: "EDITOR", "VIEWER"
 ) {}
 ```

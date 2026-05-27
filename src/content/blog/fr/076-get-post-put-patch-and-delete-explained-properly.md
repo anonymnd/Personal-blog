@@ -19,16 +19,16 @@ Considérons une ressource Playlist. Le client possède la représentation de la
 ### 1. Création (POST)
 Lorsqu'un client crée une playlist, il envoie un `POST` vers `/playlists`. Le serveur attribue l'ID.
 
-**Requête :** `POST /playlists` 
+**Requête :** `POST /playlists`
 **Corps :** `{"title": "Chill Vibes", "tracks": [101, 102]}`
 
-**Réponse Succès :** `201 Created`. 
+**Réponse Succès :** `201 Created`.
 Le serveur doit impérativement inclure un en-tête `Location` : `Location: /playlists/789`. Cela indique au client où se trouve exactement la nouvelle ressource.
 
 ### 2. Remplacement Complet (PUT)
 `PUT` est utilisé pour remplacer l'intégralité de la ressource cible. Le client envoie la représentation complète mise à jour.
 
-**Requête :** `PUT /playlists/789` 
+**Requête :** `PUT /playlists/789`
 **Corps :** `{"title": "Chill Vibes Updated", "tracks": [101, 102, 103]}`
 
 **Réponse Succès :** `200 OK` (en retournant la playlist mise à jour) ou `204 No Content` (si le client n'a pas besoin du corps).
@@ -36,7 +36,7 @@ Le serveur doit impérativement inclure un en-tête `Location` : `Location: /pla
 ### 3. Modification Partielle (PATCH)
 `PATCH` est utilisé pour des modifications. Contrairement à `PUT`, le client n'envoie que les champs à modifier.
 
-**Requête :** `PATCH /playlists/789` 
+**Requête :** `PATCH /playlists/789`
 **Corps :** `{"title": "Midnight Jazz"}`
 
 **Réponse Succès :** `200 OK` avec la représentation modifiée.
@@ -44,7 +44,7 @@ Le serveur doit impérativement inclure un en-tête `Location` : `Location: /pla
 ### 4. Suppression (DELETE)
 `DELETE` supprime la ressource identifiée par l'URI.
 
-**Requête :** `DELETE /playlists/789` 
+**Requête :** `DELETE /playlists/789`
 **Réponse Succès :** `204 No Content`. C'est le standard pour les suppressions réussies sans retour de corps.
 
 ## Contraste : L'Idempotence en Action

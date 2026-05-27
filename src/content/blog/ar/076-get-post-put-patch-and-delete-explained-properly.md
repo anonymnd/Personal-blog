@@ -19,16 +19,16 @@ Safety كتخص العملية المطلوبة: GET ما خاصهاش تطلب 
 ### 1. الإنشاء (POST)
 فاش الكليان كيبغي يكريي playlist، كيصيفط `POST` لـ `/playlists`. السيرفر هو اللي كيعطي الـ ID.
 
-**الطلب:** `POST /playlists` 
+**الطلب:** `POST /playlists`
 **الـ Body:** `{"title": "Chill Vibes", "tracks": [101, 102]}`
 
-**رد النجاح:** `201 Created`. 
+**رد النجاح:** `201 Created`.
 ضروري السيرفر يزيد `Location` header: `Location: /playlists/789`. هكا الكليان كيعرف فين كاين الـ resource الجديد بالضبط.
 
 ### 2. التعويض الكامل (PUT)
 `PUT` كنستعملوه باش نبدلو الـ resource كامل. الكليان كيصيفط representation كاملة ومحدثة.
 
-**الطلب:** `PUT /playlists/789` 
+**الطلب:** `PUT /playlists/789`
 **الـ Body:** `{"title": "Chill Vibes Updated", "tracks": [101, 102, 103]}`
 
 **رد النجاح:** `200 OK` (إلا رجعنا الـ playlist المحدثة) أو `204 No Content` (إلا كان الكليان ما محتاجش الـ body).
@@ -36,7 +36,7 @@ Safety كتخص العملية المطلوبة: GET ما خاصهاش تطلب 
 ### 3. التعديل الجزئي (PATCH)
 `PATCH` كنستعملوه للتعديلات البسيطة. عكس `PUT` ، الكليان كيصيفط غير الحقول اللي بغا يبدل.
 
-**الطلب:** `PATCH /playlists/789` 
+**الطلب:** `PATCH /playlists/789`
 **الـ Body:** `{"title": "Midnight Jazz"}`
 
 **رد النجاح:** `200 OK` مع الـ representation اللي تبدلات.
@@ -44,7 +44,7 @@ Safety كتخص العملية المطلوبة: GET ما خاصهاش تطلب 
 ### 4. المسح (DELETE)
 `DELETE` كيمسح الـ resource اللي محدد فـ URI.
 
-**الطلب:** `DELETE /playlists/789` 
+**الطلب:** `DELETE /playlists/789`
 **رد النجاح:** `204 No Content`. هادا هو الستاندار فاش كيكون المسح ناجح وما كاينش body يرجع.
 
 ## الفرق فـ الـ Idempotency

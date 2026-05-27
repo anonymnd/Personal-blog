@@ -17,12 +17,12 @@ Switching to `ddl-auto=validate` is the first step toward production stability. 
 
 ## How Flyway Ensures Consistency
 
-Flyway replaces guesswork with a versioned history table (`flyway_schema_history`). Instead of letting a framework guess the state, you provide explicit SQL scripts. 
+Flyway replaces guesswork with a versioned history table (`flyway_schema_history`). Instead of letting a framework guess the state, you provide explicit SQL scripts.
 
 ### The Versioning Mechanism
-Flyway identifies migrations by a naming convention: `V<Version>__<Description>.sql` (e.g., `V1__Create_user_table.sql`). 
+Flyway identifies migrations by a naming convention: `V<Version>__<Description>.sql` (e.g., `V1__Create_user_table.sql`).
 1. **Execution**: Flyway scans the classpath for scripts and compares them against the history table.
-2. **Checksums**: When a script is applied, Flyway stores a checksum (a hash of the file content). 
+2. **Checksums**: When a script is applied, Flyway stores a checksum (a hash of the file content).
 3. **Immutability**: Once `V1` is applied to production, it must never be edited. If you change a single character in `V1__Create_user_table.sql` after it has run, Flyway will detect a checksum mismatch on the next startup and refuse to boot. To change the schema, you must create `V2`.
 
 ## Scenario: Adding a Required `displayName`
@@ -45,10 +45,10 @@ These statements belong to deliberately separated migration/deployment stages; t
 When a migration fails, the behavior depends on the database engine.
 
 - **PostgreSQL**: Most DDL (Data Definition Language) is transactional. If `V3` fails halfway through, the entire transaction rolls back, and the history table remains at `V2`. You fix the script and restart.
-- **MySQL/Oracle**: DDL often triggers an implicit commit. If a script contains three `ALTER TABLE` statements and the third one fails, the first two remain applied. 
+- **MySQL/Oracle**: DDL often triggers an implicit commit. If a script contains three `ALTER TABLE` statements and the third one fails, the first two remain applied.
 
 ### The `repair` Limitation
-When a migration fails in a non-transactional DB, Flyway marks that version as `failed` in the history table. The application will not start until this is resolved. 
+When a migration fails in a non-transactional DB, Flyway marks that version as `failed` in the history table. The application will not start until this is resolved.
 
 Developers often mistake `flyway repair` for a magic undo button. **`flyway repair` does not roll back SQL changes.** It only cleans up the `flyway_schema_history` table by removing failed entries or aligning checksums. If your failed script partially added a column, you must manually drop that column via SQL before running `repair` and restarting the app.
 

@@ -29,7 +29,7 @@ public class Ticket {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User owner;
-    
+
     // Getters, Constructor
 }
 
@@ -39,7 +39,7 @@ public class User {
     @GeneratedValue
     private Long id;
     private String username;
-    
+
     // Getters, Constructor
 }
 ```
@@ -72,7 +72,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
 ## مشكل الـ Pagination و تكرار السطور
 
-الـ `JOIN FETCH` كيحيد N+1، ولكن كيدير مشكل إلا كانت عندنا `@OneToMany` (مثلاً `Ticket` → `Comment`). 
+الـ `JOIN FETCH` كيحيد N+1، ولكن كيدير مشكل إلا كانت عندنا `@OneToMany` (مثلاً `Ticket` → `Comment`).
 
 إلا درنا join fetch لـ collection، الداتابيز كترجع Cartesian product. إلا كانت تيكيت وحدة فيها 5 ديال الكومنتيرات، غادي يرجعو 5 ديال السطور لنفس التيكيت. إلا زدنا `Pageable` لهاد الـ query، Hibernate ما يقدرش يدير limit في الداتابيز حيت غادي يقطع الكوليكسيون. داكشي علاش كيجيب **كاع** السطور للميموار ويدير pagination في Java، وهادشي يقدر يسبب `OutOfMemoryError` إلا كانت الداتا كبيرة.
 

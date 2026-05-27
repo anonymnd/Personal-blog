@@ -14,7 +14,7 @@ draft: false
 For modulo routing hash(key) % N, changing three nodes to four changes many assignments. With uniform hashes and the same node ordering, about three quarters of keys move, not literally all of them. Losing those warm cache placements can increase backend work; the size of that surge depends on traffic, TTLs and miss handling. Consistent hashing aims to limit reassignment when membership changes.
 ## The Consistent Hashing Mechanism
 
-Consistent hashing solves this by decoupling the number of nodes from the mapping logic. Instead of a linear array, we treat the hash space as a circular ring (the Hash Ring). 
+Consistent hashing solves this by decoupling the number of nodes from the mapping logic. Instead of a linear array, we treat the hash space as a circular ring (the Hash Ring).
 
 1. **The Ring**: Imagine a range of integers from 0 to 2³² − 1. The end wraps around to the beginning.
 2. **Node Placement**: Each cache node is hashed based on its identifier (e.g., IP address) and placed at a specific point on this ring.
@@ -22,7 +22,7 @@ Consistent hashing solves this by decoupling the number of nodes from the mappin
 
 ## Addressing Hotspots with Virtual Nodes
 
-If you only place one point per physical node, the segments of the ring (the intervals) will be uneven. One node might end up responsible for 60% of the keys, while another handles 10%. 
+If you only place one point per physical node, the segments of the ring (the intervals) will be uneven. One node might end up responsible for 60% of the keys, while another handles 10%.
 
 To fix this, we use **Virtual Nodes (vnodes)**. Instead of placing `Node A` once, we place it 100 times using different seeds (e.g., `hash("NodeA-1")`, `hash("NodeA-2")`). This interleaves the nodes across the ring, ensuring that if a node is added or removed, the load is redistributed evenly across all remaining nodes rather than just shifting one large block to a single neighbor.
 
@@ -46,7 +46,7 @@ Now we introduce Node 4. Let's see what happens to our keys:
 - Key C (500) $ightarrow$ Still Node 3
 - Key D (800) $ightarrow$ Still Node 1
 
-Wait, nothing moved? Let's look at a key that *would* move. 
+Wait, nothing moved? Let's look at a key that *would* move.
 - Key E (Hash 410): Previously, it mapped to Node 3 (700). Now, moving clockwise from 410, it hits Node 4 (450) first.
 
 **The Moved Interval:**
@@ -60,12 +60,12 @@ Furthermore, the client or the load balancer must be aware of the ring topology.
 
 ## Exercise
 
-**Scenario**: You have a ring (0-100) with nodes at 20, 50, and 80. You add a new node at position 60. 
+**Scenario**: You have a ring (0-100) with nodes at 20, 50, and 80. You add a new node at position 60.
 1. Which node previously owned keys in the range 51-60?
 2. Which node owns those keys now?
 3. If a node at 50 is removed, which node inherits its keys?
 
-**Answer**: 
+**Answer**:
 1. Node 80 (it was the first node clockwise from 51-60).
 2. Node 60.
 3. Node 60 (or Node 80 if 60 didn't exist).

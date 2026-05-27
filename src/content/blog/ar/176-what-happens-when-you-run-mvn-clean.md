@@ -39,7 +39,7 @@ Failure ديال Surefire غالبا كتوقف قبل package. Failsafe كتس�
 
 **الحل**:
 باش تعرف المشكل وتصلحو، دير:
-`mvn clean test` 
+`mvn clean test`
 
 هكا كتمسح الـ JAR القديم وكتعطي التركيز غير للـ failure. ومن بعد كتمشي لـ `target/surefire-reports/TEST-com.project.ReportExportTest.xml` باش تشوف فين كاين المشكل بالضبط.
 

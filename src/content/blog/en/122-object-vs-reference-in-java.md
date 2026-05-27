@@ -40,7 +40,7 @@ import java.util.*;
 public class BasketDemo {
     static class ShoppingBasket {
         List<String> items = new ArrayList<>();
-        
+
         void addItem(String item) {
             items.add(item);
         }
@@ -98,7 +98,7 @@ void modify(List<Integer> a, List<Integer> b) {
 ```
 
 **Answer:**
-Both `list1` and `list2` will contain `[1, 2, 3, 4]`. 
+Both `list1` and `list2` will contain `[1, 2, 3, 4]`.
 - `a.add(3)` mutates the shared object.
 - `a = new ArrayList<>()` only reassigns the local copy `a`; it has no effect on `list1`.
 - `b.add(4)` mutates the shared object because `b` still points to the original list.

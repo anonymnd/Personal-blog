@@ -103,7 +103,7 @@ class NotificationDispatcherTest {
     @Test
     void shouldNotUseFallbackOnSuccess() {
         Message msg = new Message("user@test.com", "Hello");
-        
+
         dispatcher.dispatch(msg);
 
         verify(primary).send(msg);

@@ -29,10 +29,10 @@ Les attributs sont les propriétés de ces entités. Une erreur classique est de
 
 Selon la méthode Merise, on définit le Modèle Conceptuel des Données (MCD) en se concentrant sur les entités et leurs associations avec des cardinalités (min, max).
 
-- **Client <-> Location** : 
+- **Client <-> Location** :
   - Un Client peut signer 0 ou plusieurs locations (0,N).
   - Une Location est signée par exactement 1 client (1,1).
-- **Location <-> Équipement** : 
+- **Location <-> Équipement** :
   - Une Location contient 1 ou plusieurs équipements (1,N).
   - Un Équipement peut faire partie de 0 ou plusieurs locations au fil du temps (0,N).
 
@@ -91,11 +91,11 @@ Si nous stockions le prix uniquement dans la table `equipment`, modifier le prix
 
 **Scénario** : L'entreprise décide que chaque équipement doit être affecté à un 'Entrepôt' spécifique avant d'être loué. Un entrepôt peut contenir plusieurs articles, mais un article appartient à un seul entrepôt à la fois.
 
-**Question** : 
+**Question** :
 1. Quelle est la cardinalité entre Entrepôt et Équipement ?
 2. Comment le schéma physique change-t-il ?
 
-**Réponse** : 
+**Réponse** :
 1. Entrepôt (0,N) <-> Équipement (1,1). Un entrepôt a zéro ou plusieurs articles ; un article doit appartenir à exactement un entrepôt.
 2. La table `equipment` doit être mise à jour pour inclure une colonne `warehouse_id` comme Clé Étrangère référençant la nouvelle table `warehouses`.
 

@@ -62,7 +62,7 @@ class DataImporter {
                 throw new MalformedRowException("فورما ديال البيانات غلط", i + 1);
             }
             // هنا يقدر يوقع RuntimeException إلا كان شي helper null
-            // helper.process(row); 
+            // helper.process(row);
         }
     }
 }
@@ -76,7 +76,7 @@ public class ImportRunner {
             System.err.println("عفاك تأكد من المسار ديال الملف: " + e.getMessage());
         } catch (MalformedRowException e) {
             System.err.println("خطأ في السطر " + e.getRowNumber() + ": " + e.getMessage());
-        } 
+        }
         // الـ RuntimeExceptions (بحال NullPointerException) ما كنـ catch-وهومش هنا
         // حيت خاصهم يتصلحو في الكود ديال DataImporter ماشي في الـ runner.
     }

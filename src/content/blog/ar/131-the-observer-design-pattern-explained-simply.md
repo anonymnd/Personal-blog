@@ -48,7 +48,7 @@ class AudioEngine {
     }
 
     private void notifyObservers() {
-        // كنديرو snapshot باش ما يوقعش لينا ConcurrentModificationException 
+        // كنديرو snapshot باش ما يوقعش لينا ConcurrentModificationException
         // إلا شي observer بغا يدير unsubscribe وهو وسط الـ loop
         List<PlaybackObserver> snapshot = new ArrayList<>(observers);
         for (PlaybackObserver observer : snapshot) {

@@ -17,7 +17,7 @@ Inversion of Control (IoC) flips this relationship. Instead of the `TaxCalculato
 
 ## Constructor Injection and the Contract
 
-Constructor injection ensures that a component is never in an invalid state. By requiring dependencies at instantiation, the compiler guarantees that the `TaxCalculator` has a `RateSource` before any method is called. 
+Constructor injection ensures that a component is never in an invalid state. By requiring dependencies at instantiation, the compiler guarantees that the `TaxCalculator` has a `RateSource` before any method is called.
 
 To make this flexible, we use an interface. The interface defines the *contract*—the set of methods the calculator expects—without specifying *how* those methods are implemented. This allows us to substitute a production implementation with a test implementation without changing a single line of code in the calculator.
 
@@ -40,7 +40,7 @@ public class RemoteRateSource implements RateSource {
     public double getRate(String regionCode) {
         // Illustrative: In reality, this would use a RestClient
         System.out.println("Fetching from remote API...");
-        return 0.20; 
+        return 0.20;
     }
 }
 
@@ -83,7 +83,7 @@ public class TaxCalculator {
 
 ## The Myth of Total Decoupling
 
-There is a common misconception that interfaces remove all coupling. While they remove *implementation coupling* (the calculator doesn't know about `RemoteRateSource`), they do not remove *semantic coupling*. 
+There is a common misconception that interfaces remove all coupling. While they remove *implementation coupling* (the calculator doesn't know about `RemoteRateSource`), they do not remove *semantic coupling*.
 
 Semantic coupling occurs when the caller expects the implementation to behave in a specific way that isn't captured by the method signature. For example, if `TaxCalculator` assumes that `getRate` will never return a negative number or will always respond within 100ms, it is still coupled to the *behavior* of the implementation. If a new `DatabaseRateSource` is introduced that throws a `SQLException` (wrapped in a RuntimeException), the calculator may crash despite the interface contract being technically satisfied. Interfaces define the *what*, but the *how* (performance, error handling, side effects) still impacts the caller.
 

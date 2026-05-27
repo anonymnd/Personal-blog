@@ -41,7 +41,7 @@ public class CatalogService {
 
     // Simulation d'un findById qui retourne un Optional
     public Optional<BookEdition> findPreferredEdition(String bookId) {
-        return Optional.empty(); 
+        return Optional.empty();
     }
 
     public BookEdition findAnyEditionExpensive(String bookId) {

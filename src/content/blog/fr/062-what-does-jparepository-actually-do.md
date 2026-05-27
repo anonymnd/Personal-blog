@@ -48,14 +48,14 @@ public class StockItem {
     private Long id;
     private String sku;
     private Integer quantity;
-    
+
     // Getters, Constructeur, etc.
 }
 ```
 
 ### Trace 1 : L'Insertion Initiale
 1. `StockItem item = new StockItem("BOLT-01", 100);` → **État : New**.
-2. `repository.save(item);` → Hibernate voit que c'est nouveau → appelle `persist()`. 
+2. `repository.save(item);` → Hibernate voit que c'est nouveau → appelle `persist()`.
 3. Avec `SEQUENCE`, Hibernate récupère l'ID suivant (ex: `1`) et l'assigne à `item`. **État : Managed**. Aucun `INSERT` SQL n'a encore eu lieu.
 4. **Flush** : À la fin de la transaction ou lors d'un `flush()`, Hibernate génère : `INSERT INTO stock_item (id, sku, quantity) VALUES (1, 'BOLT-01', 100);`.
 
@@ -66,8 +66,8 @@ public class StockItem {
 
 ### Trace 3 : Le Merge d'une Entité Détachée
 1. Une entité est envoyée à une UI, modifiée, puis renvoyée. Elle a un ID mais n'est plus dans la session → **État : Detached**.
-2. `StockItem detachedItem = ...; // quantity est 50` 
-3. `StockItem managedItem = repository.save(detachedItem);` → Hibernate appelle `merge()`. 
+2. `StockItem detachedItem = ...; // quantity est 50`
+3. `StockItem managedItem = repository.save(detachedItem);` → Hibernate appelle `merge()`.
 4. Hibernate charge l'enregistrement actuel depuis la DB, copie `50` dans l'instance managée, et la retourne.
 5. **Flush** : `UPDATE stock_item SET quantity = 50 WHERE id = 1;`.
 

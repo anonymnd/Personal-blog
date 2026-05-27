@@ -17,7 +17,7 @@ To solve this, we establish a boundary. The domain throws specific, typed except
 
 ## Designing the Domain Failures
 
-For a delivery tracking scenario, we distinguish between a resource that doesn't exist and a dependency that is failing. 
+For a delivery tracking scenario, we distinguish between a resource that doesn't exist and a dependency that is failing.
 
 1. **ParcelNotFoundException**: A business-level failure indicating the ID is valid in format but absent from the system.
 2. **CarrierIntegrationException**: A failure when the external carrier API is down or timing out.
@@ -73,7 +73,7 @@ public class GlobalErrorHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleCarrierFailure(CarrierIntegrationException ex) {
         // Log the actual cause (stack trace) internally, but hide it from the client
         log.error("External carrier failure: {}", ex.getCarrierCode(), ex);
-        
+
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
             HttpStatus.SERVICE_UNAVAILABLE, "The delivery carrier is temporarily unavailable");
         problem.setTitle("Carrier Integration Error");
@@ -115,7 +115,7 @@ ProblemDetail is a Spring Framework API, not a Jakarta EE type. Current Spring d
 
 **Scenario**: You need to add a `DeliveryDateInvalidException` for cases where a user requests a tracking update for a date in the future. This is a business rule violation.
 
-**Task**: 
+**Task**:
 1. Create the exception record/class.
 2. Add a handler to the `GlobalErrorHandler` that returns a `422 Unprocessable Entity` status.
 3. Include a custom property `requestedDate` in the response.

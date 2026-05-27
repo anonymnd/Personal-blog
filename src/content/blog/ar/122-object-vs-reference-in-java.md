@@ -40,7 +40,7 @@ import java.util.*;
 public class BasketDemo {
     static class ShoppingBasket {
         List<String> items = new ArrayList<>();
-        
+
         void addItem(String item) {
             items.add(item);
         }
@@ -98,7 +98,7 @@ void modify(List<Integer> a, List<Integer> b) {
 ```
 
 **الجواب:**
-`list1` و `list2` بجوج غيكون فيهم `[1, 2, 3, 4]`. 
+`list1` و `list2` بجوج غيكون فيهم `[1, 2, 3, 4]`.
 - `a.add(3)` بدلات الأوبجيكت المشترك.
 - `a = new ArrayList<>()` بدلات غير النسخة المحلية `a`؛ ما أثراتش على `list1`.
 - `b.add(4)` بدلات الأوبجيكت المشترك حيت `b` مازال كيشير لـ list الأصلية.

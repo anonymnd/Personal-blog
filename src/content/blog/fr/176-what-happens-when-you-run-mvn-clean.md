@@ -39,7 +39,7 @@ Les commandes comme `mvn spring-boot:run` ne sont pas des phases de cycle de vie
 
 **La Solution** :
 Pour diagnostiquer et résoudre, lancez :
-`mvn clean test` 
+`mvn clean test`
 
 Cela supprime le JAR obsolète et se concentre sur l'échec. Vous consultez ensuite `target/surefire-reports/TEST-com.project.ReportExportTest.xml` pour trouver l'erreur d'assertion exacte.
 

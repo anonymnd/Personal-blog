@@ -62,7 +62,7 @@ class DataImporter {
                 throw new MalformedRowException("Format de données invalide", i + 1);
             }
             // RuntimeException potentielle ici si un helper était null
-            // helper.process(row); 
+            // helper.process(row);
         }
     }
 }
@@ -76,7 +76,7 @@ public class ImportRunner {
             System.err.println("Veuillez vérifier le chemin du fichier : " + e.getMessage());
         } catch (MalformedRowException e) {
             System.err.println("Erreur à la ligne " + e.getRowNumber() + ": " + e.getMessage());
-        } 
+        }
         // Les RuntimeExceptions (comme NullPointerException) ne sont pas capturées ici
         // car elles doivent être corrigées dans le code de DataImporter.
     }

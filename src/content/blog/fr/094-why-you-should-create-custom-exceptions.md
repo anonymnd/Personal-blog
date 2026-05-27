@@ -73,7 +73,7 @@ public class GlobalErrorHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleCarrierFailure(CarrierIntegrationException ex) {
         // Log de la cause réelle (stack trace) en interne, mais masquée pour le client
         log.error("Échec du transporteur externe : {}", ex.getCarrierCode(), ex);
-        
+
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
             HttpStatus.SERVICE_UNAVAILABLE, "Le transporteur de livraison est temporairement indisponible");
         problem.setTitle("Erreur d'Intégration Transporteur");

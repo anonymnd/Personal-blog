@@ -21,7 +21,7 @@ In this structure, the `CustomerPhone` depends only on the `CustomerID`, and the
 
 ## Distinguishing State from History
 
-A common mistake during normalization is removing data that looks redundant but is actually a historical snapshot. 
+A common mistake during normalization is removing data that looks redundant but is actually a historical snapshot.
 
 In our scenario, the `InvoicedPrice` might look like it depends on the `PartID`. However, prices change over time. If you move the price to a `Parts` table and delete it from the `InvoiceLine`, changing today's price will retroactively change the total of an invoice from three years ago. This is a loss of business meaning.
 
@@ -62,7 +62,7 @@ By splitting the tables, we now handle the anomalies:
 
 **Answer**:
 - Dependencies: `ProjectID` → `ProjectName`; `EmployeeID` → `EmployeeName`.
-- The `Role` and `HourlyRate` depend on the combination of `(ProjectID, EmployeeID)`. 
+- The `Role` and `HourlyRate` depend on the combination of `(ProjectID, EmployeeID)`.
 - To avoid losing business meaning, `HourlyRate` must stay in the `ProjectAssignment` join entity because it is a snapshot of the agreement for that specific project, not a global attribute of the employee.
 
 The invoice-line key shown assumes each part appears once per invoice; use a separate line identifier if a part can occur on several differently priced lines. Storing the invoiced price preserves its meaning independently of current catalog prices, but does not make the row technically immutable. Prevent unauthorized history edits separately.

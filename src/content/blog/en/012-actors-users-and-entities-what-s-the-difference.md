@@ -13,8 +13,8 @@ draft: false
 
 A common failure in software design is collapsing the 'User' into a single object that handles authentication, business logic, and system interaction. To build a scalable system, you must decouple three distinct concepts: the Actor, the Account, and the Domain Entity.
 
-1. **The Actor**: An external entity that interacts with the system to achieve a goal. Actors are roles, not people. An actor can be a human (e.g., a Courier) or an external system (e.g., a Payment Gateway). 
-2. **The Account**: The security principal. This is the identity used for authentication (login/password, API key) and authorization (permissions). 
+1. **The Actor**: An external entity that interacts with the system to achieve a goal. Actors are roles, not people. An actor can be a human (e.g., a Courier) or an external system (e.g., a Payment Gateway).
+2. **The Account**: The security principal. This is the identity used for authentication (login/password, API key) and authorization (permissions).
 3. **The Domain Entity**: An object with a unique business identity that persists over time, regardless of who is interacting with it. For example, a 'Parcel' is an entity; it exists whether or not a Courier is currently scanning it.
 
 ## Worked Scenario: The Parcel Locker System

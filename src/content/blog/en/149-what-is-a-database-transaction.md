@@ -32,7 +32,7 @@ Propagation defines how transactions behave when one transactional method calls 
 
 ## Worked Example: Reward Credit Transfer
 
-Consider a scenario where we transfer credits and send an email receipt. 
+Consider a scenario where we transfer credits and send an email receipt.
 
 ```java
 @Service
@@ -75,7 +75,7 @@ public class RewardService {
 
 1.  **The Proxy Call**: An external controller calls `transferCredits()`. The proxy starts a transaction.
 2.  **The Self-Invocation**: `transferCredits()` calls `sendNotification()`. Because this is a local call, the `REQUIRES_NEW` instruction is **ignored**. The notification logic runs inside the existing transaction.
-3.  **The Side Effect**: `emailService.send()` is called. This is an external API call (SMTP/HTTP). 
+3.  **The Side Effect**: `emailService.send()` is called. This is an external API call (SMTP/HTTP).
 4.  **The Failure**: A `RuntimeException` is thrown because the amount exceeds 1000.
 5.  **The Rollback**: Spring catches the unchecked exception and tells PostgreSQL to rollback. The credit balances in the DB are restored to their original values.
 6.  **The Leak**: The email has already been sent. Database transactions **cannot** undo external side effects. The user receives a receipt for a transfer that technically never happened.
@@ -86,7 +86,7 @@ By default, Spring rolls back on `RuntimeException` and `Error` (unchecked excep
 
 ## Exercise
 
-**Scenario**: You have a method `processOrder()` marked `@Transactional`. Inside it, you call `updateInventory()`, which is also marked `@Transactional(propagation = Propagation.REQUIRED)`. `updateInventory()` throws a checked `InsufficientStockException`. 
+**Scenario**: You have a method `processOrder()` marked `@Transactional`. Inside it, you call `updateInventory()`, which is also marked `@Transactional(propagation = Propagation.REQUIRED)`. `updateInventory()` throws a checked `InsufficientStockException`.
 
 1. Does the transaction roll back by default?
 2. If `processOrder()` calls `updateInventory()` via `this.updateInventory()`, does the propagation setting matter?

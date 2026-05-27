@@ -40,7 +40,7 @@ public class RemoteRateSource implements RateSource {
     public double getRate(String regionCode) {
         // Illustratif : utiliserait normalement un RestClient
         System.out.println("Récupération depuis l'API distante...");
-        return 0.20; 
+        return 0.20;
     }
 }
 

@@ -35,7 +35,7 @@ La partie `?limit=10` est une chaîne de requête (query string). Celles-ci sont
 #### Corps de la requête (`@RequestBody`)
 Pour l'appel `POST /subscriptions`, les données ne sont pas dans l'URL. Elles sont dans le corps HTTP sous forme de chaîne JSON : `{"email": "user@example.com", "stationId": 42}`.
 
-Spring utilise des `HttpMessageConverters` (généralement Jackson) pour effectuer la conversion. Le processus est : 
+Spring utilise des `HttpMessageConverters` (généralement Jackson) pour effectuer la conversion. Le processus est :
 `Chaîne JSON` → `Jackson ObjectMapper` → `Record/POJO Java`.
 
 ## Exemple concret : L'API Météo
@@ -51,7 +51,7 @@ public class WeatherController {
     // GET /stations/42/readings?limit=10
     @GetMapping("/{id}/readings")
     public List<Reading> getReadings(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam(defaultValue = "20") int limit) {
         // Logique pour récupérer les relevés de la station 'id' limités à 'limit'
         return List.of(new Reading(22.5, "Celsius"));

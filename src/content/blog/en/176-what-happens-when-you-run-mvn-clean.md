@@ -14,7 +14,7 @@ draft: false
 mvn package traverses the default lifecycle up to package, executing the goals bound to those phases for the project’s packaging and configuration. validate → compile → test → package is a simplified outline that omits intermediate phases. Tests can be skipped, absent or configured differently, so a packaged JAR is not proof of passing tests. Inspect the effective POM and build log.
 ## The Target Folder and the 'Clean' Necessity
 
-All build outputs are directed to the `target/` directory. This includes `.class` files, generated sources, and the final JAR. 
+All build outputs are directed to the `target/` directory. This includes `.class` files, generated sources, and the final JAR.
 
 `mvn clean` is a separate lifecycle. Its sole purpose is to delete the `target/` folder. This is critical because Maven does not always detect every change in complex dependency trees or resource files. If a previous build failed or left stale artifacts, a subsequent `mvn package` might bundle outdated code. Running `mvn clean package` ensures a deterministic build from a blank slate.
 
@@ -39,7 +39,7 @@ Commands like `mvn spring-boot:run` are not lifecycle phases. They are **plugin 
 
 **The Fix**:
 To diagnose and resolve, run:
-`mvn clean test` 
+`mvn clean test`
 
 This wipes the stale JAR and focuses on the failure. You then check `target/surefire-reports/TEST-com.project.ReportExportTest.xml` to find the exact assertion failure.
 
@@ -52,7 +52,7 @@ Similarly, spring-boot:run is a plugin goal but can request prerequisite lifecyc
 
 **Question**: You run `mvn verify`. The build fails. You find that the unit tests passed, but an integration test failed. Where do you look for the report, and why is there a JAR file in the `target` folder despite the failure?
 
-**Answer**: 
+**Answer**:
 1. Look in `target/failsafe-reports`. Since unit tests passed, the build progressed past the `test` phase into `integration-test`.
 2. The JAR exists because the `package` phase occurs *before* the `integration-test` and `verify` phases. Therefore, Maven successfully bundled the JAR before the integration test failed.
 

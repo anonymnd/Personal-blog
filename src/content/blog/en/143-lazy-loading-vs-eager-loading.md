@@ -29,7 +29,7 @@ public class Ticket {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User owner;
-    
+
     // Getters, Constructor
 }
 
@@ -39,7 +39,7 @@ public class User {
     @GeneratedValue
     private Long id;
     private String username;
-    
+
     // Getters, Constructor
 }
 ```
@@ -72,7 +72,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
 ## Pagination and Row Multiplication
 
-While `JOIN FETCH` solves the N+1 problem, it introduces a risk when dealing with `@OneToMany` collections (e.g., `Ticket` → `Comment`). 
+While `JOIN FETCH` solves the N+1 problem, it introduces a risk when dealing with `@OneToMany` collections (e.g., `Ticket` → `Comment`).
 
 If you join-fetch a collection, the database returns a Cartesian product. If a ticket has 5 comments, the result set contains 5 rows for that one ticket. If you apply `Pageable` to this query, Hibernate cannot safely limit the rows at the database level because it would truncate the collection. Instead, Hibernate fetches **all** rows into memory and performs pagination in Java, which can lead to an `OutOfMemoryError` on large datasets.
 
