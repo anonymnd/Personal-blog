@@ -31,34 +31,3 @@ const labels: Record<Locale, string> = { en: 'EN', fr: 'FR', ar: 'العربية
 		})
 	}
 </div>
-
-<style>
-	.locale-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		flex-wrap: wrap;
-	}
-	.locale-link {
-		font-size: 0.78rem;
-		font-weight: 600;
-		padding: 0.35rem 0.55rem;
-		border-radius: 8px;
-		text-decoration: none;
-		color: var(--text-muted);
-		border: 1px solid transparent;
-	}
-	.locale-link:hover {
-		color: var(--accent);
-		border-color: var(--border);
-		background: var(--bg-elevated);
-	}
-	.locale-link.current {
-		color: var(--bg);
-		background: var(--accent);
-		border-color: var(--accent);
-	}
-	.locale-link.missing:not(.current) {
-		opacity: 0.55;
-	}
-</style>

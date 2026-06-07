@@ -1,113 +1,29 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import EntryCard from '../../../components/EntryCard.astro';
 import { blogIndexLocaleHrefs } from '../../../lib/localeHrefs';
-import { postHref, type Locale, locales } from '../../../i18n/locales';
-import { blogIndexStrings, layoutStrings } from '../../../i18n/ui';
+import { type Locale, locales } from '../../../i18n/locales';
+import { journal } from '../../../i18n/design';
+import { blogIndexStrings } from '../../../i18n/ui';
 import { isPublished } from '../../../lib/publication.mjs';
 import { getCollection } from 'astro:content';
-
-export function getStaticPaths() {
-	return locales.map((lang) => ({ params: { lang } }));
-}
-
-const lang = Astro.params.lang as Locale;
-const L = layoutStrings(lang);
-const B = blogIndexStrings(lang);
-const localeHrefs = blogIndexLocaleHrefs();
-
-const posts = (
-	await getCollection('blog', ({ data }) => {
-		if (!isPublished(data, import.meta.env.PROD)) return false;
-		return data.locale === lang;
-	})
-).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+export function getStaticPaths(){return locales.map(lang=>({params:{lang}}));}
+const lang=Astro.params.lang as Locale, J=journal(lang),B=blogIndexStrings(lang);
+const posts=(await getCollection('blog',({data})=>isPublished(data,import.meta.env.PROD)&&data.locale===lang)).sort((a,b)=>b.data.pubDate.valueOf()-a.data.pubDate.valueOf());
+const tags=[...new Set(posts.flatMap(p=>p.data.tags??[]))].sort();
 ---
-
-<BaseLayout
-	title={B.title}
-	description={B.intro(posts.length)}
-	lang={lang}
-	localeHrefs={localeHrefs}
->
-	<div class="page">
-		<h1>{B.title}</h1>
-		<p class="intro">{B.intro(posts.length)}</p>
-		<ol class="list">
-			{
-				posts.map((post) => (
-					<li>
-						<a href={postHref(lang, post.data.translationKey)}>
-							<span class="title">{post.data.title}</span>
-							<span class="meta">
-								<time datetime={post.data.pubDate.toISOString()}>
-									{post.data.pubDate.toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en')}
-								</time>
-								<span class="dash">·</span>
-								<span class="desc">{post.data.description}</span>
-							</span>
-						</a>
-					</li>
-				))
-			}
-		</ol>
-	</div>
+<BaseLayout title={J.library} description={B.intro(posts.length)} lang={lang} localeHrefs={blogIndexLocaleHrefs()}>
+ <section class="library shell"><header class="library-head"><p class="eyebrow">{J.eyebrow}</p><h1>{J.library}</h1><p>{B.intro(posts.length)} {J.note}</p></header>
+ <div class="library-tools" hidden><div><label for="article-search">{J.search}</label><input id="article-search" type="search" placeholder={J.placeholder}/></div><div><label for="article-topic">{J.topic}</label><select id="article-topic"><option value="">{J.all}</option>{tags.map(tag=><option value={tag}>{tag}</option>)}</select></div></div>
+ <p id="search-status" class="search-status" aria-live="polite" data-label={J.results}></p>
+ <ul class="post-grid library-grid">{posts.map(post=><li data-entry data-search={[post.data.title,post.data.description,...(post.data.tags??[])].join(' ').toLocaleLowerCase(lang)} data-tags={JSON.stringify(post.data.tags??[])}><EntryCard post={post} lang={lang}/></li>)}</ul><p id="search-empty" hidden>{J.empty}</p>
+ </section>
 </BaseLayout>
-
-<style>
-	.page {
-		max-width: 40rem;
-		margin: 0 auto;
-		padding: 2.5rem 1.5rem 4rem;
-	}
-	h1 {
-		margin: 0 0 0.5rem;
-		font-size: 1.75rem;
-		letter-spacing: -0.02em;
-	}
-	.intro {
-		color: var(--text-muted);
-		margin: 0 0 2rem;
-	}
-	.list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0;
-	}
-	.list li {
-		border-bottom: 1px solid var(--border);
-	}
-	.list li:first-child {
-		border-top: 1px solid var(--border);
-	}
-	.list a {
-		display: block;
-		padding: 1.15rem 0;
-		text-decoration: none;
-		color: inherit;
-		transition: padding-inline-start 0.15s;
-	}
-	.list a:hover {
-		padding-inline-start: 0.35rem;
-	}
-	.list a:hover .title {
-		color: var(--accent);
-	}
-	.title {
-		display: block;
-		font-weight: 600;
-		margin-bottom: 0.35rem;
-	}
-	.meta {
-		display: block;
-		font-size: 0.88rem;
-		color: var(--text-muted);
-		line-height: 1.45;
-	}
-	.dash {
-		margin: 0 0.35rem;
-		opacity: 0.5;
-	}
-</style>
+<script>
+const tools=document.querySelector<HTMLElement>('.library-tools');
+const search=document.querySelector<HTMLInputElement>('#article-search');
+const topic=document.querySelector<HTMLSelectElement>('#article-topic');
+const entries=[...document.querySelectorAll<HTMLElement>('[data-entry]')];
+const status=document.querySelector<HTMLElement>('#search-status');
+if(tools&&search&&topic&&status){tools.hidden=false;const filter=()=>{const q=search.value.trim().toLocaleLowerCase(document.documentElement.lang);let count=0;for(const entry of entries){const tags=JSON.parse(entry.dataset.tags??'[]');entry.hidden=!(entry.dataset.search?.includes(q)&&(!topic.value||tags.includes(topic.value)));if(!entry.hidden)count++;}status.textContent=count+' '+status.dataset.label;document.querySelector<HTMLElement>('#search-empty')!.hidden=count!==0;};search.addEventListener('input',filter);topic.addEventListener('change',filter);filter();}
+</script>
