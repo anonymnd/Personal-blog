@@ -1,0 +1,14 @@
+---
+import { postHref, type Locale } from '../i18n/locales';
+import { journal } from '../i18n/design';
+const { post, lang } = Astro.props;
+const J = journal(lang as Locale);
+const order=post.data.seriesOrder??0;
+const variant=order%3;
+---
+<a class="entry-card" href={postHref(lang, post.data.translationKey)}>
+ <div class:list={['entry-cover', 'cover-'+variant]} aria-hidden="true"><span class="cover-number">{String(order).padStart(2,'0')}</span><svg viewBox="0 0 140 100" fill="none"><path d={variant===0 ? 'M20 75 70 15l50 60H20Zm0 0 50-25 50 25M70 15v60' : variant===1 ? 'M15 25h80v55H15zM45 10h80v55H45zM15 25 45 10M95 25l30-15M95 80l30-15' : 'M30 20h80v60H30zM10 40h80v50H10zM10 40l20-20M90 40l20-20'} stroke="currentColor" stroke-width="2"/></svg></div><div class="entry-meta"><span>{post.data.tags?.[0] ?? J.eyebrow}</span><time datetime={post.data.pubDate.toISOString()}>{post.data.pubDate.toLocaleDateString(lang, {month:'short',day:'numeric',year:'numeric'})}</time></div>
+ <h3>{post.data.title}</h3>
+ <p>{post.data.description}</p>
+ <span class="entry-read">{J.read}<svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></span>
+</a>
