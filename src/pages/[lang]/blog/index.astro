@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import EntryCard from '../../../components/EntryCard.astro';
+import CategorySidebar from '../../../components/CategorySidebar.astro';
 import { blogIndexLocaleHrefs } from '../../../lib/localeHrefs';
 import { type Locale, locales } from '../../../i18n/locales';
 import { journal } from '../../../i18n/design';
@@ -13,11 +14,11 @@ const posts=(await getCollection('blog',({data})=>isPublished(data,import.meta.e
 const tags=[...new Set(posts.flatMap(p=>p.data.tags??[]))].sort();
 ---
 <BaseLayout title={J.library} description={B.intro(posts.length)} lang={lang} localeHrefs={blogIndexLocaleHrefs()}>
- <section class="library shell"><header class="library-head"><p class="eyebrow">{J.eyebrow}</p><h1>{J.library}</h1><p>{B.intro(posts.length)} {J.note}</p></header>
- <div class="library-tools" hidden><div><label for="article-search">{J.search}</label><input id="article-search" type="search" placeholder={J.placeholder}/></div><div><label for="article-topic">{J.topic}</label><select id="article-topic"><option value="">{J.all}</option>{tags.map(tag=><option value={tag}>{tag}</option>)}</select></div></div>
+ <section class="library shell"><header class="library-head"><h1>{J.library}</h1><p>{B.intro(posts.length)} {J.note}</p></header>
+ <div class="library-with-sidebar"><CategorySidebar lang={lang} posts={posts}/><div class="library-results"><div class="library-tools" hidden><div><label for="article-search">{J.search}</label><input id="article-search" type="search" placeholder={J.placeholder}/></div><div><label for="article-topic">{J.topic}</label><select id="article-topic"><option value="">{J.all}</option>{tags.map(tag=><option value={tag}>{tag}</option>)}</select></div></div>
  <p id="search-status" class="search-status" aria-live="polite" data-label={J.results}></p>
  <ul class="post-grid library-grid">{posts.map(post=><li data-entry data-search={[post.data.title,post.data.description,...(post.data.tags??[])].join(' ').toLocaleLowerCase(lang)} data-tags={JSON.stringify(post.data.tags??[])}><EntryCard post={post} lang={lang}/></li>)}</ul><p id="search-empty" hidden>{J.empty}</p>
- </section>
+ </div></div></section>
 </BaseLayout>
 <script>
 const tools=document.querySelector<HTMLElement>('.library-tools');
@@ -25,5 +26,5 @@ const search=document.querySelector<HTMLInputElement>('#article-search');
 const topic=document.querySelector<HTMLSelectElement>('#article-topic');
 const entries=[...document.querySelectorAll<HTMLElement>('[data-entry]')];
 const status=document.querySelector<HTMLElement>('#search-status');
-if(tools&&search&&topic&&status){tools.hidden=false;const filter=()=>{const q=search.value.trim().toLocaleLowerCase(document.documentElement.lang);let count=0;for(const entry of entries){const tags=JSON.parse(entry.dataset.tags??'[]');entry.hidden=!(entry.dataset.search?.includes(q)&&(!topic.value||tags.includes(topic.value)));if(!entry.hidden)count++;}status.textContent=count+' '+status.dataset.label;document.querySelector<HTMLElement>('#search-empty')!.hidden=count!==0;};search.addEventListener('input',filter);topic.addEventListener('change',filter);filter();}
+if(tools&&search&&topic&&status){tools.hidden=false;search.value=new URLSearchParams(location.search).get('q')??'';const filter=()=>{const q=search.value.trim().toLocaleLowerCase(document.documentElement.lang);let count=0;for(const entry of entries){const tags=JSON.parse(entry.dataset.tags??'[]');entry.hidden=!(entry.dataset.search?.includes(q)&&(!topic.value||tags.includes(topic.value)));if(!entry.hidden)count++;}status.textContent=count+' '+status.dataset.label;document.querySelector<HTMLElement>('#search-empty')!.hidden=count!==0;};search.addEventListener('input',filter);topic.addEventListener('change',filter);filter();}
 </script>

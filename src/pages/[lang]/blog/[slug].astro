@@ -1,6 +1,9 @@
 ---
 import { journal } from '../../../i18n/design';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import CategorySidebar from '../../../components/CategorySidebar.astro';
+import { categoryFor, categoryLabel, categoryHref, categoryStrings } from '../../../lib/categories';
+import ArticleDemos from '../../../components/ArticleDemos.astro';
 import { postAvailableLocales, postLocaleHrefs } from '../../../lib/localeHrefs';
 import { blogIndexHref, postHref, type Locale } from '../../../i18n/locales';
 import { postStrings } from '../../../i18n/ui';
@@ -37,6 +40,9 @@ const minutes = Math.max(1, Math.ceil((post.body ?? "").split(/\s+/).length / 20
 
 const localeHrefs = postLocaleHrefs(allPosts, post.data.translationKey);
 const availableLocales = postAvailableLocales(allPosts, post.data.translationKey);
+const category = categoryFor(post.data);
+const related = allPosts.filter(p => p.data.locale === lang && p.data.translationKey !== post.data.translationKey && categoryFor(p.data) === category).sort((a,b)=>b.data.pubDate.valueOf()-a.data.pubDate.valueOf()).slice(0,3);
+const C = categoryStrings(lang);
 const series = allPosts.filter(p => p.data.locale === lang && /^\d{3}-/.test(p.data.translationKey)).sort((a,b) => (a.data.seriesOrder ?? 0) - (b.data.seriesOrder ?? 0));
 const position = series.findIndex(p => p.data.translationKey === post.data.translationKey);
 const previous = position > 0 ? series[position-1] : undefined;
@@ -57,6 +63,7 @@ const seriesLabel = lang === 'ar' ? 'فهاد السلسلة' : lang === 'fr' ? 
 				<a href={blogIndexHref(lang)}>{P.backToBlog}</a>
 			</p>
 			<h1>{post.data.title}</h1>
+			<a class="article-category" href={categoryHref(lang,category)}>{categoryLabel(category,lang)}</a>
 			<p class="desc">{post.data.description}</p>
 			<div class="byline"><span>Nada Tayebi</span><span class="sep">·</span><span>{minutes} {J.minutes}</span><span class="sep">·</span>
 				<time datetime={post.data.pubDate.toISOString()}>
@@ -89,5 +96,7 @@ const seriesLabel = lang === 'ar' ? 'فهاد السلسلة' : lang === 'fr' ? 
 <div class="prose">
 			<Content />
 		</div>
-	</article>{headings.some(h=>h.depth===2) && <aside class="contents"><nav aria-label={J.contents}><p class="eyebrow">{J.contents}</p><ol>{headings.filter(h=>h.depth===2).map(h=><li><a href={"#"+h.slug}>{h.text}</a></li>)}</ol></nav></aside>}</div>
+        <ArticleDemos lang={lang}/>
+		{position >= 0 && <nav class="series-nav" aria-label={seriesLabel}>{previous && <a href={postHref(lang, previous.data.translationKey)}><span>{lang === 'ar' ? 'المقال اللي فات' : lang === 'fr' ? 'Article précédent' : 'Previous article'}</span><strong>{previous.data.title}</strong></a>}{next && <a href={postHref(lang, next.data.translationKey)}><span>{lang === 'ar' ? 'المقال الجاي' : lang === 'fr' ? 'Article suivant' : 'Next article'}</span><strong>{next.data.title}</strong></a>}</nav>}
+	</article><aside class="article-sidebar">{headings.some(h=>h.depth===2) && <nav class="desktop-contents" aria-label={J.contents}><p class="eyebrow">{J.contents}</p><ol>{headings.filter(h=>h.depth===2).map(h=><li><a href={"#"+h.slug}>{h.text}</a></li>)}</ol></nav>}<CategorySidebar lang={lang} posts={allPosts} current={category}/>{related.length > 0 && <nav class="related-writing" aria-label={C.related}><h2>{C.related}</h2><ul>{related.map(p=><li><a href={postHref(lang,p.data.translationKey)}>{p.data.title}</a></li>)}</ul></nav>}</aside></div>
 </BaseLayout>
