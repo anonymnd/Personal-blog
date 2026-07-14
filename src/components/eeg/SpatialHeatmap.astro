@@ -1,0 +1,264 @@
+---
+interface Props {
+	channels?: string[];
+	timePoints?: number;
+}
+
+const { channels = ['Fp1', 'Fp2', 'F3', 'Fz', 'F4', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4', 'O1', 'O2'], timePoints = 50 } = Astro.props;
+
+// Deterministic pseudo-random heatmap data
+function generateCell(chIdx: number, tIdx: number): number {
+	let s = (chIdx * 31 + tIdx * 17 + 7) % 2147483647;
+	s = (s * 16807) % 2147483647;
+	return (s % 100) / 100;
+}
+
+const modes = [
+	{ id: 'raw', label: 'Raw signal', desc: 'Full bandwidth, includes noise' },
+	{ id: 'filtered', label: 'Filtered (1–40 Hz)', desc: 'Slow drifts and high-frequency noise removed' },
+	{ id: 'epoch', label: 'Epochs', desc: 'Cut into 1.5-second windows around events' },
+];
+---
+
+<figure class="heatmap-figure" role="group" aria-labelledby="heatmap-title">
+	<figcaption id="heatmap-title" class="heatmap-title">
+		Channels × time: a second view of the same data
+	</figcaption>
+
+	<div class="heatmap-demo" data-modes={JSON.stringify(modes)}>
+		<div class="heatmap-modes" role="tablist" aria-label="Processing stage">
+			{modes.map((mode, i) => (
+				<button
+					type="button"
+					class="mode-btn"
+					role="tab"
+					aria-selected={i === 0 ? 'true' : 'false'}
+					data-mode={mode.id}
+				>
+					{mode.label}
+				</button>
+			))}
+		</div>
+
+		<p class="mode-desc" aria-live="polite">Full bandwidth, includes noise</p>
+
+		<div class="heatmap-grid" style={`--rows: ${channels.length}; --cols: ${timePoints};`}>
+			<div class="heatmap-channels" aria-hidden="true">
+				{channels.map((ch) => <span>{ch}</span>)}
+			</div>
+			<div class="heatmap-cells" role="img" aria-label={`Heatmap of ${channels.length} channels across ${timePoints} time points`}>
+				{channels.map((ch, ci) =>
+					Array.from({ length: timePoints }, (_, ti) => {
+						const v = generateCell(ci, ti);
+						return (
+							<div
+								class="cell"
+								style={`--v: ${v.toFixed(2)}`}
+								data-channel={ch}
+								data-time={ti}
+							/>
+						);
+					})
+				)}
+			</div>
+		</div>
+
+		<div class="heatmap-legend" aria-hidden="true">
+			<span>−30 μV</span>
+			<div class="legend-bar" />
+			<span>+30 μV</span>
+		</div>
+
+		<div class="heatmap-tooltip" role="tooltip" hidden></div>
+	</div>
+
+	<p class="heatmap-caption">
+		<em>Figure 4:</em> Each cell is one sample (one channel at one time point). Toggle the processing stage to see how filtering and epoching reshape the same recording.
+	</p>
+</figure>
+
+<style>
+	.heatmap-figure {
+		margin: 2rem 0 2.5rem;
+		padding: 1.4rem;
+		background: #eeedf9;
+		border: 1px solid #dcd6ee;
+		border-inline-start: 4px solid var(--accent-dim);
+		border-radius: 0 14px 14px 0;
+	}
+
+	.heatmap-title {
+		font-size: 0.7rem;
+		font-weight: 650;
+		color: #634a98;
+		margin-bottom: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.heatmap-modes {
+		display: flex;
+		gap: 0.4rem;
+		margin-bottom: 0.5rem;
+	}
+	.mode-btn {
+		min-height: 36px;
+		padding: 0.4rem 0.8rem;
+		border: 1px solid #beb0d5;
+		border-radius: 7px;
+		background: #fff;
+		color: #563484;
+		font-size: 0.78rem;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.mode-btn:hover { background: #e1d9f2; }
+	.mode-btn[aria-selected="true"] {
+		background: var(--accent-dim);
+		color: #fff;
+		border-color: var(--accent-dim);
+	}
+
+	.mode-desc {
+		font-size: 0.74rem;
+		color: #645775;
+		margin: 0 0 0.6rem;
+	}
+
+	.heatmap-grid {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.4rem;
+		position: relative;
+	}
+
+	.heatmap-channels {
+		display: grid;
+		grid-template-rows: repeat(var(--rows), 1fr);
+		gap: 1px;
+		font-size: 0.6rem;
+		font-family: var(--font-mono);
+		color: var(--text-muted);
+		align-items: center;
+		text-align: end;
+		padding-inline-end: 0.3rem;
+	}
+
+	.heatmap-cells {
+		display: grid;
+		grid-template-columns: repeat(var(--cols), 1fr);
+		grid-template-rows: repeat(var(--rows), 1fr);
+		gap: 1px;
+		border: 1px solid #d0c8e8;
+		border-radius: 4px;
+		overflow: hidden;
+	}
+
+	.cell {
+		aspect-ratio: 1;
+		min-width: 0;
+		background: hsl(calc(240 + var(--v) * 140), 55%, calc(75% - var(--v) * 40%));
+		transition: opacity 0.15s;
+	}
+	.cell:hover { opacity: 0.7; outline: 1px solid #333; }
+
+	.heatmap-demo[data-mode="filtered"] .cell {
+		background: hsl(calc(240 + var(--v) * 140), 55%, calc(78% - var(--v) * 35%));
+	}
+
+	.heatmap-demo[data-mode="epoch"] .cell {
+		background: hsl(calc(240 + var(--v) * 140), 60%, calc(72% - var(--v) * 42%));
+	}
+
+	.heatmap-legend {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		font-size: 0.65rem;
+		color: var(--text-muted);
+		font-family: var(--font-mono);
+	}
+	.legend-bar {
+		flex: 1;
+		max-width: 120px;
+		height: 8px;
+		border-radius: 4px;
+		background: linear-gradient(to right, hsl(240, 55%, 75%), hsl(380, 55%, 35%));
+	}
+
+	.heatmap-tooltip {
+		position: absolute;
+		padding: 0.3rem 0.6rem;
+		background: var(--text);
+		color: #fff;
+		border-radius: 5px;
+		font-size: 0.72rem;
+		font-family: var(--font-mono);
+		white-space: nowrap;
+		pointer-events: none;
+		z-index: 10;
+		opacity: 0;
+		transition: opacity 0.12s;
+	}
+	.heatmap-tooltip[data-visible="true"] { opacity: 1; }
+
+	.heatmap-caption {
+		font-size: 0.95rem;
+		line-height: 1.5;
+		font-weight: 700;
+		color: var(--text);
+		text-wrap: balance;
+		margin: 1rem 0 0;
+	}
+
+	@media (max-width: 560px) {
+		.mode-btn { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+		.heatmap-channels { font-size: 0.5rem; }
+	}
+</style>
+
+<script>
+	document.querySelectorAll<HTMLElement>('.heatmap-demo').forEach((demo) => {
+		const btns = demo.querySelectorAll<HTMLButtonElement>('.mode-btn');
+		const desc = demo.querySelector<HTMLElement>('.mode-desc');
+		const tooltip = demo.querySelector<HTMLElement>('.heatmap-tooltip');
+
+		const descs: Record<string, string> = {
+			raw: 'Full bandwidth, includes noise',
+			filtered: 'Slow drifts and high-frequency noise removed',
+			epoch: 'Cut into 1.5-second windows around events',
+		};
+
+		btns.forEach((btn) => {
+			btn.addEventListener('click', () => {
+				btns.forEach((b) => b.setAttribute('aria-selected', String(b === btn)));
+				demo.dataset.mode = btn.dataset.mode ?? 'raw';
+				if (desc) desc.textContent = descs[btn.dataset.mode ?? 'raw'] ?? '';
+			});
+		});
+
+		// Tooltip on cell hover
+		if (tooltip) {
+			demo.querySelectorAll<HTMLElement>('.cell').forEach((cell) => {
+				cell.addEventListener('mouseenter', (e) => {
+					const ch = cell.dataset.channel ?? '';
+					const t = cell.dataset.time ?? '0';
+					const v = parseFloat(getComputedStyle(cell).getPropertyValue('--v')) * 60 - 30;
+					tooltip.textContent = `${ch} · t=${t} · ${v.toFixed(1)} μV`;
+					tooltip.hidden = false;
+					tooltip.dataset.visible = 'true';
+					const rect = cell.getBoundingClientRect();
+					const demoRect = demo.getBoundingClientRect();
+					tooltip.style.left = `${rect.left - demoRect.left + rect.width / 2}px`;
+					tooltip.style.top = `${rect.top - demoRect.top - 8}px`;
+					tooltip.style.transform = 'translate(-50%, -100%)';
+				});
+				cell.addEventListener('mouseleave', () => {
+					tooltip.dataset.visible = 'false';
+					setTimeout(() => { if (tooltip.dataset.visible === 'false') tooltip.hidden = true; }, 120);
+				});
+			});
+		}
+	});
+</script>

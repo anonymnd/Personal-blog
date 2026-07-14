@@ -1,0 +1,57 @@
+/* Self-hosted fonts — Public Sans (latin) + Noto Sans Arabic */
+@font-face {
+	font-family: 'Public Sans';
+	font-style: normal;
+	font-weight: 400;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-3.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Public Sans';
+	font-style: normal;
+	font-weight: 500;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-4.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Public Sans';
+	font-style: normal;
+	font-weight: 600;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-5.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Public Sans';
+	font-style: normal;
+	font-weight: 700;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-6.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Public Sans';
+	font-style: normal;
+	font-weight: 800;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-7.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Noto Sans Arabic';
+	font-style: normal;
+	font-weight: 400;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-0.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Noto Sans Arabic';
+	font-style: normal;
+	font-weight: 600;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-1.ttf') format('truetype');
+}
+@font-face {
+	font-family: 'Noto Sans Arabic';
+	font-style: normal;
+	font-weight: 700;
+	font-display: optional;
+	src: url('/Personal-blog/fonts/journal-2.ttf') format('truetype');
+}

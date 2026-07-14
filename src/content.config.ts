@@ -5,7 +5,7 @@ import { z } from 'astro/zod';
 const localeEnum = z.enum(['en', 'fr', 'ar']);
 
 const blog = defineCollection({
-	loader: glob({ base: './src/content/blog', pattern: '**/*.md' }),
+	loader: glob({ base: './src/content/blog', pattern: ['**/*.md', '**/*.mdx'] }),
 	schema: z.object({
 		title: z.string(),
 		description: z.string(),
@@ -17,6 +17,8 @@ const blog = defineCollection({
 		/** Same value in every language file so URLs stay aligned (e.g. welcome-to-this-blog). */
 		translationKey: z.string(),
 		locale: localeEnum,
+		/** Opt-in flag for articles with interactive visual components. */
+		interactive: z.boolean().optional(),
 	}),
 });
 

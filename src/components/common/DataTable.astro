@@ -1,0 +1,161 @@
+---
+interface Props {
+	caption?: string;
+	sortable?: boolean;
+}
+
+const { caption, sortable = false } = Astro.props;
+---
+
+<div class="table-wrap" data-sortable={sortable ? 'true' : 'false'}>
+	<table class="data-table">
+		{caption && <caption>{caption}</caption>}
+		<slot />
+	</table>
+	<div class="table-scroll-hint" aria-hidden="true">Scroll →</div>
+</div>
+
+<style>
+	.table-wrap {
+		position: relative;
+		margin: 1.6rem 0;
+		max-width: 100%;
+		overflow-x: auto;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+	}
+
+	.data-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.9rem;
+		display: table;
+	}
+
+	.data-table caption {
+		padding: 0.75rem 1rem;
+		font-size: 0.8rem;
+		font-weight: 650;
+		color: var(--text-muted);
+		text-align: start;
+		border-bottom: 1px solid var(--border);
+		background: var(--bg-elevated);
+	}
+
+	.data-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: var(--bg-elevated);
+		font-weight: 650;
+		font-size: 0.82rem;
+		color: var(--text);
+		text-align: start;
+		padding: 0.7rem 0.9rem;
+		border-bottom: 2px solid var(--border);
+		white-space: nowrap;
+	}
+
+	.data-table th[data-sortable] {
+		cursor: pointer;
+		user-select: none;
+	}
+	.data-table th[data-sortable]:hover {
+		color: var(--accent);
+	}
+	.data-table th[data-sortable]::after {
+		content: '↕';
+		margin-inline-start: 0.3rem;
+		opacity: 0.35;
+		font-size: 0.75rem;
+	}
+	.data-table th[aria-sort="ascending"]::after { content: '↑'; opacity: 1; color: var(--accent); }
+	.data-table th[aria-sort="descending"]::after { content: '↓'; opacity: 1; color: var(--accent); }
+
+	.data-table tbody td {
+		padding: 0.6rem 0.9rem;
+		border-bottom: 1px solid var(--border);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.data-table tbody tr:last-child td {
+		border-bottom: none;
+	}
+
+	.data-table tbody tr {
+		transition: background 0.12s;
+	}
+	.data-table tbody tr:hover {
+		background: #f4f5fb;
+	}
+
+	.table-scroll-hint {
+		display: none;
+		position: sticky;
+		bottom: 0;
+		right: 0;
+		float: right;
+		padding: 0.2rem 0.6rem;
+		background: var(--accent);
+		color: #fff;
+		font-size: 0.65rem;
+		border-radius: 6px 6px 0 0;
+		opacity: 0.7;
+	}
+
+	@media (max-width: 600px) {
+		.table-wrap:hover .table-scroll-hint,
+		.table-wrap:focus-within .table-scroll-hint {
+			display: block;
+		}
+	}
+</style>
+
+<script>
+	document.querySelectorAll('.table-wrap[data-sortable="true"]').forEach((wrap) => {
+		const table = wrap.querySelector('table');
+		if (!table) return;
+
+		table.querySelectorAll('thead th').forEach((th, colIndex) => {
+			th.setAttribute('data-sortable', 'true');
+			th.setAttribute('tabindex', '0');
+			th.setAttribute('role', 'columnheader');
+
+			const doSort = () => {
+				const currentSort = th.getAttribute('aria-sort');
+				const newSort = currentSort === 'ascending' ? 'descending' : 'ascending';
+
+				table.querySelectorAll('thead th').forEach((h) => h.removeAttribute('aria-sort'));
+				th.setAttribute('aria-sort', newSort);
+
+				const tbody = table.querySelector('tbody');
+				if (!tbody) return;
+
+				const rows = Array.from(tbody.querySelectorAll('tr'));
+				rows.sort((a, b) => {
+					const aVal = a.cells[colIndex]?.textContent?.trim() ?? '';
+					const bVal = b.cells[colIndex]?.textContent?.trim() ?? '';
+					const aNum = parseFloat(aVal);
+					const bNum = parseFloat(bVal);
+					if (!isNaN(aNum) && !isNaN(bNum)) {
+						return newSort === 'ascending' ? aNum - bNum : bNum - aNum;
+					}
+					return newSort === 'ascending'
+						? aVal.localeCompare(bVal)
+						: bVal.localeCompare(aVal);
+				});
+
+				rows.forEach((row) => tbody.appendChild(row));
+			};
+
+			th.addEventListener('click', doSort);
+			th.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					doSort();
+				}
+			});
+		});
+	});
+</script>

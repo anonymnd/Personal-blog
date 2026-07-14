@@ -1,0 +1,14 @@
+---
+import type { Locale } from '../i18n/locales';
+
+interface Props {
+	lang: Locale;
+}
+
+// Article-specific interactive demos are injected here by the article page.
+// This component renders nothing by default; it exists as a mount point
+// for demo modules that can be conditionally included per-article.
+const { lang } = Astro.props;
+---
+
+<!-- Article demos mount point -->

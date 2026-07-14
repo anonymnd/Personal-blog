@@ -1,0 +1,297 @@
+---
+interface Props {
+	highlight?: string[];
+}
+
+const { highlight = [] } = Astro.props;
+
+interface Electrode {
+	label: string;
+	x: number;
+	y: number;
+	region: string;
+}
+
+const electrodes: Electrode[] = [
+	// Frontal pole
+	{ label: 'Fp1', x: 115, y: 65, region: 'frontal pole' },
+	{ label: 'Fp2', x: 185, y: 65, region: 'frontal pole' },
+	// Frontal
+	{ label: 'F7', x: 95, y: 95, region: 'frontal' },
+	{ label: 'F3', x: 115, y: 85, region: 'frontal' },
+	{ label: 'Fz', x: 150, y: 75, region: 'frontal midline' },
+	{ label: 'F4', x: 185, y: 85, region: 'frontal' },
+	{ label: 'F8', x: 205, y: 95, region: 'frontal' },
+	// Central
+	{ label: 'C3', x: 110, y: 130, region: 'central' },
+	{ label: 'Cz', x: 150, y: 130, region: 'central midline' },
+	{ label: 'C4', x: 190, y: 130, region: 'central' },
+	// Parietal
+	{ label: 'P3', x: 115, y: 165, region: 'parietal' },
+	{ label: 'Pz', x: 150, y: 165, region: 'parietal midline' },
+	{ label: 'P4', x: 185, y: 165, region: 'parietal' },
+	// Occipital
+	{ label: 'O1', x: 115, y: 195, region: 'occipital' },
+	{ label: 'O2', x: 185, y: 195, region: 'occipital' },
+	// Temporal
+	{ label: 'T3', x: 65, y: 115, region: 'temporal' },
+	{ label: 'T4', x: 235, y: 115, region: 'temporal' },
+	{ label: 'T5', x: 85, y: 175, region: 'temporal' },
+	{ label: 'T6', x: 215, y: 175, region: 'temporal' },
+];
+---
+
+<figure class="eeg-cap-figure" role="group" aria-labelledby="eeg-cap-title">
+	<figcaption id="eeg-cap-title" class="eeg-cap-title">
+		Standard EEG electrode placement — international 10-20 system
+	</figcaption>
+	<div class="eeg-cap-wrap">
+		<svg
+			viewBox="0 0 300 300"
+			xmlns="http://www.w3.org/2000/svg"
+			class="eeg-cap-svg"
+			role="img"
+			aria-label="Top-down view of a head showing 19 electrode positions from the international 10-20 system"
+		>
+			<title>EEG 10-20 electrode placement system</title>
+			<desc>
+				Top-down schematic of a human head with 19 electrode positions labeled Fp1, Fp2, F7, F3, Fz, F4, F8, C3, Cz, C4, P3, Pz, P4, O1, O2, T3, T4, T5, T6.
+			</desc>
+
+			<!-- Head outline -->
+			<circle cx="150" cy="150" r="100" class="head-outline" />
+
+			<!-- Nose indicator (top) -->
+			<path d="M150 48 L143 36 L157 36 Z" class="nose" />
+
+			<!-- Ears (left/right) -->
+			<path d="M48 140 Q36 150 48 160" class="ear" />
+			<path d="M252 140 Q264 150 252 160" class="ear" />
+
+			<!-- Midline guides -->
+			<line x1="150" y1="52" x2="150" y2="248" class="midline" />
+			<line x1="55" y1="150" x2="245" y2="150" class="midline" />
+
+			{/* Electrodes */}
+			{electrodes.map((el) => {
+				const isHighlighted = highlight.includes(el.label);
+				return (
+					<g
+						class={`electrode-group ${isHighlighted ? 'highlighted' : ''}`}
+						data-label={el.label}
+						data-region={el.region}
+						tabindex="0"
+						role="button"
+						aria-label={`${el.label}, ${el.region}`}
+					>
+						<circle cx={el.x} cy={el.y} r="4" class="electrode-dot" />
+						<circle cx={el.x} cy={el.y} r="9" class="electrode-ring" />
+						<text x={el.x} y={el.y - 10} class="electrode-label" text-anchor="middle">{el.label}</text>
+					</g>
+				);
+			})}
+		</svg>
+		<div class="eeg-tooltip" role="tooltip" aria-live="polite" hidden></div>
+	</div>
+	<p class="eeg-cap-caption">
+		<em>Figure 1:</em> Standard 10-20 electrode positions. Letters indicate scalp region (Fp = frontal pole, F = frontal, C = central, P = parietal, O = occipital, T = temporal). Numbers indicate hemisphere (odd = left, even = right, z = midline).
+	</p>
+</figure>
+
+<style>
+	.eeg-cap-figure {
+		margin: 2rem 0 2.5rem;
+		padding: 1.4rem;
+		background: #eeedf9;
+		border: 1px solid #dcd6ee;
+		border-inline-start: 4px solid var(--accent-dim);
+		border-radius: 0 14px 14px 0;
+	}
+
+	.eeg-cap-title {
+		font-size: 0.7rem;
+		font-weight: 650;
+		color: #634a98;
+		margin-bottom: 0.45rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.eeg-cap-wrap {
+		position: relative;
+		max-width: 360px;
+		margin: 1rem auto;
+	}
+
+	.eeg-cap-svg {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+
+	.head-outline {
+		fill: #f8f7ff;
+		stroke: #333;
+		stroke-width: 2;
+	}
+
+	.nose {
+		fill: none;
+		stroke: #555;
+		stroke-width: 1.5;
+	}
+
+	.ear {
+		fill: none;
+		stroke: #555;
+		stroke-width: 1.5;
+	}
+
+	.midline {
+		stroke: #c5bee0;
+		stroke-width: 1;
+		stroke-dasharray: 4 6;
+	}
+
+	.electrode-group {
+		cursor: pointer;
+		outline: none;
+	}
+
+	.electrode-dot {
+		fill: #0066cc;
+		transition: fill 0.15s, r 0.15s;
+	}
+
+	.electrode-ring {
+		fill: none;
+		stroke: transparent;
+		stroke-width: 2;
+		transition: stroke 0.15s, r 0.15s;
+	}
+
+	.electrode-label {
+		font-size: 10px;
+		font-weight: 650;
+		fill: #333;
+		pointer-events: none;
+		transition: fill 0.15s;
+	}
+
+	.electrode-group:hover .electrode-dot,
+	.electrode-group:focus-visible .electrode-dot {
+		fill: var(--accent-dim);
+	}
+
+	.electrode-group:hover .electrode-ring,
+	.electrode-group:focus-visible .electrode-ring {
+		stroke: var(--accent-dim);
+		stroke-width: 2;
+	}
+
+	.electrode-group:hover .electrode-label,
+	.electrode-group:focus-visible .electrode-label {
+		fill: var(--accent-dim);
+	}
+
+	.electrode-group.highlighted .electrode-dot {
+		fill: var(--accent-dim);
+		animation: pulse-electrode 2s ease-in-out infinite;
+	}
+
+	.electrode-group.highlighted .electrode-ring {
+		stroke: var(--accent-dim);
+		stroke-width: 2.5;
+	}
+
+	.electrode-group.highlighted .electrode-label {
+		fill: var(--accent-dim);
+		font-weight: 750;
+	}
+
+	@keyframes pulse-electrode {
+		0%, 100% { r: 4; }
+		50% { r: 5.5; }
+	}
+
+	.eeg-tooltip {
+		position: absolute;
+		padding: 0.4rem 0.7rem;
+		background: var(--text);
+		color: #fff;
+		border-radius: 6px;
+		font-size: 0.78rem;
+		white-space: nowrap;
+		pointer-events: none;
+		z-index: 10;
+		transform: translate(-50%, -100%);
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+	.eeg-tooltip[data-visible="true"] {
+		opacity: 1;
+	}
+
+	.eeg-cap-caption {
+		font-size: 0.95rem;
+		line-height: 1.5;
+		font-weight: 700;
+		color: var(--text);
+		text-wrap: balance;
+		margin: 1rem 0 0;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.electrode-group.highlighted .electrode-dot {
+			animation: none;
+		}
+	}
+</style>
+
+<script>
+	const tooltip = document.querySelector<HTMLElement>('.eeg-tooltip');
+	const wrap = document.querySelector<HTMLElement>('.eeg-cap-wrap');
+
+	document.querySelectorAll<SVGGElement>('.electrode-group').forEach((group) => {
+		const label = group.dataset.label ?? '';
+		const region = group.dataset.region ?? '';
+
+		const show = (e: Event) => {
+			if (!tooltip || !wrap) return;
+			tooltip.textContent = `${label} — ${region}`;
+			tooltip.hidden = false;
+			tooltip.dataset.visible = 'true';
+
+			const wrapRect = wrap.getBoundingClientRect();
+			const svg = wrap.querySelector('svg');
+			if (!svg) return;
+			const svgRect = svg.getBoundingClientRect();
+
+			// Get electrode position from SVG coordinates
+			const circle = group.querySelector('circle');
+			if (!circle) return;
+			const cx = parseFloat(circle.getAttribute('cx') ?? '0');
+			const cy = parseFloat(circle.getAttribute('cy') ?? '0');
+			const scaleX = svgRect.width / 300;
+			const scaleY = svgRect.height / 300;
+			const px = (svgRect.left - wrapRect.left) + cx * scaleX;
+			const py = (svgRect.top - wrapRect.top) + cy * scaleY;
+
+			tooltip.style.left = `${px}px`;
+			tooltip.style.top = `${py - 8}px`;
+		};
+
+		const hide = () => {
+			if (!tooltip) return;
+			tooltip.dataset.visible = 'false';
+			setTimeout(() => {
+				if (tooltip.dataset.visible === 'false') tooltip.hidden = true;
+			}, 150);
+		};
+
+		group.addEventListener('mouseenter', show);
+		group.addEventListener('focus', show);
+		group.addEventListener('mouseleave', hide);
+		group.addEventListener('blur', hide);
+	});
+</script>

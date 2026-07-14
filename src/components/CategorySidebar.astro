@@ -1,0 +1,40 @@
+---
+import { categoryFor, categoryLabel, categoryHref, categoryStrings, type CategorySlug } from '../lib/categories';
+import type { Locale } from '../i18n/locales';
+
+interface Props {
+	lang: Locale;
+	posts: Array<{ data: { tags?: string[] } }>;
+	current?: CategorySlug;
+}
+
+const { lang, posts, current } = Astro.props;
+const C = categoryStrings(lang);
+
+// Count posts per category
+const counts = new Map<CategorySlug, number>();
+for (const post of posts) {
+	const cat = categoryFor(post.data);
+	counts.set(cat, (counts.get(cat) ?? 0) + 1);
+}
+
+const total = posts.length;
+const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<nav class="category-sidebar" aria-label={C.explore}>
+	<h2>{C.explore}</h2>
+	<a href={`${lang === 'ar' ? '/Personal-blog/ar/' : lang === 'fr' ? '/Personal-blog/fr/' : '/Personal-blog/en/'}blog/`} class="category-all">
+		{C.all}<span>{total}</span>
+	</a>
+	<ul>
+		{ordered.map(([slug, count]) => (
+			<li>
+				<a href={categoryHref(lang, slug)} aria-current={current === slug ? 'page' : undefined}>
+					<span>{categoryLabel(slug, lang)}</span>
+					<span class="category-count">{count}</span>
+				</a>
+			</li>
+		))}
+	</ul>
+</nav>

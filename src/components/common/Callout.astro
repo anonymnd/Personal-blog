@@ -1,0 +1,112 @@
+---
+interface Props {
+	type?: 'key-insight' | 'warning' | 'formula' | 'further-reading' | 'definition';
+	label?: string;
+}
+
+const { type = 'key-insight', label } = Astro.props;
+
+const icons: Record<string, string> = {
+	'key-insight': 'M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83',
+	warning: 'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z',
+	formula: 'M4 7V4h16v3M9 20h6M12 4v16',
+	'further-reading': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+	definition: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+};
+
+const defaultLabels: Record<string, string> = {
+	'key-insight': 'Key insight',
+	warning: 'Careful',
+	formula: 'Formula',
+	'further-reading': 'Go further',
+	definition: 'Definition',
+};
+---
+
+<aside class={`callout callout--${type}`} role="note">
+	<div class="callout-icon" aria-hidden="true">
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+			<path d={icons[type]} />
+		</svg>
+	</div>
+	<div class="callout-body">
+		{label && <p class="callout-label">{label ?? defaultLabels[type]}</p>}
+		<div class="callout-content">
+			<slot />
+		</div>
+	</div>
+</aside>
+
+<style>
+	.callout {
+		display: flex;
+		gap: 0.85rem;
+		margin: 1.8rem 0;
+		padding: 1.1rem 1.3rem;
+		border-radius: var(--radius);
+		border-inline-start: 4px solid;
+		font-size: 0.95rem;
+		line-height: 1.75;
+	}
+
+	.callout-icon {
+		flex-shrink: 0;
+		width: 22px;
+		height: 22px;
+		margin-top: 2px;
+	}
+	.callout-icon svg {
+		width: 100%;
+		height: 100%;
+	}
+
+	.callout-label {
+		font-size: 0.72rem;
+		font-weight: 650;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin-bottom: 0.3rem;
+	}
+	.callout-content p { margin-block: 0 0.6rem; }
+	.callout-content p:last-child { margin-bottom: 0; }
+
+	.callout--key-insight {
+		background: #eef1fc;
+		border-color: var(--accent);
+		color: var(--text);
+	}
+	.callout--key-insight .callout-icon { color: var(--accent); }
+	.callout--key-insight .callout-label { color: var(--accent); }
+
+	.callout--warning {
+		background: #fdf6ec;
+		border-color: #d97706;
+		color: var(--text);
+	}
+	.callout--warning .callout-icon { color: #d97706; }
+	.callout--warning .callout-label { color: #b45309; }
+
+	.callout--formula {
+		background: #f3f0fb;
+		border-color: var(--accent-dim);
+		color: var(--text);
+	}
+	.callout--formula .callout-icon { color: var(--accent-dim); }
+	.callout--formula .callout-label { color: var(--accent-dim); }
+
+	.callout--further-reading {
+		background: #f0f4f0;
+		border-color: #4a7c59;
+		color: var(--text);
+	}
+	.callout--further-reading .callout-icon { color: #4a7c59; }
+	.callout--further-reading .callout-label { color: #3d6b4b; }
+
+	.callout--definition {
+		background: #edf7ed;
+		border-color: #2d8a4e;
+		color: var(--text);
+	}
+	.callout--definition .callout-icon { color: #2d8a4e; }
+	.callout--definition .callout-label { color: #1e6b3a; }
+</style>

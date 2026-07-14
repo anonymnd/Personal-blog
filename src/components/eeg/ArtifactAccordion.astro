@@ -1,0 +1,165 @@
+---
+interface Artifact {
+	name: string;
+	icon: string;
+	cause: string;
+	detection: string;
+}
+
+const artifacts: Artifact[] = [
+	{
+		name: 'Blink (EOG artifact)',
+		icon: '👁',
+		cause: 'Eyelid movement creates a large dipolar electric field picked up by frontal electrodes.',
+		detection: 'Large, stereotyped deflections at frontal channels (Fp1, Fp2). Often detected with a dedicated EOG channel or ICA component.',
+	},
+	{
+		name: 'Eye movement (saccade)',
+		icon: '↔️',
+		cause: 'The eye is a dipole; rotating it shifts the corneo-retinal potential.',
+		detection: 'Step-like deflections at frontal sites. Horizontal saccades show opposite polarity at F7 vs F8.',
+	},
+	{
+		name: 'Jaw / facial muscle (EMG)',
+		icon: '😬',
+		cause: 'Muscle contraction generates broadband high-frequency electrical activity.',
+		detection: 'High-frequency power increase, especially at temporal electrodes. Often removed with a low-pass filter or ICA.',
+	},
+	{
+		name: 'Head movement',
+		icon: '🔄',
+		cause: 'Electrode-cable movement changes impedance and creates motion artifacts.',
+		detection: 'Large slow drifts across many channels. Sometimes detected with accelerometer data.',
+	},
+	{
+		name: 'Poor electrode contact',
+		icon: '⚡',
+		cause: 'An electrode lifting off the scalp creates intermittent or saturated signals.',
+		detection: 'Flatlines, saturation at rails, or extreme impedance values. Bad channels are usually interpolated or excluded.',
+	},
+	{
+		name: 'Power-line noise',
+		icon: '🔌',
+		cause: 'Electrical mains at 50 Hz (Europe) or 60 Hz (US) couples into the recording.',
+		detection: 'Sharp spectral peak at 50/60 Hz and harmonics. Removed with a notch filter.',
+	},
+];
+---
+
+<figure class="artifact-figure" role="group" aria-labelledby="artifact-title">
+	<figcaption id="artifact-title" class="artifact-title">
+		What can contaminate an EEG recording
+	</figcaption>
+
+	<div class="artifact-list">
+		{artifacts.map((a, i) => (
+			<details class="artifact-item" open={i === 0}>
+				<summary>
+					<span class="artifact-icon" aria-hidden="true">{a.icon}</span>
+					<span class="artifact-name">{a.name}</span>
+					<span class="artifact-toggle" aria-hidden="true">+</span>
+				</summary>
+				<div class="artifact-body">
+					<p><strong>Cause:</strong> {a.cause}</p>
+					<p><strong>Detection:</strong> {a.detection}</p>
+				</div>
+			</details>
+		))}
+	</div>
+
+	<p class="artifact-caption">
+		<em>Figure 5:</em> Common EEG artifacts. None of these are "brain waves" — but the computer sees them all as voltage changes.
+	</p>
+</figure>
+
+<style>
+	.artifact-figure {
+		margin: 2rem 0 2.5rem;
+		padding: 1.4rem;
+		background: #eeedf9;
+		border: 1px solid #dcd6ee;
+		border-inline-start: 4px solid var(--accent-dim);
+		border-radius: 0 14px 14px 0;
+	}
+
+	.artifact-title {
+		font-size: 0.7rem;
+		font-weight: 650;
+		color: #634a98;
+		margin-bottom: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.artifact-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.artifact-item {
+		background: #fff;
+		border: 1px solid #d0c8e8;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.artifact-item summary {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.7rem 1rem;
+		cursor: pointer;
+		min-height: 44px;
+		font-weight: 600;
+		font-size: 0.88rem;
+		list-style: none;
+		transition: background 0.12s;
+	}
+	.artifact-item summary::-webkit-details-marker { display: none; }
+	.artifact-item summary:hover { background: #f4f2fc; }
+	.artifact-item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+	.artifact-icon {
+		font-size: 1.2rem;
+		flex-shrink: 0;
+	}
+
+	.artifact-name {
+		flex: 1;
+	}
+
+	.artifact-toggle {
+		font-size: 1.2rem;
+		font-weight: 400;
+		color: var(--accent-dim);
+		transition: transform 0.2s;
+		flex-shrink: 0;
+	}
+	.artifact-item[open] .artifact-toggle {
+		transform: rotate(45deg);
+	}
+
+	.artifact-body {
+		padding: 0 1rem 0.8rem;
+		border-top: 1px solid #e8e4f2;
+	}
+	.artifact-body p {
+		margin: 0.6rem 0 0;
+		font-size: 0.85rem;
+		line-height: 1.7;
+		color: var(--text);
+	}
+	.artifact-body strong {
+		color: var(--accent-dim);
+	}
+
+	.artifact-caption {
+		font-size: 0.95rem;
+		line-height: 1.5;
+		font-weight: 700;
+		color: var(--text);
+		text-wrap: balance;
+		margin: 1rem 0 0;
+	}
+</style>

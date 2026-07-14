@@ -1,0 +1,155 @@
+---
+interface Props {
+	language?: string;
+	filename?: string;
+	highlight?: string; // e.g. "2,5-7"
+}
+
+const { language, filename, highlight } = Astro.props;
+const highlightLines = highlight
+	? highlight.split(',').flatMap((range) => {
+			const [start, end] = range.split('-').map(Number);
+			if (end) return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+			return [start];
+		})
+	: [];
+---
+
+<div class="code-block" data-language={language}>
+	{filename && <div class="code-filename">{filename}</div>}
+	<div class="code-wrapper">
+		<pre class="code-pre"><code class={`language-${language ?? 'text'}`}><slot /></code></pre>
+		<button
+			type="button"
+			class="code-copy"
+			aria-label="Copy code"
+			data-copied="false"
+		>
+			<svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+				<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+			</svg>
+			<svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M20 6L9 17l-5-5" />
+			</svg>
+			<span class="copy-label">Copy</span>
+		</button>
+	</div>
+	{language && <span class="code-lang-badge" aria-hidden="true">{language}</span>}
+</div>
+
+<style>
+	.code-block {
+		position: relative;
+		margin: 1.6rem 0;
+		border-radius: 9px;
+		overflow: hidden;
+		background: #222942;
+	}
+
+	.code-filename {
+		padding: 0.5rem 1rem;
+		background: #1a2035;
+		color: #8892b0;
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		border-bottom: 1px solid #2d3454;
+	}
+
+	.code-wrapper {
+		position: relative;
+	}
+
+	.code-pre {
+		margin: 0;
+		padding: 1rem 1.25rem;
+		background: transparent;
+		overflow-x: auto;
+		line-height: 1.7;
+		color: #f3f5ff;
+		border-radius: 0;
+	}
+
+	.code-pre code {
+		background: none;
+		padding: 0;
+		font-family: var(--font-mono);
+		font-size: 0.88em;
+	}
+
+	.code-copy {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		min-height: 32px;
+		padding: 0.3rem 0.6rem;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 6px;
+		color: #b0b8d4;
+		font-size: 0.72rem;
+		cursor: pointer;
+		transition: background 0.15s, color 0.15s;
+	}
+	.code-copy:hover {
+		background: rgba(255, 255, 255, 0.14);
+		color: #fff;
+	}
+	.code-copy .icon-check { display: none; }
+	.code-copy[data-copied="true"] .icon-copy { display: none; }
+	.code-copy[data-copied="true"] .icon-check { display: block; }
+	.code-copy[data-copied="true"] { color: #6ee7a0; border-color: #6ee7a0; }
+	.code-copy svg { width: 14px; height: 14px; }
+
+	.code-lang-badge {
+		position: absolute;
+		bottom: 0.4rem;
+		right: 0.6rem;
+		padding: 0.1rem 0.4rem;
+		background: rgba(255, 255, 255, 0.06);
+		border-radius: 4px;
+		color: #6b7394;
+		font-family: var(--font-mono);
+		font-size: 0.65rem;
+		text-transform: uppercase;
+		pointer-events: none;
+	}
+
+	@media (max-width: 560px) {
+		.code-copy .copy-label { display: none; }
+		.code-copy { padding: 0.3rem; }
+	}
+</style>
+
+<script>
+	document.querySelectorAll('.code-block').forEach((block) => {
+		const btn = block.querySelector<HTMLButtonElement>('.code-copy');
+		const code = block.querySelector<HTMLElement>('code');
+		if (!btn || !code) return;
+
+		btn.addEventListener('click', async () => {
+			const text = code.textContent ?? '';
+			try {
+				await navigator.clipboard.writeText(text);
+			} catch {
+				const ta = document.createElement('textarea');
+				ta.value = text;
+				ta.style.position = 'fixed';
+				ta.style.opacity = '0';
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand('copy');
+				document.body.removeChild(ta);
+			}
+			btn.dataset.copied = 'true';
+			btn.setAttribute('aria-label', 'Copied!');
+			setTimeout(() => {
+				btn.dataset.copied = 'false';
+				btn.setAttribute('aria-label', 'Copy code');
+			}, 2000);
+		});
+	});
+</script>
