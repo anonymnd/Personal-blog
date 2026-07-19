@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تختار Rate-Limiting Algorithms باش تحكم فـ Bursts و Fairness"
 description: "دليل تقني على Token Bucket و Leaky Bucket، كيفاش تحسب الـ burst، وكيفاش تضمن العدل بين لي كليان فـ API ديال geocoding."
-pubDate: 2026-10-08T16:48:00.000Z
+pubDate: 2025-06-09T18:00:00.000Z
 translationKey: 222-what-is-rate-limiting
 seriesOrder: 49
 locale: ar

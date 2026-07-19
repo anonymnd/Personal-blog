@@ -1,7 +1,7 @@
 ---
 title: "Conception des DTO et Mappages selon le Contrat API"
 description: "Apprenez à découpler les entités de base de données des contrats API via les Java Records et des stratégies de mappage pour contrôler la visibilité et l'édition des données."
-pubDate: 2026-10-07T01:48:00.000Z
+pubDate: 2026-04-19T12:00:00.000Z
 translationKey: 050-why-your-database-should-not-mirror-your-ui
 seriesOrder: 10
 locale: fr

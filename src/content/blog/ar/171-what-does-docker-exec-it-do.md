@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تخدم وتصلح Application Stack بـ Docker Compose"
 description: "تعلم كيفاش تنسق بين Recipe API و PostgreSQL، مع التركيز على الـ healthcheck والـ diagnostic tools."
-pubDate: 2026-10-08T06:48:00.000Z
+pubDate: 2026-08-07T16:00:00.000Z
 translationKey: 171-what-does-docker-exec-it-do
 seriesOrder: 39
 locale: ar

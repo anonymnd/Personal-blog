@@ -1,7 +1,7 @@
 ---
 title: "Checked and Unchecked Exceptions: كيفاش تحدد عقد التعامل مع الأخطاء"
 description: "شرح مفصل على الفرق بين Exception و RuntimeException في Java باستعمال مثال ديال أداة import ديال البيانات."
-pubDate: 2026-10-07T20:48:00.000Z
+pubDate: 2026-02-10T16:30:00.000Z
 translationKey: 129-checked-vs-unchecked-exceptions
 seriesOrder: 29
 locale: ar

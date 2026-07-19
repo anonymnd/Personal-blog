@@ -1,7 +1,7 @@
 ---
 title: Bienvenue sur ce blog d’apprentissage
 description: Comment fonctionne ce site et comment publier le même article en anglais, français et arabe.
-pubDate: 2026-04-10
+pubDate: 2026-06-12
 translationKey: welcome-to-this-blog
 locale: fr
 tags:

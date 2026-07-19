@@ -1,7 +1,7 @@
 ---
 title: "Stocker les mots de passe avec des hachages lents et salés"
 description: "Mise en œuvre du stockage sécurisé des mots de passe avec BCrypt et Argon2id, focus sur la gestion du sel et les stratégies de migration."
-pubDate: 2026-10-08T12:48:00.000Z
+pubDate: 2026-07-19T13:30:00.000Z
 translationKey: 209-why-passwords-should-never-be-stored-as-plain-text
 seriesOrder: 45
 locale: fr

@@ -1,7 +1,7 @@
 ---
 title: Qu’est-ce qu’une URL (simplement)
 description: Les morceaux d’une adresse web—protocole, hôte, chemin, requête—et pourquoi c’est utile quand on apprend le fonctionnement du web.
-pubDate: 2026-04-12
+pubDate: 2026-01-10
 translationKey: what-is-a-url
 locale: fr
 tags:

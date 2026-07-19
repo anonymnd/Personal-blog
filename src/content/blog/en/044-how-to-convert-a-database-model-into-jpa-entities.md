@@ -1,7 +1,7 @@
 ---
 title: "Map Entity Relationships Correctly with JPA"
 description: "Deep dive into owning sides, mappedBy, and converting Many-to-Many relationships into join entities with attributes."
-pubDate: 2026-10-06T22:48:00.000Z
+pubDate: 2026-01-02T08:00:00.000Z
 translationKey: 044-how-to-convert-a-database-model-into-jpa-entities
 seriesOrder: 7
 locale: en

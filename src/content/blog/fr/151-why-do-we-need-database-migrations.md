@@ -1,7 +1,7 @@
 ---
 title: "Évoluer un Schéma de Production avec Flyway plutôt qu'au Hasard"
 description: "Maîtrisez les migrations versionnées, le pattern expand-contract pour le zéro-downtime et la récupération après l'échec de scripts DDL."
-pubDate: 2026-10-08T02:48:00.000Z
+pubDate: 2025-09-18T10:30:00.000Z
 translationKey: 151-why-do-we-need-database-migrations
 seriesOrder: 35
 locale: fr

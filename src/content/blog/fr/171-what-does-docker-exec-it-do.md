@@ -1,7 +1,7 @@
 ---
 title: "Exécuter et Diagnostiquer une Pile Applicative avec Docker Compose"
 description: "Maîtriser l'orchestration d'une API de recettes et PostgreSQL, en se concentrant sur la disponibilité basée sur la santé et les outils de diagnostic."
-pubDate: 2026-10-08T06:48:00.000Z
+pubDate: 2026-08-07T16:00:00.000Z
 translationKey: 171-what-does-docker-exec-it-do
 seriesOrder: 39
 locale: fr

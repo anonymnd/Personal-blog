@@ -1,7 +1,7 @@
 ---
 title: "Run and Diagnose an Application Stack with Docker Compose"
 description: "Mastering service orchestration for a Recipe API and PostgreSQL, focusing on health-based readiness and diagnostic tools."
-pubDate: 2026-10-08T06:48:00.000Z
+pubDate: 2026-08-07T16:00:00.000Z
 translationKey: 171-what-does-docker-exec-it-do
 seriesOrder: 39
 locale: en

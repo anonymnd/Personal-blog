@@ -1,7 +1,7 @@
 ---
 title: "Persist Container Data Safely with Volumes and Backups"
 description: "A deep dive into the lifecycle of PostgreSQL data in Docker, distinguishing between container restarts, replacements, and volume destruction."
-pubDate: 2026-10-08T05:48:00.000Z
+pubDate: 2025-12-10T12:30:00.000Z
 translationKey: 167-what-is-a-docker-volume
 seriesOrder: 38
 locale: en

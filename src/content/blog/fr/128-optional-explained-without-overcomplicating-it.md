@@ -1,7 +1,7 @@
 ---
 title: "Utiliser Optional comme Contrat d'Absence Clair"
 description: "Apprenez à utiliser Optional pour signaler l'absence potentielle de valeur et gérer les replis coûteux via l'évaluation paresseuse."
-pubDate: 2026-10-07T19:48:00.000Z
+pubDate: 2026-08-18T17:30:00.000Z
 translationKey: 128-optional-explained-without-overcomplicating-it
 seriesOrder: 28
 locale: fr

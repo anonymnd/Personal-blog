@@ -1,7 +1,7 @@
 ---
 title: "Actors, Accounts and Domain Entities Are Different Things"
 description: "Learn to separate interacting roles from authentication identities and business objects using a parcel locker scenario."
-pubDate: 2026-10-06T18:48:00.000Z
+pubDate: 2025-02-01T13:45:00.000Z
 translationKey: 012-actors-users-and-entities-what-s-the-difference
 seriesOrder: 3
 locale: en

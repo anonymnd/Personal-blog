@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تموديلي User، Organization و Tenant Memberships"
 description: "شرح عميق ديال B2B multi-tenancy فين الـ user يقدر يكون فبزاف ديال الشركات مع الحفاظ على uniqueness لكل tenant."
-pubDate: 2026-10-07T00:48:00.000Z
+pubDate: 2025-06-01T13:45:00.000Z
 translationKey: 049-user-accounts-vs-organizations-how-to-model-b2b-applications
 seriesOrder: 9
 locale: ar

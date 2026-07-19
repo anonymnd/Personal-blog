@@ -1,7 +1,7 @@
 ---
 title: "Fetch Related Data Without Creating an N+1 Query Problem"
 description: "A technical guide to optimizing data retrieval using fetch plans and entity graphs to avoid redundant database round-trips."
-pubDate: 2026-10-07T22:48:00.000Z
+pubDate: 2025-03-15T19:45:00.000Z
 translationKey: 143-lazy-loading-vs-eager-loading
 seriesOrder: 31
 locale: en

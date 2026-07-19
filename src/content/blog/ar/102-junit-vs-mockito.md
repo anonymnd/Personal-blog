@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تخدم بـ Mockito بلا ما تخلط بين Interactions و Outcomes"
 description: "تعلم كيفاش تعزل الـ logic ديالك باستعمال Mockito وتفرق بين الـ stubbing ديال النتائج و الـ verification ديال التفاعلات فـ scenario ديال notification dispatcher."
-pubDate: 2026-10-07T13:48:00.000Z
+pubDate: 2025-08-23T12:30:00.000Z
 translationKey: 102-junit-vs-mockito
 seriesOrder: 22
 locale: ar

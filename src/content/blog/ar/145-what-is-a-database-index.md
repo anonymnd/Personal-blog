@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تصمم وتقرا B-Tree Indexes في الـ Queries ديالك"
 description: "شرح عميق لـ B-Tree، ترتيب الـ composite index، و selectivity باش تحسن الـ audit-log queries."
-pubDate: 2026-10-07T23:48:00.000Z
+pubDate: 2026-04-25T13:15:00.000Z
 translationKey: 145-what-is-a-database-index
 seriesOrder: 32
 locale: ar

@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تطلع App من الـ Laptop لـ Serveur"
 description: "دليل تقني باش تنقل service ديال appointments لـ VPS Linux، كيشرح الـ configuration، الـ reverse proxy، وكيفاش تسير الـ service."
-pubDate: 2026-10-08T19:48:00.000Z
+pubDate: 2026-10-02T13:00:00.000Z
 translationKey: 231-what-is-a-server
 seriesOrder: 52
 locale: ar

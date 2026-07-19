@@ -1,7 +1,7 @@
 ---
 title: "توزيع المسؤوليات: Controllers, Services, و Repositories"
 description: "شرح مفصل كيفاش نقسمو الخدمة بين الطبقات باستعمال مثال ديال إرسال السلع (Warehouse Dispatch) باش نفرقو بين HTTP، منطق البيزنس، و تخزين البيانات."
-pubDate: 2026-10-07T03:48:00.000Z
+pubDate: 2026-06-23T13:15:00.000Z
 translationKey: 052-controller-service-and-repository-explained-simply
 seriesOrder: 12
 locale: ar

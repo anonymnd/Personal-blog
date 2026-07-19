@@ -1,7 +1,7 @@
 ---
 title: "Turn Domain Exceptions into a Stable API Error Contract"
 description: "Implementing a boundary between domain-specific failures and a consistent ProblemDetail API response using RestControllerAdvice."
-pubDate: 2026-10-07T11:48:00.000Z
+pubDate: 2025-01-25T17:15:00.000Z
 translationKey: 094-why-you-should-create-custom-exceptions
 seriesOrder: 20
 locale: en

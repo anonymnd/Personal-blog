@@ -1,7 +1,7 @@
 ---
 title: ما هي عنوان URL؟ (باختصار)
 description: أجزاء عنوان الويب—المخطط، المضيف، المسار، الاستعلام—ولماذا يهم ذلك عند تعلّم عمل الويب.
-pubDate: 2026-04-12
+pubDate: 2026-01-10
 translationKey: what-is-a-url
 locale: ar
 tags:

@@ -1,7 +1,7 @@
 ---
 title: "Transactions de Base de Données et Limites Transactionnelles Spring"
 description: "Analyse approfondie d'ACID, du mécanisme de proxy @Transactional de Spring, de la propagation et des limites du rollback."
-pubDate: 2026-10-08T01:48:00.000Z
+pubDate: 2025-10-26T15:00:00.000Z
 translationKey: 149-what-is-a-database-transaction
 seriesOrder: 34
 locale: fr

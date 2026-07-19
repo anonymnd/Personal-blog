@@ -1,7 +1,7 @@
 ---
 title: "Transformer un Flux Métier en Cas d'Utilisation Explicites"
 description: "Guide pour extraire les flux, gérer les exceptions et documenter la logique via des cas d'utilisation et des tables de décision (scénario de bibliothèque)."
-pubDate: 2026-10-06T17:48:00.000Z
+pubDate: 2025-09-20T12:00:00.000Z
 translationKey: 011-how-to-understand-a-business-workflow-before-designing-the-backend
 seriesOrder: 2
 locale: fr

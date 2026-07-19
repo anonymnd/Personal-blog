@@ -1,7 +1,7 @@
 ---
 title: "استعمال Circuit Breakers باش تحبس المشاكل ديال Dependency Failures"
 description: "تعلم كيفاش تمنع الانهيار المتسلسل (cascading failures) في السيستيمات الموزعة باستعمال Circuit Breaker باش تحكم في الخدمات اللي مكاتجاوبش."
-pubDate: 2026-10-08T17:48:00.000Z
+pubDate: 2026-01-18T13:00:00.000Z
 translationKey: 224-what-is-a-circuit-breaker
 seriesOrder: 50
 locale: ar

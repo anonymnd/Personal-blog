@@ -1,7 +1,7 @@
 ---
 title: "Comprendre les Origines, le CORS et l'Accès Imposé par le Navigateur"
 description: "Analyse approfondie de la politique de même origine (SOP), des mécanismes de preflight et de la distinction cruciale entre CORS et authentification."
-pubDate: 2026-10-08T09:48:00.000Z
+pubDate: 2026-03-30T15:30:00.000Z
 translationKey: 195-what-is-cors
 seriesOrder: 42
 locale: fr

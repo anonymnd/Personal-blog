@@ -1,7 +1,7 @@
 ---
 title: "Exceptions Vérifiées et Non Vérifiées : Exprimer les Contrats de Gestion"
 description: "Analyse approfondie des hiérarchies d'exceptions Java pour distinguer les échecs métier récupérables des erreurs de programmation via un outil d'importation."
-pubDate: 2026-10-07T20:48:00.000Z
+pubDate: 2026-02-10T16:30:00.000Z
 translationKey: 129-checked-vs-unchecked-exceptions
 seriesOrder: 29
 locale: fr

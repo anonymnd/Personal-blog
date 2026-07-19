@@ -1,7 +1,7 @@
 ---
 title: "Model Roles and Permissions Without Losing Resource Ownership"
 description: "Implementing a hybrid RBAC and ABAC model to handle role-based access and specific resource ownership in a museum context."
-pubDate: 2026-10-08T11:48:00.000Z
+pubDate: 2026-02-13T16:45:00.000Z
 translationKey: 206-roles-vs-permissions
 seriesOrder: 44
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "Design DTOs and Mappings Around an API Contract"
 description: "Learn to decouple internal database entities from external API contracts using Java Records and mapping strategies to control data visibility and editability."
-pubDate: 2026-10-07T01:48:00.000Z
+pubDate: 2026-04-19T12:00:00.000Z
 translationKey: 050-why-your-database-should-not-mirror-your-ui
 seriesOrder: 10
 locale: en

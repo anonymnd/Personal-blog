@@ -1,7 +1,7 @@
 ---
 title: "تصميم الـ DTOs والـ Mappings على حساب الـ API Contract"
 description: "تعلم كيفاش تعزل الـ entities ديال base de données على الـ API contracts باستعمال Java Records و strategies ديال mapping باش تحكم فشنو كيبان وشنو كيتقاد."
-pubDate: 2026-10-07T01:48:00.000Z
+pubDate: 2026-04-19T12:00:00.000Z
 translationKey: 050-why-your-database-should-not-mirror-your-ui
 seriesOrder: 10
 locale: ar

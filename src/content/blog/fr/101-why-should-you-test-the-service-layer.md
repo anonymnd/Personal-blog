@@ -1,7 +1,7 @@
 ---
 title: "Choisir ses tests selon le risque réel détectable"
 description: "Guide stratégique pour mapper les modes de défaillance au bon niveau de test via un scénario de conversion monétaire."
-pubDate: 2026-10-07T12:48:00.000Z
+pubDate: 2025-11-09T10:30:00.000Z
 translationKey: 101-why-should-you-test-the-service-layer
 seriesOrder: 21
 locale: fr

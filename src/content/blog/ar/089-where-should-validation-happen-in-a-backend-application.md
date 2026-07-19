@@ -1,7 +1,7 @@
 ---
 title: "التحقق من المدخلات، الأهلية ديال البيزنس، وضمانات قاعدة البيانات"
 description: "شرح مفصل لثلاث ديال الطبقات ديال validation باستعمال مثال ديال التسجيل فـ workshop باش نتفاداو الداتا الغالطة و المشاكل ديال concurrency."
-pubDate: 2026-10-07T10:48:00.000Z
+pubDate: 2025-02-07T09:15:00.000Z
 translationKey: 089-where-should-validation-happen-in-a-backend-application
 seriesOrder: 19
 locale: ar

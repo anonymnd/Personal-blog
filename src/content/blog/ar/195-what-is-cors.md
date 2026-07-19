@@ -1,7 +1,7 @@
 ---
 title: "فهم الـ Origins و CORS وكيفاش كيتحكم المتصفح في الوصول"
 description: "شرح مفصل على Same-Origin Policy، كيفاش كيخدم الـ preflight، والفرق الكبير بين CORS والـ authentication."
-pubDate: 2026-10-08T09:48:00.000Z
+pubDate: 2026-03-30T15:30:00.000Z
 translationKey: 195-what-is-cors
 seriesOrder: 42
 locale: ar

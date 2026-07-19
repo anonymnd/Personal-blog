@@ -1,7 +1,7 @@
 ---
 title: "Tracer une requête navigateur à travers Spring Boot"
 description: "Analyse approfondie du cycle de vie d'une requête HTTP, du fetch du navigateur au DispatcherServlet et à la conversion des messages."
-pubDate: 2026-10-07T02:48:00.000Z
+pubDate: 2025-04-20T12:45:00.000Z
 translationKey: 051-what-actually-happens-when-a-request-reaches-spring-boot
 seriesOrder: 11
 locale: fr

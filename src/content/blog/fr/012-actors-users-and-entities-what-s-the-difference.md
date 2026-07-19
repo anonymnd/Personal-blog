@@ -1,7 +1,7 @@
 ---
 title: "Distinguer Acteurs, Comptes et Entités de Domaine"
 description: "Apprenez à séparer les rôles d'interaction, les identités d'authentification et les objets métier via un scénario de consignes automatiques."
-pubDate: 2026-10-06T18:48:00.000Z
+pubDate: 2025-02-01T13:45:00.000Z
 translationKey: 012-actors-users-and-entities-what-s-the-difference
 seriesOrder: 3
 locale: fr

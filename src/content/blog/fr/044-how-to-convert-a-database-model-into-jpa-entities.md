@@ -1,7 +1,7 @@
 ---
 title: "Mapper Correctement les Relations d'Entités avec JPA"
 description: "Analyse approfondie des côtés propriétaires, du mappedBy et de la conversion des relations Many-to-Many en entités de jointure avec attributs."
-pubDate: 2026-10-06T22:48:00.000Z
+pubDate: 2026-01-02T08:00:00.000Z
 translationKey: 044-how-to-convert-a-database-model-into-jpa-entities
 seriesOrder: 7
 locale: fr

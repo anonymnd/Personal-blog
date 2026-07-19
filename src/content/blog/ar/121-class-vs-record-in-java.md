@@ -1,7 +1,7 @@
 ---
 title: "Records و Immutable Value Objects: شنو اللي immuable بصح؟"
 description: "تحليل ديال shallow vs deep immutability فـ Java records وكيفاش نحميو collections باستعمال defensive copying."
-pubDate: 2026-10-07T16:48:00.000Z
+pubDate: 2025-11-23T17:30:00.000Z
 translationKey: 121-class-vs-record-in-java
 seriesOrder: 25
 locale: ar

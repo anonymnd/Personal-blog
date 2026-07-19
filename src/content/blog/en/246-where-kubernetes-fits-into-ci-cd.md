@@ -1,7 +1,7 @@
 ---
 title: "Place Kubernetes in the Deployment Architecture"
 description: "Distinguishing container packaging from orchestration and implementing a stateless map-tile API deployment with Services."
-pubDate: 2026-10-08T22:48:00.000Z
+pubDate: 2026-03-26T14:30:00.000Z
 translationKey: 246-where-kubernetes-fits-into-ci-cd
 seriesOrder: 55
 locale: en

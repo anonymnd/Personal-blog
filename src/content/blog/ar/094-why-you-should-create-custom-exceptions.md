@@ -1,7 +1,7 @@
 ---
 title: "كيفاش ترد الـ Domain Exceptions لـ API Error Contract مستقر"
 description: "كيفاش تفرق بين المشاكل ديال الـ business والرد ديال الـ API باستعمال ProblemDetail و RestControllerAdvice."
-pubDate: 2026-10-07T11:48:00.000Z
+pubDate: 2025-01-25T17:15:00.000Z
 translationKey: 094-why-you-should-create-custom-exceptions
 seriesOrder: 20
 locale: ar

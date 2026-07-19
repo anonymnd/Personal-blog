@@ -1,7 +1,7 @@
 ---
 title: "Use Redis Cache-Aside Without Serving Incorrect Data"
 description: "A deep dive into the Cache-Aside pattern to manage cinema screening data while preventing stale reads and cache stampedes."
-pubDate: 2026-10-08T15:48:00.000Z
+pubDate: 2026-05-11T12:00:00.000Z
 translationKey: 218-what-is-a-cache
 seriesOrder: 48
 locale: en

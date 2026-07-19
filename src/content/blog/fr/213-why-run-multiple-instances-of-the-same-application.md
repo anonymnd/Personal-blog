@@ -1,7 +1,7 @@
 ---
 title: "Mise à l'échelle des instances et routage via Load Balancer"
 description: "Apprenez à scaler un service de rendu de documents en externalisant l'état et en choisissant entre le routage L4 et L7."
-pubDate: 2026-10-08T13:48:00.000Z
+pubDate: 2025-02-06T18:15:00.000Z
 translationKey: 213-why-run-multiple-instances-of-the-same-application
 seriesOrder: 46
 locale: fr

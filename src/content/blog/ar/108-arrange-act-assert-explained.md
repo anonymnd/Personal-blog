@@ -1,7 +1,7 @@
 ---
 title: "تست ديال CUD كـ Observable Behaviors"
 description: "شرح مفصل ديال Arrange-Act-Assert باش تستي الـ Create, Update, و Delete باستعمال scenario ديال reading-list service."
-pubDate: 2026-10-07T14:48:00.000Z
+pubDate: 2026-03-11T13:15:00.000Z
 translationKey: 108-arrange-act-assert-explained
 seriesOrder: 23
 locale: ar

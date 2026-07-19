@@ -1,7 +1,7 @@
 ---
 title: "Model Users, Organizations and Tenant Memberships"
 description: "A deep dive into B2B multi-tenancy modeling where users belong to multiple organizations with tenant-scoped uniqueness."
-pubDate: 2026-10-07T00:48:00.000Z
+pubDate: 2025-06-01T13:45:00.000Z
 translationKey: 049-user-accounts-vs-organizations-how-to-model-b2b-applications
 seriesOrder: 9
 locale: en

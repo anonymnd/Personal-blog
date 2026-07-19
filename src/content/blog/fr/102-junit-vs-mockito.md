@@ -1,7 +1,7 @@
 ---
 title: "Utiliser Mockito sans confondre interactions et résultats"
 description: "Apprenez à isoler la logique avec Mockito en distinguant le stubbing des résultats et la vérification des interactions via un dispatcher de notifications."
-pubDate: 2026-10-07T13:48:00.000Z
+pubDate: 2025-08-23T12:30:00.000Z
 translationKey: 102-junit-vs-mockito
 seriesOrder: 22
 locale: fr

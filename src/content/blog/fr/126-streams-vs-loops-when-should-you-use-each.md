@@ -1,7 +1,7 @@
 ---
 title: "Choisir entre Boucles, Streams et Références de Méthodes pour la Lisibilité"
 description: "Comparaison technique des styles itératif et fonctionnel en Java via le traitement de données de capteurs pour évaluer la lisibilité et les effets de bord."
-pubDate: 2026-10-07T18:48:00.000Z
+pubDate: 2026-01-07T09:15:00.000Z
 translationKey: 126-streams-vs-loops-when-should-you-use-each
 seriesOrder: 27
 locale: fr

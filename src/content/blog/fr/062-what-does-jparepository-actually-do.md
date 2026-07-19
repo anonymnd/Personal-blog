@@ -1,7 +1,7 @@
 ---
 title: "Suivre une Entité JPA : De l'État Java au SQL"
 description: "Analyse approfondie du cycle de vie de persistance Hibernate, des états des entités et du mécanisme de transformation des objets Java en lignes de base de données."
-pubDate: 2026-10-07T05:48:00.000Z
+pubDate: 2026-01-31T09:15:00.000Z
 translationKey: 062-what-does-jparepository-actually-do
 seriesOrder: 14
 locale: fr

@@ -1,7 +1,7 @@
 ---
 title: "Modélisation des Utilisateurs, Organisations et Adhésions"
 description: "Analyse approfondie du multi-tenant B2B où les utilisateurs appartiennent à plusieurs organisations avec une unicité scoped au tenant."
-pubDate: 2026-10-07T00:48:00.000Z
+pubDate: 2025-06-01T13:45:00.000Z
 translationKey: 049-user-accounts-vs-organizations-how-to-model-b2b-applications
 seriesOrder: 9
 locale: fr

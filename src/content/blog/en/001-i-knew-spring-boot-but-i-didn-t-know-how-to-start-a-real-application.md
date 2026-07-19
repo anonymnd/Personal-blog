@@ -1,7 +1,7 @@
 ---
 title: "From a Blank Project to a First Working Feature"
 description: "Build a one-page delivery plan around evidence, explicit assumptions and a demonstrable first feature."
-pubDate: 2026-10-06T16:48:00.000Z
+pubDate: 2026-01-18T13:45:00.000Z
 translationKey: 001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application
 seriesOrder: 1
 locale: en

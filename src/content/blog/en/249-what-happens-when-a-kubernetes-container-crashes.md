@@ -1,7 +1,7 @@
 ---
 title: "Diagnose Kubernetes Restarts and Traffic Readiness"
 description: "A deep dive into the mechanics of kubelet restarts, probe interactions, and the critical distinction between traffic removal and container recycling."
-pubDate: 2026-10-08T23:48:00.000Z
+pubDate: 2025-04-28T18:45:00.000Z
 translationKey: 249-what-happens-when-a-kubernetes-container-crashes
 seriesOrder: 56
 locale: en

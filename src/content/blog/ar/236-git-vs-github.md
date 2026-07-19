@@ -1,7 +1,7 @@
 ---
 title: "استعمال Git للتاريخ و GitHub للتعاون"
 description: "الفرق بين Git المحلي و GitHub كخدمة استضافة من خلال مثال ديال دليل مجتمعي."
-pubDate: 2026-10-08T20:48:00.000Z
+pubDate: 2026-03-13T13:45:00.000Z
 translationKey: 236-git-vs-github
 seriesOrder: 53
 locale: ar

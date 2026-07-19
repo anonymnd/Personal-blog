@@ -1,7 +1,7 @@
 ---
 title: "Design and Read B-Tree Indexes for Real Queries"
 description: "Deep dive into B-Tree mechanics, composite index ordering, and selectivity for audit-log query optimization."
-pubDate: 2026-10-07T23:48:00.000Z
+pubDate: 2026-04-25T13:15:00.000Z
 translationKey: 145-what-is-a-database-index
 seriesOrder: 32
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "Utiliser les Circuit Breakers pour Contenir les Défaillances de Dépendances"
 description: "Apprenez à prévenir les pannes en cascade dans les systèmes distribués en utilisant le pattern Circuit Breaker pour gérer les dépendances instables."
-pubDate: 2026-10-08T17:48:00.000Z
+pubDate: 2026-01-18T13:00:00.000Z
 translationKey: 224-what-is-a-circuit-breaker
 seriesOrder: 50
 locale: fr

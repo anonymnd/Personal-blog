@@ -1,7 +1,7 @@
 ---
 title: "Persister les Données de Conteneur avec les Volumes et Sauvegardes"
 description: "Analyse approfondie du cycle de vie des données PostgreSQL sous Docker, distinction entre redémarrages, remplacements et destruction de volumes."
-pubDate: 2026-10-08T05:48:00.000Z
+pubDate: 2025-12-10T12:30:00.000Z
 translationKey: 167-what-is-a-docker-volume
 seriesOrder: 38
 locale: fr

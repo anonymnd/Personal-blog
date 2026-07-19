@@ -1,7 +1,7 @@
 ---
 title: "Java Type Identity Depends on Packages and Class Loaders"
 description: "Explaining why classes with identical names are distinct types and how to handle boundary-safe mapping."
-pubDate: 2026-10-07T15:48:00.000Z
+pubDate: 2026-05-14T14:30:00.000Z
 translationKey: 119-why-two-java-classes-with-the-same-name-can-be-different-types
 seriesOrder: 24
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "Trace a Browser Request Through Spring Boot"
 description: "A deep dive into the lifecycle of an HTTP request, from the browser fetch to Spring's DispatcherServlet and message conversion."
-pubDate: 2026-10-07T02:48:00.000Z
+pubDate: 2025-04-20T12:45:00.000Z
 translationKey: 051-what-actually-happens-when-a-request-reaches-spring-boot
 seriesOrder: 11
 locale: en

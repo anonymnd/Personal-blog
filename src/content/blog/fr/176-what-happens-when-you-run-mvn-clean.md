@@ -1,7 +1,7 @@
 ---
 title: "Maîtriser le Cycle de Vie Maven : Du Clean aux Artefacts"
 description: "Analyse approfondie des phases Maven, du dossier target et de la distinction entre rapports de tests unitaires et d'intégration."
-pubDate: 2026-10-08T07:48:00.000Z
+pubDate: 2026-02-25T17:00:00.000Z
 translationKey: 176-what-happens-when-you-run-mvn-clean
 seriesOrder: 40
 locale: fr

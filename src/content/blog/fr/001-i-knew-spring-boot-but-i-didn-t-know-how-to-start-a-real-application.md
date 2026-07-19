@@ -1,7 +1,7 @@
 ---
 title: "Du projet vide à une première fonctionnalité utilisable"
 description: "Construisez un plan de livraison à partir de preuves, d’hypothèses explicites et d’une première fonctionnalité démontrable."
-pubDate: 2026-10-06T16:48:00.000Z
+pubDate: 2026-01-18T13:45:00.000Z
 translationKey: 001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application
 seriesOrder: 1
 locale: fr

@@ -1,7 +1,7 @@
 ---
 title: "طرق HTTP وردود النجاح: دليل شامل وموحد"
 description: "شرح معمق لمفاهيم الـ safety و idempotency لـ POST, PUT, PATCH, و DELETE باستعمال مثال ديال API ديال playlists."
-pubDate: 2026-10-07T08:48:00.000Z
+pubDate: 2025-10-11T12:30:00.000Z
 translationKey: 076-get-post-put-patch-and-delete-explained-properly
 seriesOrder: 17
 locale: ar

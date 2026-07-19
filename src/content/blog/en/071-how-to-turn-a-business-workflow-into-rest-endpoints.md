@@ -1,7 +1,7 @@
 ---
 title: "Design a REST Contract Around Resources and Business Transitions"
 description: "A guide to separating resource management from business state transitions in a document-signing workflow."
-pubDate: 2026-10-07T07:48:00.000Z
+pubDate: 2026-01-03T13:30:00.000Z
 translationKey: 071-how-to-turn-a-business-workflow-into-rest-endpoints
 seriesOrder: 16
 locale: en

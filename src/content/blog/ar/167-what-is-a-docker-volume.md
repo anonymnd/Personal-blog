@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تحافظ على الداتا ديال Container باستخدام Volumes و Backups"
 description: "شرح مفصل على كيفاش كتعامل Docker مع الداتا ديال PostgreSQL، والفرق بين restart، replacement و مسح الـ volumes."
-pubDate: 2026-10-08T05:48:00.000Z
+pubDate: 2025-12-10T12:30:00.000Z
 translationKey: 167-what-is-a-docker-volume
 seriesOrder: 38
 locale: ar

@@ -1,7 +1,7 @@
 ---
 title: "Choisir le bon diagramme UML pour la bonne question"
 description: "Guide pour sélectionner et construire des diagrammes UML selon la question technique à résoudre, basé sur un scénario de réservation de billets."
-pubDate: 2026-10-06T20:48:00.000Z
+pubDate: 2026-07-02T18:30:00.000Z
 translationKey: 023-business-flow-diagram-vs-uml-diagram
 seriesOrder: 5
 locale: fr

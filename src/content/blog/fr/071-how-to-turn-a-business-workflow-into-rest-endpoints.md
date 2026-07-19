@@ -1,7 +1,7 @@
 ---
 title: "Conception de Contrats REST : Ressources et Transitions Métier"
 description: "Guide pour séparer la gestion des ressources des transitions d'état métier dans un flux de signature de documents."
-pubDate: 2026-10-07T07:48:00.000Z
+pubDate: 2026-01-03T13:30:00.000Z
 translationKey: 071-how-to-turn-a-business-workflow-into-rest-endpoints
 seriesOrder: 16
 locale: fr

@@ -1,7 +1,7 @@
 ---
 title: "Conception et Lecture d'Index B-Tree pour Requêtes Réelles"
 description: "Analyse approfondie des mécanismes B-Tree, de l'ordre des colonnes composites et de la sélectivité pour l'optimisation de logs d'audit."
-pubDate: 2026-10-07T23:48:00.000Z
+pubDate: 2026-04-25T13:15:00.000Z
 translationKey: 145-what-is-a-database-index
 seriesOrder: 32
 locale: fr

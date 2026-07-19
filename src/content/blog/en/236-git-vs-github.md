@@ -1,7 +1,7 @@
 ---
 title: "Use Git for History and GitHub for Collaboration"
 description: "Distinguishing local version control from remote hosting through a community directory scenario."
-pubDate: 2026-10-08T20:48:00.000Z
+pubDate: 2026-03-13T13:45:00.000Z
 translationKey: 236-git-vs-github
 seriesOrder: 53
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تخدم بـ Observer Pattern باش تسير Notifications فـ وسط البروكرام"
 description: "شرح مفصل على كيفاش تسير subscribers، وتفادى leaks ديال الميموار، وتعامل مع errors فـ scenario ديال music player."
-pubDate: 2026-10-07T21:48:00.000Z
+pubDate: 2026-06-21T10:45:00.000Z
 translationKey: 131-the-observer-design-pattern-explained-simply
 seriesOrder: 30
 locale: ar

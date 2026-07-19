@@ -1,7 +1,7 @@
 ---
 title: "Give Controllers, Services and Repositories Clear Responsibilities"
 description: "A deep dive into responsibility allocation using a warehouse dispatch scenario to separate HTTP translation, business orchestration, and persistence."
-pubDate: 2026-10-07T03:48:00.000Z
+pubDate: 2026-06-23T13:15:00.000Z
 translationKey: 052-controller-service-and-repository-explained-simply
 seriesOrder: 12
 locale: en

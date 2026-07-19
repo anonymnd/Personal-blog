@@ -1,7 +1,7 @@
 ---
 title: "Git pour l'Historique et GitHub pour la Collaboration"
 description: "Distinction entre le contrôle de version local et l'hébergement distant via un scénario d'annuaire communautaire."
-pubDate: 2026-10-08T20:48:00.000Z
+pubDate: 2026-03-13T13:45:00.000Z
 translationKey: 236-git-vs-github
 seriesOrder: 53
 locale: fr

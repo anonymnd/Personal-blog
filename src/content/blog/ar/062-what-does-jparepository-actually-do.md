@@ -1,7 +1,7 @@
 ---
 title: "تتبع Entity ديال JPA: من Java لـ SQL"
 description: "شرح مفصل لـ lifecycle ديال Hibernate، الحالات ديال entity، وكيفاش كيتحول object ديال Java لسطر في database."
-pubDate: 2026-10-07T05:48:00.000Z
+pubDate: 2026-01-31T09:15:00.000Z
 translationKey: 062-what-does-jparepository-actually-do
 seriesOrder: 14
 locale: ar

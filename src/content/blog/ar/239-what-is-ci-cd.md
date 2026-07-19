@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تصاوب CI/CD Pipeline بـ Release Gates واضحين"
 description: "دليل تقني باش تطبق pipeline ديال 'build-once, deploy-many' لواحد السيرفيس ديال تقارير الفاكتورة (billing report service) باستعمال immutable artifacts."
-pubDate: 2026-10-08T21:48:00.000Z
+pubDate: 2025-11-24T19:15:00.000Z
 translationKey: 239-what-is-ci-cd
 seriesOrder: 54
 locale: ar

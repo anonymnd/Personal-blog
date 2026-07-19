@@ -1,7 +1,7 @@
 ---
 title: "Docker Ports, localhost و Service Discovery فـ موديل واحد"
 description: "شرح مفصل على الفرق بين ports لي كنفتحو فـ host، و namespace ديال container، وكيفاش Compose DNS كيخدم باش يتواصلو services بيناتهم."
-pubDate: 2026-10-08T04:48:00.000Z
+pubDate: 2025-11-08T19:15:00.000Z
 translationKey: 164-what-does-port-mapping-mean
 seriesOrder: 37
 locale: ar

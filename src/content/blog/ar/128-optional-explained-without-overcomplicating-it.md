@@ -1,7 +1,7 @@
 ---
 title: "استعمال Optional كعقد واضح لغياب القيمة"
 description: "تعلم كيفاش تستعمل Optional باش تعطي إشارة بلي القيمة تقدر تكون ماكايناش، وكيفاش تعامل مع fallback غالي بلا ما تضيع الموارد."
-pubDate: 2026-10-07T19:48:00.000Z
+pubDate: 2026-08-18T17:30:00.000Z
 translationKey: 128-optional-explained-without-overcomplicating-it
 seriesOrder: 28
 locale: ar

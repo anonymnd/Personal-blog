@@ -1,7 +1,7 @@
 ---
 title: "Turn a Business Workflow into Explicit Use Cases"
 description: "A guide to eliciting workflows, handling exceptions, and documenting logic via textual use cases and decision tables using a library lending scenario."
-pubDate: 2026-10-06T17:48:00.000Z
+pubDate: 2025-09-20T12:00:00.000Z
 translationKey: 011-how-to-understand-a-business-workflow-before-designing-the-backend
 seriesOrder: 2
 locale: en

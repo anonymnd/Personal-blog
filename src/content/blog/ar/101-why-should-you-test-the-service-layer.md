@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تختار التستات على حساب الريسك لي كيقدروا يلقاو"
 description: "دليل باش تعرف فين تحط كل تست على حساب المشكل لي بغيتي تكتشف، بمثال ديال تحويل العملات."
-pubDate: 2026-10-07T12:48:00.000Z
+pubDate: 2025-11-09T10:30:00.000Z
 translationKey: 101-why-should-you-test-the-service-layer
 seriesOrder: 21
 locale: ar

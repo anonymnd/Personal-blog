@@ -1,7 +1,7 @@
 ---
 title: "Déboguer les pannes Java par la preuve, pas par essais-erreurs"
 description: "Une approche systématique pour tracer les exceptions Java depuis les logs jusqu'à la cause racine via un échec d'importation de factures lié au fuseau horaire."
-pubDate: 2026-10-08T08:48:00.000Z
+pubDate: 2025-12-20T15:45:00.000Z
 translationKey: 182-how-to-read-a-maven-error
 seriesOrder: 41
 locale: fr

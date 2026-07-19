@@ -1,7 +1,7 @@
 ---
 title: "Injection de Dépendances, Inversion de Contrôle et Contrats d'Interface"
 description: "Analyse approfondie de la construction des composants, de l'injection par constructeur et de la réalité du couplage sémantique via les interfaces."
-pubDate: 2026-10-07T04:48:00.000Z
+pubDate: 2025-08-25T11:30:00.000Z
 translationKey: 055-what-is-dependency-injection
 seriesOrder: 13
 locale: fr

@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تعرف علاش Kubernetes كيدير Restart و كيفاش كيسير Traffic"
 description: "شرح عميق على الفرق بين kubelet و controller، وكيفاش تخدم بـ probes باش تحمي الـ Pod ديالك من الـ restart loops."
-pubDate: 2026-10-08T23:48:00.000Z
+pubDate: 2025-04-28T18:45:00.000Z
 translationKey: 249-what-happens-when-a-kubernetes-container-crashes
 seriesOrder: 56
 locale: ar

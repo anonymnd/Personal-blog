@@ -1,7 +1,7 @@
 ---
 title: "Build a JWT Authentication Flow with Explicit Trust Boundaries"
 description: "A deep dive into stateless token issuance, signature validation, and the lifecycle of access and refresh tokens in a fitness application."
-pubDate: 2026-10-08T10:48:00.000Z
+pubDate: 2026-09-20T11:00:00.000Z
 translationKey: 199-authentication-vs-authorization
 seriesOrder: 43
 locale: en

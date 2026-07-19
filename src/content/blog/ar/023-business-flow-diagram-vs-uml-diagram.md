@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تختار الـ UML Diagram اللي كيجاوب على السؤال ديالك"
 description: "دليل باش تعرف تختار وتبني الـ UML diagrams على حساب السؤال التقني اللي عندك، باستعمال مثال ديال رزرفاسيون ديال تيكيتات."
-pubDate: 2026-10-06T20:48:00.000Z
+pubDate: 2026-07-02T18:30:00.000Z
 translationKey: 023-business-flow-diagram-vs-uml-diagram
 seriesOrder: 5
 locale: ar

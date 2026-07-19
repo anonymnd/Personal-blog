@@ -1,7 +1,7 @@
 ---
 title: "Tester les opérations CUD comme comportements observables"
 description: "Analyse approfondie du schéma Arrange-Act-Assert pour les opérations de création, mise à jour et suppression via un service de liste de lecture."
-pubDate: 2026-10-07T14:48:00.000Z
+pubDate: 2026-03-11T13:15:00.000Z
 translationKey: 108-arrange-act-assert-explained
 seriesOrder: 23
 locale: fr

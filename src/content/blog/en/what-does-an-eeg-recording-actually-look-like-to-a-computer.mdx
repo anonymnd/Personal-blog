@@ -1,7 +1,7 @@
 ---
 title: What Does an EEG Recording Actually Look Like to a Computer?
 description: A computer science perspective on EEG data—from raw voltages to processed signals—and why preprocessing decisions matter more than the model itself.
-pubDate: 2026-10-10
+pubDate: 2025-10-13
 translationKey: what-does-an-eeg-recording-actually-look-like-to-a-computer
 locale: en
 interactive: true
@@ -20,9 +20,10 @@ import SpatialHeatmap from '../../../components/eeg/SpatialHeatmap.astro';
 import ArtifactAccordion from '../../../components/eeg/ArtifactAccordion.astro';
 import LeakageDiagram from '../../../components/eeg/LeakageDiagram.astro';
 import PipelineStepper from '../../../components/eeg/PipelineStepper.astro';
+import MLTaskGrid from '../../../components/eeg/MLTaskGrid.astro';
 import Callout from '../../../components/common/Callout.astro';
-
-# What Does an EEG Recording Actually Look Like to a Computer?
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
 
 When I first heard people talk about EEG, I imagined the familiar image: several wavy lines moving across a screen.
 
@@ -46,7 +47,7 @@ This article is my attempt to explain what those numbers represent, how they bec
 
 EEG stands for **electroencephalography**.
 
-Electrodes are placed on the scalp and measure tiny voltage differences related to electrical activity produced by populations of neurons.
+Electrodes are placed on the scalp and measure tiny voltage differences related to electrical activity produced by populations of neurons. <SourceLink authors="McWeeny & Norton" year="2020" title="Understanding Event-Related Potentials (ERPs) in Clinical and Basic Language and Communication Disorders Research: A Tutorial" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7802513/" />
 
 <Callout type="definition" label="Definition">
 EEG (electroencephalography) records voltage fluctuations over time from electrodes on the scalp — reflecting summed electrical activity from large populations of neurons.
@@ -76,7 +77,7 @@ Which is where the engineering problem starts.
 
 Imagine someone wearing an EEG cap with several electrodes.
 
-Each electrode gives us a signal. One electrode might be called `F3`, another `Cz`, another `O1`. These names refer to locations on the scalp (see the interactive map above).
+Each electrode gives us a signal. One electrode might be called `F3`, another `Cz`, another `O1`. These names refer to locations on the scalp, following the international **10–20 system** (see the interactive map above).
 
 For each location, the system repeatedly records a voltage value.
 
@@ -118,7 +119,7 @@ EEG may come from neuroscience, but once it reaches software, many familiar engi
 
 ## And there is a lot of noise
 
-This was probably one of the biggest things I misunderstood at first. I imagined EEG signals as clean brain waves. They are not.
+This was probably one of the biggest things I misunderstood at first. I imagined EEG signals as clean brain waves. They are not. <SourceLink authors="Puce & Hämäläinen" year="2017" title="A Review of Issues Related to Data Acquisition and Analysis in EEG/MEG Studies" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5483631/" />
 
 A recording can contain activity caused by:
 
@@ -145,9 +146,11 @@ Preprocessing is not just a boring step before the "real AI." It is part of the 
 
 My first instinct as a software student would have been: "We have data. Let's train a model."
 
-EEG makes that instinct dangerous. Before training anything, researchers may need to make decisions about filtering, bad channels, artifacts, referencing, segmentation and many other details.
+EEG makes that instinct dangerous. Before training anything, researchers may need to make decisions about filtering, bad channels, artifacts, referencing, segmentation and many other details. <SourceLink authors="Bigdely-Shamlo et al." year="2015" title="The PREP pipeline: standardized preprocessing for large-scale EEG analysis" href="https://www.frontiersin.org/journals/neuroinformatics/articles/10.3389/fninf.2015.00016/full" />
 
 <PipelineStepper />
+
+The order above is one reasonable shape, not *the* pipeline. Published pipelines disagree about the details, and the early steps interact with each other in ways that are easy to underestimate.
 
 ---
 
@@ -169,7 +172,7 @@ or:
 
 > "Beta means concentration."
 
-The real interpretation is more complicated. Frequency activity depends on brain region, task, experimental design and many other factors. So I am trying to learn the signal first before attaching psychological meaning to every wave I see.
+The real interpretation is more complicated. Frequency activity depends on brain region, task, experimental design and many other factors. One review I read found that band-power patterns overlap heavily between psychiatric disorders and correlate only weakly with symptom scores — and that even the band edges move from paper to paper. So I am trying to learn the signal first before attaching psychological meaning to every wave I see. <SourceLink authors="Newson & Thiagarajan" year="2019" title="EEG Frequency Bands in Psychiatric Disorders: A Review of Resting State Studies" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6333694/" />
 
 ---
 
@@ -183,7 +186,7 @@ Imagine an experiment where a participant sees an image every few seconds. The E
 15.0 s → next image appeared
 ```
 
-Now we can connect parts of the EEG recording to something that happened. This allows researchers to cut the continuous signal into smaller pieces around those events. These pieces are often called **epochs**.
+Now we can connect parts of the EEG recording to something that happened. This allows researchers to cut the continuous signal into smaller pieces around those events. These pieces are often called **epochs**. <SourceLink authors="McWeeny & Norton" year="2020" title="Understanding Event-Related Potentials (ERPs) in Clinical and Basic Language and Communication Disorders Research: A Tutorial" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7802513/" />
 
 <EpochTimeline />
 
@@ -214,14 +217,11 @@ The number of possible patterns grows quickly.
 
 ## Where machine learning enters
 
-Once the signal has been prepared, machine learning can be used for many different tasks. For example:
+Once the signal has been prepared, machine learning can be used for many different tasks:
 
-- **classification** — Was the participant performing task A or task B?
-- **detection** — Does this section contain a pattern associated with drowsiness?
-- **regression** — Can we estimate a continuous variable from the signal?
-- **prediction** — Can earlier signal patterns tell us something about what happens next?
+<MLTaskGrid />
 
-This is where my original truck-driver question comes back. If researchers want to detect driver fatigue from EEG, the model needs examples of EEG recorded under different levels of alertness. The computer then tries to learn which patterns separate those states.
+This is where my original truck-driver question comes back. If researchers want to detect driver fatigue from EEG, the model needs examples of EEG recorded under different levels of alertness. The computer then tries to learn which patterns separate those states. How well that works in the real world is a separate question, and not one I can answer yet — but the shape of the problem is clear.
 
 But there is another question that now interests me even more:
 
@@ -233,11 +233,13 @@ But there is another question that now interests me even more:
 
 Suppose we record EEG from several people. Then we divide tiny pieces of those recordings randomly between training and testing data. The model might perform extremely well. Great.
 
-Except there is a problem. Pieces from the same person may appear in both sets. EEG can contain characteristics that are specific to an individual.
+Except there is a problem. Pieces from the same person may appear in both sets. Segments from one person really do resemble each other more than they resemble other people, so the recording carries a recognisable individual signature.
 
 Instead of learning "This is what fatigue looks like," the model might partly learn "This looks like participant 7."
 
 <LeakageDiagram />
+
+This is not a theoretical worry. Brookshire and colleagues re-ran published deep-learning EEG studies both ways — splitting by random segment, and splitting by whole participant. On their Alzheimer's classifier, test accuracy fell from near-perfect to roughly chance once entire people were held out instead of individual segments. And in their survey of the published studies, most had used the segment split. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" />
 
 That means a very high accuracy score may not tell us what we think it tells us. The way we split the dataset may be just as important as the model we choose.
 
@@ -299,7 +301,7 @@ I still want to understand:
 - what different filters do mathematically
 - how artifacts are detected and removed
 - what frequency bands actually tell us
-- how CSP works for motor imagery
+- how CSP works for motor imagery <SourceLink authors="Padfield et al." year="2019" title="EEG-Based Brain-Computer Interfaces Using Motor-Imagery: Techniques and Challenges" href="https://pubmed.ncbi.nlm.nih.gov/30909489/" />
 - how researchers choose useful EEG features
 - when deep learning is better than classical methods
 - how much EEG varies between people
@@ -319,6 +321,16 @@ For the next step, I want to take a public motor-imagery dataset and inspect it 
 How many subjects are there? How many channels? What does one recording look like? What happens when I plot it? Where are the events? What does filtering change? What happens when someone blinks?
 
 And only then: Can I build a simple classifier?
+
+---
+
+## Sources & papers I used while learning this
+
+These are some of the papers and reviews I used while trying to understand the concepts in this article. I'm still learning this field, so I prefer linking the original research rather than presenting these notes as expert conclusions.
+
+<Sources />
+
+---
 
 <Callout type="further-reading" label="Next in this series">
 The helmet that started these questions turned brain activity into data. Now I want to see exactly what that data looks like before asking AI to do anything with it — starting with a real motor-imagery dataset in Python.

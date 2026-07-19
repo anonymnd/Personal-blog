@@ -1,7 +1,7 @@
 ---
 title: "Test Create, Update and Delete as Observable Behaviors"
 description: "A deep dive into Arrange-Act-Assert for Create, Update, and Delete operations using a reading-list service scenario."
-pubDate: 2026-10-07T14:48:00.000Z
+pubDate: 2026-03-11T13:15:00.000Z
 translationKey: 108-arrange-act-assert-explained
 seriesOrder: 23
 locale: en

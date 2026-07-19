@@ -1,7 +1,7 @@
 ---
 title: "من قواعد البيزنس لـ Modèle ديال Database Relationnelle"
 description: "كيفاش تحول قواعد كراء الماتيريال لـ schéma conceptuel, logique, و physique باستعمال cardinalités ديال Merise."
-pubDate: 2026-10-06T21:48:00.000Z
+pubDate: 2025-06-18T18:15:00.000Z
 translationKey: 035-why-database-design-should-happen-before-building-too-many-features
 seriesOrder: 6
 locale: ar

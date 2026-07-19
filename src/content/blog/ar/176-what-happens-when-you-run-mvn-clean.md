@@ -1,7 +1,7 @@
 ---
 title: "فهم Maven Lifecycle و Build Artifacts"
 description: "شرح مفصل على مراحل Maven، الدوسي target، والفرق بين تقارير tests unitaires و integration tests."
-pubDate: 2026-10-08T07:48:00.000Z
+pubDate: 2026-02-25T17:00:00.000Z
 translationKey: 176-what-happens-when-you-run-mvn-clean
 seriesOrder: 40
 locale: ar

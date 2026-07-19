@@ -1,7 +1,7 @@
 ---
 title: "Records et Objets de Valeur Immuables : Qu'est-ce qui est Vraiment Immuable ?"
 description: "Analyse de l'immuabilité superficielle vs profonde dans les records Java, avec focus sur la copie défensive des collections."
-pubDate: 2026-10-07T16:48:00.000Z
+pubDate: 2025-11-23T17:30:00.000Z
 translationKey: 121-class-vs-record-in-java
 seriesOrder: 25
 locale: fr

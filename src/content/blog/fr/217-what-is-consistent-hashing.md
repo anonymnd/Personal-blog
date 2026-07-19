@@ -1,7 +1,7 @@
 ---
 title: "Utiliser le Hachage Cohérent pour Réduire le Déplacement des Partitions"
 description: "Analyse approfondie des anneaux de hachage et des nœuds virtuels pour minimiser les échecs de cache lors de la mise à l'échelle."
-pubDate: 2026-10-08T14:48:00.000Z
+pubDate: 2025-08-30T19:30:00.000Z
 translationKey: 217-what-is-consistent-hashing
 seriesOrder: 47
 locale: fr

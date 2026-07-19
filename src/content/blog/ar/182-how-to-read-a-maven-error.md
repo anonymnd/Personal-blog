@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تديبيغي (Debug) مشاكل Java بالدليل ماشي بالتجريب"
 description: "طريقة منظمة باش تتبع الـ exceptions في Java من الـ logs حتى توصل للسبب الحقيقي، باستعمال مثال ديال مشكل في التوقيت (timezone) فواحد الـ import ديال الفاكتورات."
-pubDate: 2026-10-08T08:48:00.000Z
+pubDate: 2025-12-20T15:45:00.000Z
 translationKey: 182-how-to-read-a-maven-error
 seriesOrder: 41
 locale: ar

@@ -1,7 +1,7 @@
 ---
 title: "Normalize a Database Without Losing Business Meaning"
 description: "Using functional dependencies to eliminate anomalies while preserving critical historical snapshots in repair invoices."
-pubDate: 2026-10-06T23:48:00.000Z
+pubDate: 2025-06-28T11:15:00.000Z
 translationKey: 047-what-is-database-normalization-and-why-should-you-care
 seriesOrder: 8
 locale: en

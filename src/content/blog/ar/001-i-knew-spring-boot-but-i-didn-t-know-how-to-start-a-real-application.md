@@ -1,7 +1,7 @@
 ---
 title: "من مشروع خاوي لأول ميزة كتخدم"
 description: "صاوب خطة ديال التسليم مبنية على الدليل والافتراضات الواضحة وأول ميزة تقدر تورّيها."
-pubDate: 2026-10-06T16:48:00.000Z
+pubDate: 2026-01-18T13:45:00.000Z
 translationKey: 001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application
 seriesOrder: 1
 locale: ar

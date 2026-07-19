@@ -1,7 +1,7 @@
 ---
 title: "Use the Observer Pattern When Notifications Need Subscribers"
 description: "A deep dive into managing local subscribers, lifecycle leaks, and failure handling in a desktop music player scenario."
-pubDate: 2026-10-07T21:48:00.000Z
+pubDate: 2026-06-21T10:45:00.000Z
 translationKey: 131-the-observer-design-pattern-explained-simply
 seriesOrder: 30
 locale: en

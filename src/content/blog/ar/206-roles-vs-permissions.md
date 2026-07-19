@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تـموديلي Roles و Permissions بلا ما تضيع Ownership ديال الـ Resources"
 description: "كيفاش تخدم بـ RBAC و ABAC مجموعين باش تحكم فـ شكون عندو الحق يدخل لـ resources معينة فـ متحف."
-pubDate: 2026-10-08T11:48:00.000Z
+pubDate: 2026-02-13T16:45:00.000Z
 translationKey: 206-roles-vs-permissions
 seriesOrder: 44
 locale: ar

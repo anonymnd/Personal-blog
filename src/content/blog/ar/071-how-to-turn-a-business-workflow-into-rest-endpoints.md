@@ -1,7 +1,7 @@
 ---
 title: "تصميم عقود REST: الموارد وتحولات البيزنس"
 description: "دليل باش تفرق بين تسيير الموارد (Resources) وتحولات الحالة ديال البيزنس في نظام توقيع الوثائق."
-pubDate: 2026-10-07T07:48:00.000Z
+pubDate: 2026-01-03T13:30:00.000Z
 translationKey: 071-how-to-turn-a-business-workflow-into-rest-endpoints
 seriesOrder: 16
 locale: ar

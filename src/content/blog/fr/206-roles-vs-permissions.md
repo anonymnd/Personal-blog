@@ -1,7 +1,7 @@
 ---
 title: "Modéliser les Rôles et Permissions sans Perdre la Propriété des Ressources"
 description: "Mise en œuvre d'un modèle hybride RBAC et ABAC pour gérer les accès par rôle et la propriété spécifique des ressources dans un musée."
-pubDate: 2026-10-08T11:48:00.000Z
+pubDate: 2026-02-13T16:45:00.000Z
 translationKey: 206-roles-vs-permissions
 seriesOrder: 44
 locale: fr

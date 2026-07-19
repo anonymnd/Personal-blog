@@ -1,7 +1,7 @@
 ---
 title: "تصنيف المتطلبات: قواعد البيزنس، القيود التقنية، والجودة"
 description: "تعلم كيف تفرق بين سلوك الدومين والقيود التقنية باستعمال مثال ديال بورتال ديال المواعيد فكلينيك."
-pubDate: 2026-10-06T19:48:00.000Z
+pubDate: 2025-01-29T19:00:00.000Z
 translationKey: 018-business-rules-vs-technical-rules
 seriesOrder: 4
 locale: ar

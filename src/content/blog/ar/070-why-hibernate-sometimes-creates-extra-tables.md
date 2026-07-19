@@ -1,7 +1,7 @@
 ---
 title: "علاش الـ Value Collections والـ Associations كيحتاجو جداول زايدة"
 description: "شرح معمق لـ @ElementCollection و الـ embeddables والفرق بين الـ value types والـ entities في JPA."
-pubDate: 2026-10-07T06:48:00.000Z
+pubDate: 2026-06-20T15:00:00.000Z
 translationKey: 070-why-hibernate-sometimes-creates-extra-tables
 seriesOrder: 15
 locale: ar

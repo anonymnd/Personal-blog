@@ -1,7 +1,7 @@
 ---
 title: "التعامل مع Transactions ديال Database و Spring Transaction Boundaries"
 description: "شرح عميق لـ ACID، كيفاش كيخدم @Transactional proxy، الـ propagation، والحدود ديال الـ rollback."
-pubDate: 2026-10-08T01:48:00.000Z
+pubDate: 2025-10-26T15:00:00.000Z
 translationKey: 149-what-is-a-database-transaction
 seriesOrder: 34
 locale: ar

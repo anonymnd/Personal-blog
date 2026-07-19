@@ -1,7 +1,7 @@
 ---
 title: "الهوية ديال الـ Types في Java: الـ Packages والـ Class Loaders"
 description: "علاش جوج classes عندهم نفس السمية كيتعتابرو أنواع مختلفة وكيفاش تحول بيناتهم بلا مشاكل."
-pubDate: 2026-10-07T15:48:00.000Z
+pubDate: 2026-05-14T14:30:00.000Z
 translationKey: 119-why-two-java-classes-with-the-same-name-can-be-different-types
 seriesOrder: 24
 locale: ar

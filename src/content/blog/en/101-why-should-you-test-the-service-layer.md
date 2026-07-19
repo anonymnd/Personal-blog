@@ -1,7 +1,7 @@
 ---
 title: "Choose Tests by the Risk They Can Actually Detect"
 description: "A strategic guide to mapping failure modes to the correct test level using a currency conversion scenario."
-pubDate: 2026-10-07T12:48:00.000Z
+pubDate: 2025-11-09T10:30:00.000Z
 translationKey: 101-why-should-you-test-the-service-layer
 seriesOrder: 21
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تختار بين Loops و Streams و Method References على حساب الـ Readability"
 description: "مقارنة تقنية بين الطريقة العادية (iterative) والطريقة الوظيفية (functional) في Java باستعمال بيانات ديال sensors باش نشوفو شكون اللي ساهلة في القراية وشكون اللي فيها مخاطر."
-pubDate: 2026-10-07T18:48:00.000Z
+pubDate: 2026-01-07T09:15:00.000Z
 translationKey: 126-streams-vs-loops-when-should-you-use-each
 seriesOrder: 27
 locale: ar

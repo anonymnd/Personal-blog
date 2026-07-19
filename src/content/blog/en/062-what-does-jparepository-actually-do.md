@@ -1,7 +1,7 @@
 ---
 title: "Follow a JPA Entity from Java State to SQL"
 description: "A deep dive into the Hibernate persistence lifecycle, entity states, and the mechanics of how Java objects become database rows."
-pubDate: 2026-10-07T05:48:00.000Z
+pubDate: 2026-01-31T09:15:00.000Z
 translationKey: 062-what-does-jparepository-actually-do
 seriesOrder: 14
 locale: en

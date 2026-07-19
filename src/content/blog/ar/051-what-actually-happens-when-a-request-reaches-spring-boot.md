@@ -1,7 +1,7 @@
 ---
 title: "تتبع طلب Browser فـ Spring Boot"
 description: "غوص عميق فـ كيفاش كيدوز HTTP request من الـ fetch ديال browser حتى لـ DispatcherServlet و conversion ديال data."
-pubDate: 2026-10-07T02:48:00.000Z
+pubDate: 2025-04-20T12:45:00.000Z
 translationKey: 051-what-actually-happens-when-a-request-reaches-spring-boot
 seriesOrder: 11
 locale: ar

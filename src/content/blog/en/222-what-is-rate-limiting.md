@@ -1,7 +1,7 @@
 ---
 title: "Choose Rate-Limiting Algorithms for Bursts and Fairness"
 description: "A technical guide on Token Bucket vs Leaky Bucket algorithms, burst calculations, and client-level fairness for a geocoding API."
-pubDate: 2026-10-08T16:48:00.000Z
+pubDate: 2025-06-09T18:00:00.000Z
 translationKey: 222-what-is-rate-limiting
 seriesOrder: 49
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تخزن passwords بـ Salted, Slow Hashes"
 description: "طريقة تخزين passwords آمنة باستعمال BCrypt و Argon2id، مع التركيز على الـ salt وكيفاش تدير migration ليهم."
-pubDate: 2026-10-08T12:48:00.000Z
+pubDate: 2026-07-19T13:30:00.000Z
 translationKey: 209-why-passwords-should-never-be-stored-as-plain-text
 seriesOrder: 45
 locale: ar

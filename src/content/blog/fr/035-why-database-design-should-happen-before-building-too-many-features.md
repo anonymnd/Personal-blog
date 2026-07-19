@@ -1,7 +1,7 @@
 ---
 title: "Des Règles Métier au Modèle de Base de Données Relationnelle"
 description: "Guide pour transformer des règles de location d'équipement en schéma conceptuel, logique et physique via les cardinalités Merise."
-pubDate: 2026-10-06T21:48:00.000Z
+pubDate: 2025-06-18T18:15:00.000Z
 translationKey: 035-why-database-design-should-happen-before-building-too-many-features
 seriesOrder: 6
 locale: fr

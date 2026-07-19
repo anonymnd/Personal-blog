@@ -1,7 +1,7 @@
 ---
 title: "Use Circuit Breakers to Contain Dependency Failures"
 description: "Learn how to prevent cascading failures in distributed systems using the Circuit Breaker pattern to manage unstable dependencies."
-pubDate: 2026-10-08T17:48:00.000Z
+pubDate: 2026-01-18T13:00:00.000Z
 translationKey: 224-what-is-a-circuit-breaker
 seriesOrder: 50
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "Construire un Flux d'Authentification JWT avec des Frontières de Confiance Explicites"
 description: "Analyse approfondie de l'émission de jetons sans état, de la validation de signature et du cycle de vie des jetons d'accès et de rafraîchissement."
-pubDate: 2026-10-08T10:48:00.000Z
+pubDate: 2026-09-20T11:00:00.000Z
 translationKey: 199-authentication-vs-authorization
 seriesOrder: 43
 locale: fr

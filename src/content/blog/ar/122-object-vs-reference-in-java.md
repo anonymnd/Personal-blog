@@ -1,7 +1,7 @@
 ---
 title: "الأوبجيكت، الريفرنس و 'new' في جافا"
 description: "شرح عميق لـ allocation في heap، وكيفاش كيخدم aliasing و pass-by-value في جافا."
-pubDate: 2026-10-07T17:48:00.000Z
+pubDate: 2025-03-20T09:30:00.000Z
 translationKey: 122-object-vs-reference-in-java
 seriesOrder: 26
 locale: ar

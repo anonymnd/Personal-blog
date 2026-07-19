@@ -1,7 +1,7 @@
 ---
 title: "Understand Maven Lifecycle Commands and Build Artifacts"
 description: "A deep dive into Maven phases, the target folder, and the distinction between unit and integration test reports."
-pubDate: 2026-10-08T07:48:00.000Z
+pubDate: 2026-02-25T17:00:00.000Z
 translationKey: 176-what-happens-when-you-run-mvn-clean
 seriesOrder: 40
 locale: en

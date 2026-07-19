@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تحول Workflow ديال البيزنس لـ Use Cases واضحة"
 description: "دليل باش تخرج الـ workflows، تعامل مع المشاكل (exceptions)، وتكتب المنطق باستعمال Use Cases و Decision Tables بمثال ديال مكتبة."
-pubDate: 2026-10-06T17:48:00.000Z
+pubDate: 2025-09-20T12:00:00.000Z
 translationKey: 011-how-to-understand-a-business-workflow-before-designing-the-backend
 seriesOrder: 2
 locale: ar

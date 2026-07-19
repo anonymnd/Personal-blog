@@ -1,7 +1,7 @@
 ---
 title: "استعمل Messaging و Kafka ملي كيكون الخدمة خاصها تبقى واخا تسالي Request"
 description: "تعلم كيفاش تفصل الخدمات (decouple) باستعمال Kafka، وركز على Outbox pattern و partition ordering و idempotency باش تضمن أن طباعة labels و analytics تخدم بلا مشاكل."
-pubDate: 2026-10-08T18:48:00.000Z
+pubDate: 2026-07-21T12:30:00.000Z
 translationKey: 226-what-is-kafka
 seriesOrder: 51
 locale: ar

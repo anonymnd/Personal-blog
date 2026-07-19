@@ -1,7 +1,7 @@
 ---
 title: "Ports Docker, localhost et Découverte de Services dans un Modèle Réseau Unique"
 description: "Analyse approfondie de la distinction entre les ports publiés sur l'hôte, les namespaces de conteneurs et le DNS Compose pour la communication inter-services."
-pubDate: 2026-10-08T04:48:00.000Z
+pubDate: 2025-11-08T19:15:00.000Z
 translationKey: 164-what-does-port-mapping-mean
 seriesOrder: 37
 locale: fr

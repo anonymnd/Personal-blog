@@ -1,7 +1,7 @@
 ---
 title: "Construire des Images d'Application Reproductibles avec Docker"
 description: "Analyse approfondie des couches Dockerfile, de la relation image-conteneur et des limites de la reproductibilité environnementale."
-pubDate: 2026-10-08T03:48:00.000Z
+pubDate: 2025-12-17T13:00:00.000Z
 translationKey: 161-why-developers-use-docker
 seriesOrder: 36
 locale: fr

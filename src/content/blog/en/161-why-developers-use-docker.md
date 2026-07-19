@@ -1,7 +1,7 @@
 ---
 title: "Build Reproducible Application Images with Docker"
 description: "A deep dive into Dockerfile layers, the image-to-container relationship, and the limits of environment reproducibility."
-pubDate: 2026-10-08T03:48:00.000Z
+pubDate: 2025-12-17T13:00:00.000Z
 translationKey: 161-why-developers-use-docker
 seriesOrder: 36
 locale: en

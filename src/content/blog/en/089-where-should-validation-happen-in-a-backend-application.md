@@ -1,7 +1,7 @@
 ---
 title: "Validate Input, Business Eligibility and Database Invariants"
 description: "A deep dive into the three layers of validation using a workshop registration scenario to prevent invalid data and race conditions."
-pubDate: 2026-10-07T10:48:00.000Z
+pubDate: 2025-02-07T09:15:00.000Z
 translationKey: 089-where-should-validation-happen-in-a-backend-application
 seriesOrder: 19
 locale: en

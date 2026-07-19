@@ -1,7 +1,7 @@
 ---
 title: "Utiliser la Messagerie et Kafka quand le Travail doit Survivre à la Requête"
 description: "Apprenez à découpler les flux critiques avec Kafka, en vous concentrant sur le pattern Outbox, l'ordre des partitions et l'idempotence pour l'impression d'étiquettes et l'analytique."
-pubDate: 2026-10-08T18:48:00.000Z
+pubDate: 2026-07-21T12:30:00.000Z
 translationKey: 226-what-is-kafka
 seriesOrder: 51
 locale: fr

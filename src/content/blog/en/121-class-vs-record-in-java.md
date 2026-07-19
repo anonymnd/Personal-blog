@@ -1,7 +1,7 @@
 ---
 title: "Records and Immutable Value Objects: What Is Really Immutable?"
 description: "An analysis of shallow vs deep immutability in Java records and classes, focusing on defensive copying of mutable collections."
-pubDate: 2026-10-07T16:48:00.000Z
+pubDate: 2025-11-23T17:30:00.000Z
 translationKey: 121-class-vs-record-in-java
 seriesOrder: 25
 locale: en

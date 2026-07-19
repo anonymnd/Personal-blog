@@ -1,7 +1,7 @@
 ---
 title: "Validation des Entrées, Éligibilité Métier et Invariants de Base de Données"
 description: "Analyse approfondie des trois couches de validation via un scénario d'inscription à un atelier pour éviter les données invalides et les conditions de concurrence."
-pubDate: 2026-10-07T10:48:00.000Z
+pubDate: 2025-02-07T09:15:00.000Z
 translationKey: 089-where-should-validation-happen-in-a-backend-application
 seriesOrder: 19
 locale: fr

@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تخدم بـ Redis Cache-Aside بلا ما تخرج داتا غالطة"
 description: "شرح مفصل لـ Cache-Aside باش تسير داتا ديال سينما بلا ما يوقع ليك مشكل ديال داتا قديمة (stale) ولا يطيح ليك السيرفر (stampede)."
-pubDate: 2026-10-08T15:48:00.000Z
+pubDate: 2026-05-11T12:00:00.000Z
 translationKey: 218-what-is-a-cache
 seriesOrder: 48
 locale: ar

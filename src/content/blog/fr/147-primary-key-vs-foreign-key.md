@@ -1,7 +1,7 @@
 ---
 title: "Clés Primaires, Clés Étrangères et Contraintes d'Unicité : Protéger des Faits Différents"
 description: "Distinction entre l'identité d'une ligne, l'intégrité référentielle et les clés candidates dans PostgreSQL et JPA."
-pubDate: 2026-10-08T00:48:00.000Z
+pubDate: 2026-02-19T18:00:00.000Z
 translationKey: 147-primary-key-vs-foreign-key
 seriesOrder: 33
 locale: fr

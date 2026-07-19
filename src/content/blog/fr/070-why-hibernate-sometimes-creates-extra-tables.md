@@ -1,7 +1,7 @@
 ---
 title: "Pourquoi les collections de valeurs et les associations nécessitent des tables supplémentaires"
 description: "Analyse approfondie de @ElementCollection, des embeddables et de la différence structurelle entre types de valeurs et entités dans JPA."
-pubDate: 2026-10-07T06:48:00.000Z
+pubDate: 2026-06-20T15:00:00.000Z
 translationKey: 070-why-hibernate-sometimes-creates-extra-tables
 seriesOrder: 15
 locale: fr

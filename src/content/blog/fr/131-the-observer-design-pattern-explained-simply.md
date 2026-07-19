@@ -1,7 +1,7 @@
 ---
 title: "Implémentation du Pattern Observer pour les Notifications Internes"
 description: "Analyse approfondie de la gestion des abonnés locaux, des fuites de cycle de vie et de la gestion des erreurs dans un lecteur musical."
-pubDate: 2026-10-07T21:48:00.000Z
+pubDate: 2026-06-21T10:45:00.000Z
 translationKey: 131-the-observer-design-pattern-explained-simply
 seriesOrder: 30
 locale: fr

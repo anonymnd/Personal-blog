@@ -1,7 +1,7 @@
 ---
 title: "Mise en œuvre du Cache-Aside Redis pour les horaires de cinéma"
 description: "Analyse approfondie du pattern Cache-Aside pour gérer les données de séances de cinéma tout en évitant les lectures obsolètes et les cache stampedes."
-pubDate: 2026-10-08T15:48:00.000Z
+pubDate: 2026-05-11T12:00:00.000Z
 translationKey: 218-what-is-a-cache
 seriesOrder: 48
 locale: fr

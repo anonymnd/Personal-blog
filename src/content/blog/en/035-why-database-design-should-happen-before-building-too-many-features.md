@@ -1,7 +1,7 @@
 ---
 title: "From Business Rules to a Relational Database Model"
 description: "A guide to transforming equipment rental business rules into a conceptual, logical, and physical database schema using Merise cardinalities."
-pubDate: 2026-10-06T21:48:00.000Z
+pubDate: 2025-06-18T18:15:00.000Z
 translationKey: 035-why-database-design-should-happen-before-building-too-many-features
 seriesOrder: 6
 locale: en

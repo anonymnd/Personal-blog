@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تبني JWT Authentication Flow بحدود ثقة واضحة"
 description: "شرح مفصل على كيفاش تخرج tokens، تفيريفيي signature، وتجيري cycle de vie ديال access و refresh tokens فـ application ديال fitness."
-pubDate: 2026-10-08T10:48:00.000Z
+pubDate: 2026-09-20T11:00:00.000Z
 translationKey: 199-authentication-vs-authorization
 seriesOrder: 43
 locale: ar

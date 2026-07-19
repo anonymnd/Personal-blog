@@ -1,7 +1,7 @@
 ---
 title: "Choisir des Algorithmes de Limitation de Débit pour les Rafales et l'Équité"
 description: "Guide technique sur les algorithmes Token Bucket et Leaky Bucket, le calcul des rafales et l'équité par client pour une API de géocodage."
-pubDate: 2026-10-08T16:48:00.000Z
+pubDate: 2025-06-09T18:00:00.000Z
 translationKey: 222-what-is-rate-limiting
 seriesOrder: 49
 locale: fr

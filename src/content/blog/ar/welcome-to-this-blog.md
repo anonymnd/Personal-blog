@@ -1,7 +1,7 @@
 ---
 title: مرحباً بك في مدوّنة التعلّم هذه
 description: كيف يعمل الموقع وكيف تنشر نفس المقال بالإنجليزية والفرنسية والعربية.
-pubDate: 2026-04-10
+pubDate: 2026-06-12
 translationKey: welcome-to-this-blog
 locale: ar
 tags:

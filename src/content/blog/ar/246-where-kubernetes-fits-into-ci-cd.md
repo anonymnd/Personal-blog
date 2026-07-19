@@ -1,7 +1,7 @@
 ---
 title: "فين كيجي Kubernetes فـ Architecture ديال Deployment"
 description: "الفرق بين packaging ديال containers و orchestration، وكيفاش نخدمو stateless map-tile API بـ Services."
-pubDate: 2026-10-08T22:48:00.000Z
+pubDate: 2026-03-26T14:30:00.000Z
 translationKey: 246-where-kubernetes-fits-into-ci-cd
 seriesOrder: 55
 locale: ar

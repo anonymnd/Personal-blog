@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تحدد حدود الموديولات قبل ما تمشي للميكروسيرفيسز"
 description: "شرح مفصل على الـ cohesion والـ coupling وكيفاش تحول من modular monolith لـ microservices باستعمال مثال ديال travel booking."
-pubDate: 2026-10-09T00:48:00.000Z
+pubDate: 2026-03-10T10:30:00.000Z
 translationKey: 253-monolith-vs-microservices
 seriesOrder: 57
 locale: ar

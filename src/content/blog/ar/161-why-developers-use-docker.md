@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تصاوب Application Images Reproductibles بـ Docker"
 description: "شرح عميق لـ Dockerfile layers، الفرق بين Image و Container، وفين كتحبس هاد الـ reproducibility."
-pubDate: 2026-10-08T03:48:00.000Z
+pubDate: 2025-12-17T13:00:00.000Z
 translationKey: 161-why-developers-use-docker
 seriesOrder: 36
 locale: ar

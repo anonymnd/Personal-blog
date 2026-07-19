@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تـmap-ي العلاقات ديال Entities فـ JPA بطريقة صحيحة"
 description: "شرح معمق على الـ owning side، mappedBy، وكيفاش تحول Many-to-Many لـ join entity باش تزيد فيها attributes."
-pubDate: 2026-10-06T22:48:00.000Z
+pubDate: 2026-01-02T08:00:00.000Z
 translationKey: 044-how-to-convert-a-database-model-into-jpa-entities
 seriesOrder: 7
 locale: ar

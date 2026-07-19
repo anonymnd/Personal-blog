@@ -1,7 +1,7 @@
 ---
 title: "Scale Application Instances and Route Traffic with a Load Balancer"
 description: "Learn how to scale a document-rendering service by externalizing state and choosing between L4/L7 routing algorithms."
-pubDate: 2026-10-08T13:48:00.000Z
+pubDate: 2025-02-06T18:15:00.000Z
 translationKey: 213-why-run-multiple-instances-of-the-same-application
 seriesOrder: 46
 locale: en

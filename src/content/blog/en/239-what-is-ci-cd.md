@@ -1,7 +1,7 @@
 ---
 title: "Build a CI/CD Pipeline with Clear Release Gates"
 description: "A technical guide to implementing a build-once, deploy-many pipeline for a billing report service using immutable artifacts and manual approval gates."
-pubDate: 2026-10-08T21:48:00.000Z
+pubDate: 2025-11-24T19:15:00.000Z
 translationKey: 239-what-is-ci-cd
 seriesOrder: 54
 locale: en

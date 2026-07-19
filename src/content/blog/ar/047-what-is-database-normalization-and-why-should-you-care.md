@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تنورماليزي Database بلا ما تضيع المعنى ديال Business"
 description: "استعمال functional dependencies باش نحيدو anomalies ونحافظو على snapshots ديال الثمن في الفاكتورات."
-pubDate: 2026-10-06T23:48:00.000Z
+pubDate: 2025-06-28T11:15:00.000Z
 translationKey: 047-what-is-database-normalization-and-why-should-you-care
 seriesOrder: 8
 locale: ar

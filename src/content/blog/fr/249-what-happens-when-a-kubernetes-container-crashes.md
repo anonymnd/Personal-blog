@@ -1,7 +1,7 @@
 ---
 title: "Diagnostiquer les Redémarrages Kubernetes et la Disponibilité du Trafic"
 description: "Analyse approfondie des mécanismes de redémarrage du kubelet, des interactions entre sondes et la distinction entre retrait du trafic et recyclage du conteneur."
-pubDate: 2026-10-08T23:48:00.000Z
+pubDate: 2025-04-28T18:45:00.000Z
 translationKey: 249-what-happens-when-a-kubernetes-container-crashes
 seriesOrder: 56
 locale: fr

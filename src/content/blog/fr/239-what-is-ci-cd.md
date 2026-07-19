@@ -1,7 +1,7 @@
 ---
 title: "Construire un Pipeline CI/CD avec des Portes de Sortie Claires"
 description: "Guide technique pour implémenter un pipeline 'build-once, deploy-many' pour un service de rapports de facturation utilisant des artefacts immuables."
-pubDate: 2026-10-08T21:48:00.000Z
+pubDate: 2025-11-24T19:15:00.000Z
 translationKey: 239-what-is-ci-cd
 seriesOrder: 54
 locale: fr

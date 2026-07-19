@@ -1,7 +1,7 @@
 ---
 title: "Checked and Unchecked Exceptions Express Handling Contracts"
 description: "A deep dive into Java exception hierarchies to distinguish between recoverable business failures and programming errors using an import tool scenario."
-pubDate: 2026-10-07T20:48:00.000Z
+pubDate: 2026-02-10T16:30:00.000Z
 translationKey: 129-checked-vs-unchecked-exceptions
 seriesOrder: 29
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "Choose Loops, Streams and Method References by Readability"
 description: "A technical comparison of iterative and functional styles in Java using sensor data processing to evaluate readability and side effects."
-pubDate: 2026-10-07T18:48:00.000Z
+pubDate: 2026-01-07T09:15:00.000Z
 translationKey: 126-streams-vs-loops-when-should-you-use-each
 seriesOrder: 27
 locale: en

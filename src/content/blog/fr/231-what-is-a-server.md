@@ -1,7 +1,7 @@
 ---
 title: "Déployer une Application d'un Ordinateur vers un Serveur"
 description: "Guide technique pour déplacer un service de rendez-vous Java vers un VPS Linux, couvrant la configuration, les proxys inverses et le cycle de vie du service."
-pubDate: 2026-10-08T19:48:00.000Z
+pubDate: 2026-10-02T13:00:00.000Z
 translationKey: 231-what-is-a-server
 seriesOrder: 52
 locale: fr

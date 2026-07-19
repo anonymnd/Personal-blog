@@ -1,7 +1,7 @@
 ---
 title: "Evolve a Production Schema with Flyway Instead of Guesswork"
 description: "Master versioned database migrations, the expand-contract pattern for zero-downtime updates, and recovery from failed DDL scripts."
-pubDate: 2026-10-08T02:48:00.000Z
+pubDate: 2025-09-18T10:30:00.000Z
 translationKey: 151-why-do-we-need-database-migrations
 seriesOrder: 35
 locale: en

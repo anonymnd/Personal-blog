@@ -1,7 +1,7 @@
 ---
 title: "Résoudre le problème des requêtes N+1 avec JPA"
 description: "Guide technique pour optimiser la récupération des données via des plans de récupération et des graphes d'entités."
-pubDate: 2026-10-07T22:48:00.000Z
+pubDate: 2025-03-15T19:45:00.000Z
 translationKey: 143-lazy-loading-vs-eager-loading
 seriesOrder: 31
 locale: fr

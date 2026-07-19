@@ -1,7 +1,7 @@
 ---
 title: "Identité des Types Java : Packages et Class Loaders"
 description: "Explication de pourquoi des classes avec des noms identiques sont des types distincts et comment gérer le mappage sécurisé."
-pubDate: 2026-10-07T15:48:00.000Z
+pubDate: 2026-05-14T14:30:00.000Z
 translationKey: 119-why-two-java-classes-with-the-same-name-can-be-different-types
 seriesOrder: 24
 locale: fr

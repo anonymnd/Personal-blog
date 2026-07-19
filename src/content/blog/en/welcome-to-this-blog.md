@@ -1,7 +1,7 @@
 ---
 title: Welcome to this learning blog
 description: How this site works and how to publish the same article in English, French, and Arabic.
-pubDate: 2026-04-10
+pubDate: 2026-06-12
 translationKey: welcome-to-this-blog
 locale: en
 tags:

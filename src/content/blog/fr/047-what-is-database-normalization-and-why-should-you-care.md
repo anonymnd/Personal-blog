@@ -1,7 +1,7 @@
 ---
 title: "Normaliser une Base de Données sans Perdre le Sens Métier"
 description: "Utilisation des dépendances fonctionnelles pour éliminer les anomalies tout en préservant les instantanés historiques dans les factures de réparation."
-pubDate: 2026-10-06T23:48:00.000Z
+pubDate: 2025-06-28T11:15:00.000Z
 translationKey: 047-what-is-database-normalization-and-why-should-you-care
 seriesOrder: 8
 locale: fr

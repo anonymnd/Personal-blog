@@ -1,7 +1,7 @@
 ---
 title: "الفرق بين الـ Actors، الـ Accounts، والـ Domain Entities"
 description: "تعلم كيفاش تفرق بين أدوار التفاعل، حسابات الدخول، والأجسام ديال البيزنس باستعمال مثال ديال صناديق الأمانات (Parcel Locker)."
-pubDate: 2026-10-06T18:48:00.000Z
+pubDate: 2025-02-01T13:45:00.000Z
 translationKey: 012-actors-users-and-entities-what-s-the-difference
 seriesOrder: 3
 locale: ar

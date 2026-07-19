@@ -1,7 +1,7 @@
 ---
 title: "Primary Keys, Foreign Keys and Unique Constraints Protect Different Facts"
 description: "Distinguishing row identity from business uniqueness and referential integrity in PostgreSQL and JPA."
-pubDate: 2026-10-08T00:48:00.000Z
+pubDate: 2026-02-19T18:00:00.000Z
 translationKey: 147-primary-key-vs-foreign-key
 seriesOrder: 33
 locale: en

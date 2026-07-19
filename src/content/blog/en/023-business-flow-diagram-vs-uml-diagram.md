@@ -1,7 +1,7 @@
 ---
 title: "Choose and Build the UML Diagram That Answers Your Question"
 description: "A guide to selecting and building UML diagrams based on the specific engineering question you need to answer, using a ticket reservation scenario."
-pubDate: 2026-10-06T20:48:00.000Z
+pubDate: 2026-07-02T18:30:00.000Z
 translationKey: 023-business-flow-diagram-vs-uml-diagram
 seriesOrder: 5
 locale: en

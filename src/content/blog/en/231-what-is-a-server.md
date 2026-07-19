@@ -1,7 +1,7 @@
 ---
 title: "Deploy an Application from a Laptop to a Server"
 description: "A technical guide on moving a Java appointment service to a Linux VPS, covering environment configuration, reverse proxies, and service lifecycle."
-pubDate: 2026-10-08T19:48:00.000Z
+pubDate: 2026-10-02T13:00:00.000Z
 translationKey: 231-what-is-a-server
 seriesOrder: 52
 locale: en

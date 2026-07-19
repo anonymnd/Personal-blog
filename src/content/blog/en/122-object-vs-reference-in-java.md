@@ -1,7 +1,7 @@
 ---
 title: "Objects, References and new in Java"
 description: "A deep dive into heap allocation, reference aliasing, and the mechanics of pass-by-value in Java."
-pubDate: 2026-10-07T17:48:00.000Z
+pubDate: 2025-03-20T09:30:00.000Z
 translationKey: 122-object-vs-reference-in-java
 seriesOrder: 26
 locale: en

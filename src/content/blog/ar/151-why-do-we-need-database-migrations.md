@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تطور Schema ديال Production بـ Flyway بلا ما تبقى تخمن"
 description: "تعلم كيفاش تسير migrations ديال database بالترتيب، وتخدم بـ expand-contract باش ما تحبسش السيرفيس، وكيفاش تعامل مع الـ failures."
-pubDate: 2026-10-08T02:48:00.000Z
+pubDate: 2025-09-18T10:30:00.000Z
 translationKey: 151-why-do-we-need-database-migrations
 seriesOrder: 35
 locale: ar

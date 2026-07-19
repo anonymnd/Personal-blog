@@ -1,7 +1,7 @@
 ---
 title: "Use Consistent Hashing to Reduce Partition Movement"
 description: "A deep dive into hash rings and virtual nodes to minimize cache misses during cluster scaling."
-pubDate: 2026-10-08T14:48:00.000Z
+pubDate: 2025-08-30T19:30:00.000Z
 translationKey: 217-what-is-consistent-hashing
 seriesOrder: 47
 locale: en

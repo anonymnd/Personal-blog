@@ -1,7 +1,7 @@
 ---
 title: "Définir les Limites de Modules Avant le Déploiement Distribué"
 description: "Analyse approfondie de la cohésion, du couplage et de la transition du monolithe modulaire vers les microservices via un scénario de réservation de voyage."
-pubDate: 2026-10-09T00:48:00.000Z
+pubDate: 2026-03-10T10:30:00.000Z
 translationKey: 253-monolith-vs-microservices
 seriesOrder: 57
 locale: fr

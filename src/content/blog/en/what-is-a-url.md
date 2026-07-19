@@ -1,7 +1,7 @@
 ---
 title: What is a URL (in plain language)
 description: The pieces of a web address—scheme, host, path, and query—and why they matter when you learn how the web works.
-pubDate: 2026-04-12
+pubDate: 2026-01-10
 translationKey: what-is-a-url
 locale: en
 tags:

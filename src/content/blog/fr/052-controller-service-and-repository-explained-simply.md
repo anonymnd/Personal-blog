@@ -1,7 +1,7 @@
 ---
 title: "Définir les Responsabilités : Contrôleurs, Services et Repositories"
 description: "Analyse approfondie de l'allocation des responsabilités via un scénario d'expédition d'entrepôt pour séparer la traduction HTTP, l'orchestration métier et la persistance."
-pubDate: 2026-10-07T03:48:00.000Z
+pubDate: 2026-06-23T13:15:00.000Z
 translationKey: 052-controller-service-and-repository-explained-simply
 seriesOrder: 12
 locale: fr

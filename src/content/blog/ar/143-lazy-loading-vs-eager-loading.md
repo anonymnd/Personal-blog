@@ -1,7 +1,7 @@
 ---
 title: "كيفاش تحل مشكلة N+1 Query في JPA"
 description: "دليل تقني باش تنقص من عدد الطلبات لقاعدة البيانات باستعمال fetch plans و entity graphs."
-pubDate: 2026-10-07T22:48:00.000Z
+pubDate: 2025-03-15T19:45:00.000Z
 translationKey: 143-lazy-loading-vs-eager-loading
 seriesOrder: 31
 locale: ar

@@ -1,7 +1,7 @@
 ---
 title: "Méthodes HTTP et Réponses Succès : Guide Cohérent"
 description: "Analyse approfondie des sémantiques de sécurité et d'idempotence pour POST, PUT, PATCH et DELETE via une API de playlists."
-pubDate: 2026-10-07T08:48:00.000Z
+pubDate: 2025-10-11T12:30:00.000Z
 translationKey: 076-get-post-put-patch-and-delete-explained-properly
 seriesOrder: 17
 locale: fr

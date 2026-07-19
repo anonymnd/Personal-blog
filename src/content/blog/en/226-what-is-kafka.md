@@ -1,7 +1,7 @@
 ---
 title: "Use Messaging and Kafka When Work Must Survive the Request"
 description: "Learn to decouple critical workflows using Kafka, focusing on the Outbox pattern, partition ordering, and idempotency to ensure reliable label printing and analytics."
-pubDate: 2026-10-08T18:48:00.000Z
+pubDate: 2026-07-21T12:30:00.000Z
 translationKey: 226-what-is-kafka
 seriesOrder: 51
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "HTTP Methods and Successful Responses: One Consistent Guide"
 description: "A deep dive into safe and idempotent semantics for POST, PUT, PATCH, and DELETE using a playlist API scenario."
-pubDate: 2026-10-07T08:48:00.000Z
+pubDate: 2025-10-11T12:30:00.000Z
 translationKey: 076-get-post-put-patch-and-delete-explained-properly
 seriesOrder: 17
 locale: en

@@ -1,7 +1,7 @@
 ---
 title: "Docker Ports, localhost and Service Discovery in One Network Model"
 description: "A deep dive into the distinction between host-published ports, container namespaces, and Compose DNS for inter-service communication."
-pubDate: 2026-10-08T04:48:00.000Z
+pubDate: 2025-11-08T19:15:00.000Z
 translationKey: 164-what-does-port-mapping-mean
 seriesOrder: 37
 locale: en

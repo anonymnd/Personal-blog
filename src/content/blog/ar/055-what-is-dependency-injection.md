@@ -1,7 +1,7 @@
 ---
 title: "Dependency Injection, Inversion of Control و Interface Contracts"
 description: "شرح عميق ديال كيفاش كيتصاوبو components، الـ constructor injection، والحقيقة ديال semantic coupling ملي كنخدمو بـ interfaces."
-pubDate: 2026-10-07T04:48:00.000Z
+pubDate: 2025-08-25T11:30:00.000Z
 translationKey: 055-what-is-dependency-injection
 seriesOrder: 13
 locale: ar
