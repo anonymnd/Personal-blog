@@ -1,0 +1,131 @@
+---
+/**
+ * Compact bibliography for the "Sources & papers I used" section.
+ * Rendered as a notebook-style reference list, not a set of cards.
+ */
+interface Paper {
+	authors: string;
+	year: string;
+	title: string;
+	why: string;
+	href: string;
+}
+
+const papers: Paper[] = [
+	{
+		authors: 'McWeeny & Norton',
+		year: '2020',
+		title: 'Understanding Event-Related Potentials (ERPs) in Clinical and Basic Language and Communication Disorders Research: A Tutorial',
+		why: 'Used for the basics: what scalp EEG measures, how electrodes and the 10–20 system work, what event markers are, and how a continuous recording gets cut into epochs.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7802513/',
+	},
+	{
+		authors: 'Puce & Hämäläinen',
+		year: '2017',
+		title: 'A Review of Issues Related to Data Acquisition and Analysis in EEG/MEG Studies',
+		why: 'Used for the noise section — eye blinks, muscle activity, impedance and reference choice, and why recording quality is decided before any analysis starts.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5483631/',
+	},
+	{
+		authors: 'Bigdely-Shamlo et al.',
+		year: '2015',
+		title: 'The PREP pipeline: standardized preprocessing for large-scale EEG analysis',
+		why: 'Used for the preprocessing section. It is one published pipeline rather than the correct answer, but it shows concretely what early cleaning involves and how the steps interact.',
+		href: 'https://www.frontiersin.org/journals/neuroinformatics/articles/10.3389/fninf.2015.00016/full',
+	},
+	{
+		authors: 'Newson & Thiagarajan',
+		year: '2019',
+		title: 'EEG Frequency Bands in Psychiatric Disorders: A Review of Resting State Studies',
+		why: 'Used for the frequency bands, and mostly for its caution: band boundaries shift between studies and band-power findings overlap heavily between disorders.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6333694/',
+	},
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: 'Used for the leakage section — the clearest thing I have read on why splitting by segment instead of by participant quietly inflates accuracy.',
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Padfield et al.',
+		year: '2019',
+		title: 'EEG-Based Brain-Computer Interfaces Using Motor-Imagery: Techniques and Challenges',
+		why: 'Used for the motor-imagery dataset I want to open next, and for context on CSP and on how much the signal varies from one person to another.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/30909489/',
+	},
+];
+---
+
+<ol class="papers" role="list">
+	{papers.map((p) => (
+		<li class="paper">
+			<p class="paper-meta"><b>{p.authors}</b><span aria-hidden="true"> · </span><span class="paper-year">{p.year}</span></p>
+			<p class="paper-title">{p.title}</p>
+			<p class="paper-why">{p.why}</p>
+			<a class="paper-go" href={p.href} target="_blank" rel="noopener noreferrer"
+				aria-label={`Read the paper: ${p.title} by ${p.authors}, ${p.year} — opens in a new tab`}>
+				Read paper<span aria-hidden="true"> ↗</span>
+			</a>
+		</li>
+	))}
+</ol>
+
+<style>
+	.papers {
+		list-style: none;
+		margin: 1.6rem 0 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1.15rem;
+	}
+
+	.paper {
+		padding-inline-start: 1rem;
+		border-inline-start: 2px solid #e4dff0;
+	}
+
+	.paper-meta {
+		margin: 0 0 0.15rem;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		color: var(--accent-dim);
+	}
+	.paper-meta b { font-weight: 700; }
+
+	.paper-title {
+		margin: 0 0 0.28rem;
+		font-size: 0.9rem;
+		font-weight: 650;
+		line-height: 1.5;
+		letter-spacing: -0.01em;
+		color: var(--text);
+		text-wrap: pretty;
+	}
+
+	.paper-why {
+		margin: 0 0 0.35rem;
+		font-size: 0.82rem;
+		line-height: 1.75;
+		color: var(--text-muted);
+		text-wrap: pretty;
+	}
+
+	.paper-go {
+		display: inline-flex;
+		align-items: baseline;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--accent);
+		text-decoration: none;
+		border-bottom: 1px solid #cfc5e6;
+		padding-bottom: 1px;
+		transition: color 0.16s, border-color 0.16s;
+	}
+	.paper-go:hover { color: var(--accent-dim); border-color: var(--accent-dim); }
+	.paper-go:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+	@media (prefers-reduced-motion: reduce) { .paper-go { transition: none; } }
+</style>

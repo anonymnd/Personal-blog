@@ -105,17 +105,39 @@ html[dir=rtl]{--font-sans:'Noto Sans Arabic',system-ui,sans-serif}html[dir=rtl] 
 .prose .visual-relation .diagram-nodes{gap:2.1rem}.visual-relation .diagram-connector{inset-inline-end:-2rem;max-width:2rem;font-size:.75rem;white-space:nowrap}
 @media(max-width:600px){.prose .visual-relation .diagram-nodes{gap:1.6rem}.visual-relation .diagram-connector{inset-inline-end:50%;max-width:none}}
 
-/* Interactive article components — callouts, code blocks, tables */
-.callout{margin:1.8rem 0;font-size:.95rem;line-height:1.75}
-.callout-content p:last-child{margin-bottom:0}
-.code-block{margin:1.6rem 0}
-.table-wrap{margin:1.6rem 0}
-.prose .callout,.prose .code-block,.prose .table-wrap,.prose figure{max-width:100%}
-.prose>figure,.prose>.code-block,.prose>.table-wrap{margin-inline:0}
+/* ── Article figures: same illustration language as the site's idea-map ──
+   Paper canvas + dot grid, hard offset shadow, asymmetric radius, blue/violet ink. */
+.prose figure{margin:2.6rem 0 3rem;max-width:100%}
+.fig{margin:2.3rem 0;padding:1.35rem 1.5rem 1.2rem;background:#fff;border:1px solid #e2ddf0;border-radius:20px 20px 52px 20px;box-shadow:8px 9px 0 #e9e5f6;min-width:0}
+.fig--paper{background:var(--map-paper);border-color:#ddd3f0}
+.fig-kicker{display:flex;align-items:center;gap:.6rem;font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-dim);margin:0 0 .35rem}
+.fig-kicker::before{content:'';width:1.5rem;height:3px;background:var(--accent-dim);border-radius:2px;flex-shrink:0}
+.fig-title{font-size:1.02rem;font-weight:750;line-height:1.35;letter-spacing:-.02em;color:var(--text);margin:0 0 .9rem;max-width:34rem}
+.fig-note{font-size:.82rem;line-height:1.8;color:var(--text-muted);margin:1rem 0 0;padding-top:.85rem;border-top:1px dashed #cfc5e6}
+.fig-note strong{color:var(--text);font-weight:650}
+.fig-note em{color:var(--accent-dim);font-style:normal;font-weight:650}
+.fig-grid{position:relative;background-image:radial-gradient(#c9bde2 1px,transparent 1px);background-size:18px 18px;background-position:-2px -2px}
+.fig svg{display:block;max-width:100%;height:auto}
+.prose>.code-block,.prose>.table-wrap{margin-inline:0}
 
-/* Step-active highlight for PipelineStepper */
-.step-active .step-num{background:var(--accent-dim);border-color:var(--accent-dim);color:#fff}
-.step-active .step-label{color:var(--accent-dim)}
+/* Callouts — editorial chip, left ink bar, no soft blobs */
+.callout{display:flex;gap:.95rem;margin:2rem 0;padding:1.05rem 1.25rem;background:#fff;border:1px solid #e2ddf0;border-inline-start:5px solid var(--accent);border-radius:0 14px 14px 0;box-shadow:4px 5px 0 #eeebf8;font-size:.95rem;line-height:1.8}
+.callout-body{min-width:0}.callout-content p:last-child{margin-bottom:0}.callout-content p{margin:.15rem 0 0}
+.callout-icon{flex-shrink:0;width:22px;height:22px;margin-top:3px;color:var(--accent)}
+.callout-icon svg{width:100%;height:100%}
+.callout-label{font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin:0 0 .1rem}
+.callout--warning{border-inline-start-color:#c26a12}.callout--warning .callout-icon,.callout--warning .callout-label{color:#c26a12}
+.callout--formula{border-inline-start-color:var(--accent-dim)}.callout--formula .callout-icon,.callout--formula .callout-label{color:var(--accent-dim)}
+.callout--further-reading{border-inline-start-color:#2f855a}.callout--further-reading .callout-icon,.callout--further-reading .callout-label{color:#2f855a}
+.callout--definition{border-inline-start-color:var(--accent-dim)}.callout--definition .callout-icon,.callout--definition .callout-label{color:var(--accent-dim)}
 
-/* Ensure interactive figures respect prose rhythm */
-.prose figure{margin-block:2rem 2.5rem}
+/* Code + tables keep the site's quiet reading treatment */
+.code-block{margin:1.8rem 0}
+.table-wrap{margin:1.8rem 0}
+
+/* Pipeline step highlight */
+.step-active .step-num{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;box-shadow:4px 4px 0 #c6b6e5}
+.step-active .step-label{color:var(--accent)}
+
+@media(max-width:560px){.fig{padding:1.05rem 1.1rem 1rem;border-radius:16px 16px 40px 16px;box-shadow:5px 6px 0 #e9e5f6}.callout{padding:.9rem 1rem;gap:.75rem}}
+@media(prefers-reduced-motion:reduce){.fig *,.callout{transition:none!important;animation:none!important}}

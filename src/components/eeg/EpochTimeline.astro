@@ -1,289 +1,140 @@
 ---
-interface Props {
-	duration?: number; // total timeline seconds
-	preStim?: number; // seconds before stimulus
-	postStim?: number; // seconds after stimulus
-}
+interface Props { duration?: number; pre?: number; post?: number }
+const { duration = 20, pre = 0.5, post = 1.0 } = Astro.props;
 
-const { duration = 20, preStim = 0.5, postStim = 1.0 } = Astro.props;
-
-// Deterministic pseudo-random EEG-like wave path
-function generateWavePath(w: number, h: number, seed: number): string {
-	let d = `M 0 ${h / 2}`;
-	let s = seed;
-	for (let x = 1; x <= w; x += 2) {
+// Deterministic EEG-ish trace
+function trace(w = 640, h = 96, seed = 91): string {
+	let s = seed; const pts: string[] = [];
+	for (let x = 0; x <= w; x += 3) {
 		s = (s * 16807 + 12345) % 2147483647;
-		const y = h / 2 + ((s % 100) / 100 - 0.5) * h * 0.6;
-		d += ` L ${x} ${y.toFixed(1)}`;
+		const env = Math.sin((x / w) * Math.PI * 4) * 0.4 + 0.6;
+		const y = h / 2 + (((s % 100) / 100) - 0.5) * h * 0.7 * env;
+		pts.push(`${x},${y.toFixed(1)}`);
 	}
-	return d;
+	return pts.join(' ');
 }
+
+const events = [6, 13.5];
 ---
 
-<figure class="epoch-figure" role="group" aria-labelledby="epoch-title">
-	<figcaption id="epoch-title" class="epoch-title">
-		Epoching: cutting a continuous recording around events
-	</figcaption>
+<figure class="fig fig--paper epoch-fig">
+	<p class="fig-kicker">Figure · epoching</p>
+	<h3 class="fig-title">Cutting a 20-second stream into 1.5-second experiments</h3>
 
-	<div class="epoch-demo" data-duration={duration} data-pre={preStim} data-post={postStim}>
-		<div class="timeline-track" role="slider" aria-label="Epoch window position" aria-valuemin="0" aria-valuemax={duration} aria-valuenow={duration / 2} tabindex="0">
-			<div class="timeline-wave" aria-hidden="true">
-				<svg viewBox="0 0 400 40" preserveAspectRatio="none">
-					<path d={generateWavePath(400, 40, 123)} class="wave-path" />
-				</svg>
-			</div>
+	<div class="epoch" data-duration={duration}>
+		<div class="track" role="slider" tabindex="0"
+			aria-label="Epoch window position" aria-valuemin="0" aria-valuemax={duration} aria-valuenow={duration / 2}
+			aria-valuetext="epoch centred at 10.0 seconds">
+			<svg class="trace" viewBox="0 0 640 96" preserveAspectRatio="none" aria-hidden="true">
+				<polyline points={trace()} fill="none" stroke="#8f86b8" stroke-width="1.6" stroke-linejoin="round" />
+			</svg>
 
-			{/* Event markers */}
-			{[10, 15].map((t) => (
-				<div class="event-marker" style={`left: ${(t / duration) * 100}%`} data-time={t}>
-					<div class="marker-line" />
-					<div class="marker-label">{t.toFixed(1)}s</div>
+			{events.map((t) => (
+				<div class="pin" style={`left:${(t / duration) * 100}%`}>
+					<span class="pin-dot"></span>
+					<span class="pin-lab">{t.toFixed(1)}s</span>
 				</div>
 			))}
 
-			{/* Epoch window */}
-			<div class="epoch-window" style={`--pre: ${preStim}; --post: ${postStim};`}>
-				<div class="epoch-region" />
-			</div>
+			<div class="win"><span class="win-edge start"></span><span class="win-edge end"></span></div>
 		</div>
 
-		<div class="epoch-readout">
-			<span>Epoch window: <strong class="epoch-start">-0.5s</strong> to <strong class="epoch-end">+1.0s</strong> around stimulus</span>
-			<span class="epoch-width">Window width: <strong>1.5s</strong></span>
+		<div class="readout">
+			<span>Window <b class="r-start">−0.5 s</b> → <b class="r-end">+1.0 s</b></span>
+			<span>Width <b class="r-width">1.5 s</b></span>
 		</div>
 
-		<div class="epoch-controls">
-			<label class="epoch-label">
-				Pre-stimulus (s)
-				<input type="number" class="pre-input" value={preStim} min="0" max="2" step="0.1" />
+		<div class="knobs">
+			<label class="knob">Pre-stimulus (s)
+				<input class="k-pre" type="number" value={pre} min="0" max="2" step="0.1" />
 			</label>
-			<label class="epoch-label">
-				Post-stimulus (s)
-				<input type="number" class="post-input" value={postStim} min="0" max="3" step="0.1" />
+			<label class="knob">Post-stimulus (s)
+				<input class="k-post" type="number" value={post} min="0" max="3" step="0.1" />
 			</label>
 		</div>
 
-		<p class="epoch-result" aria-live="polite">
-			Each event marker produces one epoch of <strong>1.5 seconds</strong> — a short snippet the model can treat as one training example.
+		<p class="result" aria-live="polite">
+			Every marker yields <b>1.5 s</b> of signal — one candidate example, as long as it stays on a single side of the train/test split.
 		</p>
 	</div>
 
-	<p class="epoch-caption">
-		<em>Figure 3:</em> Drag the epoch window or adjust the inputs to see how researchers cut a continuous recording into trial-length segments around each stimulus.
+	<p class="fig-note">
+		Drag the window or use <em>arrow keys</em> (hold Shift to jump further). Widen it and you keep more context
+		but blur the moment you cared about; narrow it and you risk cutting off the response.
+		Cutting finer also makes <em>more</em> examples — but not more independent ones, which comes back later.
 	</p>
 </figure>
 
+<style>
+	.epoch{--dur:20}
+	.track{position:relative;height:104px;background:#fff;border:1px solid #ddd3f0;border-radius:10px;
+		cursor:grab;overflow:hidden;outline:none;box-shadow:inset 0 1px 0 #f0ecf9}
+	.track:active{cursor:grabbing}
+	.track:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+	.trace{position:absolute;inset:0;width:100%;height:100%;padding:0 .4rem;box-sizing:border-box}
+
+	.pin{position:absolute;top:0;bottom:0;width:0;z-index:3}
+	.pin-dot{position:absolute;top:8px;left:50%;width:11px;height:11px;background:var(--accent);
+		border:2.5px solid #fff;border-radius:50%;box-shadow:2px 2px 0 #c6b6e5;transform:translateX(-50%)}
+	.pin-lab{position:absolute;top:24px;left:50%;transform:translateX(-50%);padding:.1rem .4rem;background:var(--accent);
+		color:#fff;border-radius:5px;font-size:.6rem;font-family:var(--font-mono);font-weight:650;white-space:nowrap}
+
+	.win{position:absolute;top:0;bottom:0;background:rgba(112,65,189,.13);
+		border-inline:2px solid var(--accent-dim);z-index:2}
+	.win-edge{position:absolute;top:0;bottom:0;width:3px;background:var(--accent-dim)}
+	.win-edge.start{inset-inline-start:-2px}.win-edge.end{inset-inline-end:-2px}
+
+	.readout{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;margin-top:.6rem;
+		font-size:.8rem;color:var(--text-muted)}
+	.readout b{font-family:var(--font-mono);color:var(--accent-dim);font-weight:650}
+
+	.knobs{display:flex;gap:1rem;margin-top:.85rem;flex-wrap:wrap}
+	.knob{display:flex;flex-direction:column;gap:.3rem;font-size:.78rem;font-weight:650;color:var(--text-muted)}
+	.knob input{width:6.5rem;min-height:44px;padding:.4rem .7rem;border:1px solid #9c8ab9;border-radius:9px;
+		background:#fff;color:var(--text);font-family:var(--font-mono);font-size:.88rem}
+	.knob input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+	.result{margin:.9rem 0 0;padding:.65rem .85rem;background:#fff;border:1px solid #e2ddf0;
+		border-inline-start:5px solid var(--accent);border-radius:0 10px 10px 0;font-size:.85rem;line-height:1.7;color:var(--text)}
+	.result b{color:var(--accent-dim);font-weight:750}
+</style>
+
 <script>
-	document.querySelectorAll<HTMLElement>('.epoch-demo').forEach((demo) => {
-		const duration = parseFloat(demo.dataset.duration ?? '20');
-		const track = demo.querySelector<HTMLElement>('.timeline-track');
-		const window = demo.querySelector<HTMLElement>('.epoch-window');
-		const startEl = demo.querySelector<HTMLElement>('.epoch-start');
-		const endEl = demo.querySelector<HTMLElement>('.epoch-end');
-		const widthEl = demo.querySelector<HTMLElement>('.epoch-width strong');
-		const resultEl = demo.querySelector<HTMLElement>('.epoch-result');
-		const preInput = demo.querySelector<HTMLInputElement>('.pre-input');
-		const postInput = demo.querySelector<HTMLInputElement>('.post-input');
+	document.querySelectorAll<HTMLElement>('.epoch').forEach((demo) => {
+		const dur = parseFloat(demo.dataset.duration ?? '20');
+		const track = demo.querySelector<HTMLElement>('.track')!;
+		const win = demo.querySelector<HTMLElement>('.win')!;
+		const rS = demo.querySelector<HTMLElement>('.r-start')!;
+		const rE = demo.querySelector<HTMLElement>('.r-end')!;
+		const rW = demo.querySelector<HTMLElement>('.r-width')!;
+		const res = demo.querySelector<HTMLElement>('.result')!;
+		const kPre = demo.querySelector<HTMLInputElement>('.k-pre')!;
+		const kPost = demo.querySelector<HTMLInputElement>('.k-post')!;
+		let centre = dur / 2, pre = parseFloat(kPre.value), post = parseFloat(kPost.value);
 
-		if (!track || !window || !startEl || !endEl || !widthEl || !resultEl || !preInput || !postInput) return;
-
-		let center = duration / 2;
-		let pre = parseFloat(preInput.value);
-		let post = parseFloat(postInput.value);
-
-		const update = () => {
-			const halfW = ((pre + post) / duration) * 50; // percentage
-			const centerPct = (center / duration) * 100;
-			window.style.left = `${centerPct - halfW}%`;
-			window.style.width = `${halfW * 2}%`;
-			track.setAttribute('aria-valuenow', center.toFixed(1));
-
-			startEl.textContent = `-${pre.toFixed(1)}s`;
-			endEl.textContent = `+${post.toFixed(1)}s`;
-			const total = pre + post;
-			widthEl.textContent = `${total.toFixed(1)}s`;
-
-			if (resultEl) {
-				resultEl.innerHTML = `Each event marker produces one epoch of <strong>${total.toFixed(1)} seconds</strong> — a short snippet the model can treat as one training example.`;
-			}
+		const render = () => {
+			const half = ((pre + post) / dur) * 50, pct = (centre / dur) * 100;
+			win.style.left = `${pct - half}%`; win.style.width = `${half * 2}%`;
+			track.setAttribute('aria-valuenow', centre.toFixed(1));
+			track.setAttribute('aria-valuetext', `epoch centred at ${centre.toFixed(1)} seconds`);
+			rS.textContent = `−${pre.toFixed(1)} s`; rE.textContent = `+${post.toFixed(1)} s`;
+			const w = pre + post; rW.textContent = `${w.toFixed(1)} s`;
+			res.innerHTML = `Every marker yields <b>${w.toFixed(1)} s</b> of signal — one candidate example, as long as it stays on a single side of the train/test split.`;
 		};
+		kPre.addEventListener('input', () => { pre = parseFloat(kPre.value) || 0; render(); });
+		kPost.addEventListener('input', () => { post = parseFloat(kPost.value) || 0; render(); });
 
-		preInput.addEventListener('input', () => { pre = parseFloat(preInput.value) || 0; update(); });
-		postInput.addEventListener('input', () => { post = parseFloat(postInput.value) || 0; update(); });
-
-		// Drag
 		let dragging = false;
-		const move = (clientX: number) => {
-			const rect = track.getBoundingClientRect();
-			const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-			center = pct * duration;
-			update();
-		};
-
-		track.addEventListener('pointerdown', (e) => {
-			dragging = true;
-			track.setPointerCapture(e.pointerId);
-			move(e.clientX);
-		});
+		const move = (x: number) => { const r = track.getBoundingClientRect();
+			centre = Math.max(0, Math.min(1, (x - r.left) / r.width)) * dur; render(); };
+		track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); move(e.clientX); });
 		track.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX); });
 		track.addEventListener('pointerup', () => { dragging = false; });
-
-		// Keyboard
 		track.addEventListener('keydown', (e) => {
 			const step = e.shiftKey ? 1 : 0.25;
-			if (e.key === 'ArrowRight') { center = Math.min(duration, center + step); update(); e.preventDefault(); }
-			if (e.key === 'ArrowLeft') { center = Math.max(0, center - step); update(); e.preventDefault(); }
+			if (e.key === 'ArrowRight') { centre = Math.min(dur, centre + step); render(); e.preventDefault(); }
+			if (e.key === 'ArrowLeft')  { centre = Math.max(0, centre - step); render(); e.preventDefault(); }
 		});
-
-		update();
+		render();
 	});
 </script>
-
-<style>
-	.epoch-figure {
-		margin: 2rem 0 2.5rem;
-		padding: 1.4rem;
-		background: #eeedf9;
-		border: 1px solid #dcd6ee;
-		border-inline-start: 4px solid var(--accent-dim);
-		border-radius: 0 14px 14px 0;
-	}
-
-	.epoch-title {
-		font-size: 0.7rem;
-		font-weight: 650;
-		color: #634a98;
-		margin-bottom: 0.85rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
-
-	.epoch-demo {
-		--pre: 0.5;
-		--post: 1;
-	}
-
-	.timeline-track {
-		position: relative;
-		height: 72px;
-		background: #f8f7ff;
-		border: 1px solid #d0c8e8;
-		border-radius: 8px;
-		cursor: grab;
-		overflow: hidden;
-		outline: none;
-	}
-	.timeline-track:active { cursor: grabbing; }
-	.timeline-track:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
-
-	.timeline-wave {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		padding: 0 0.5rem;
-	}
-	.timeline-wave svg { width: 100%; height: 40px; }
-	.wave-path { stroke: #8b8fb4; stroke-width: 1; fill: none; }
-
-	.event-marker {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 0;
-		z-index: 2;
-	}
-	.marker-line {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 2px;
-		background: var(--accent);
-		transform: translateX(-1px);
-	}
-	.marker-label {
-		position: absolute;
-		top: 4px;
-		left: 50%;
-		transform: translateX(-50%);
-		padding: 0.1rem 0.35rem;
-		background: var(--accent);
-		color: #fff;
-		border-radius: 4px;
-		font-size: 0.62rem;
-		font-family: var(--font-mono);
-		white-space: nowrap;
-	}
-
-	.epoch-window {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		background: rgba(109, 40, 217, 0.12);
-		border-inline: 2px solid var(--accent-dim);
-		z-index: 1;
-		transition: left 0.05s, width 0.05s;
-	}
-	.epoch-region {
-		position: absolute;
-		inset: 0;
-		background: rgba(109, 40, 217, 0.06);
-	}
-
-	.epoch-readout {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: space-between;
-		gap: 0.5rem;
-		margin-top: 0.6rem;
-		font-size: 0.82rem;
-		color: var(--text-muted);
-	}
-	.epoch-readout strong {
-		font-family: var(--font-mono);
-		color: var(--accent-dim);
-	}
-
-	.epoch-controls {
-		display: flex;
-		gap: 1rem;
-		margin-top: 0.8rem;
-	}
-	.epoch-label {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-	}
-	.epoch-label input {
-		width: 6rem;
-		min-height: 40px;
-		padding: 0.3rem 0.6rem;
-		border: 1px solid #9c8ab9;
-		border-radius: 7px;
-		background: #fff;
-		color: var(--text);
-		font-family: var(--font-mono);
-		font-size: 0.88rem;
-	}
-
-	.epoch-result {
-		margin: 0.8rem 0 0;
-		padding: 0.6rem 0.8rem;
-		border-inline-start: 3px solid var(--accent);
-		background: #e1e6fa;
-		color: #333c75;
-		font-size: 0.82rem;
-		line-height: 1.7;
-	}
-
-	.epoch-caption {
-		font-size: 0.95rem;
-		line-height: 1.5;
-		font-weight: 700;
-		color: var(--text);
-		text-wrap: balance;
-		margin: 1rem 0 0;
-	}
-</style>

@@ -1,165 +1,75 @@
 ---
-interface Artifact {
-	name: string;
-	icon: string;
-	cause: string;
-	detection: string;
-}
+interface Artifact { name: string; kind: string; cause: string; tell: string; fix: string }
 
 const artifacts: Artifact[] = [
-	{
-		name: 'Blink (EOG artifact)',
-		icon: '👁',
-		cause: 'Eyelid movement creates a large dipolar electric field picked up by frontal electrodes.',
-		detection: 'Large, stereotyped deflections at frontal channels (Fp1, Fp2). Often detected with a dedicated EOG channel or ICA component.',
-	},
-	{
-		name: 'Eye movement (saccade)',
-		icon: '↔️',
-		cause: 'The eye is a dipole; rotating it shifts the corneo-retinal potential.',
-		detection: 'Step-like deflections at frontal sites. Horizontal saccades show opposite polarity at F7 vs F8.',
-	},
-	{
-		name: 'Jaw / facial muscle (EMG)',
-		icon: '😬',
-		cause: 'Muscle contraction generates broadband high-frequency electrical activity.',
-		detection: 'High-frequency power increase, especially at temporal electrodes. Often removed with a low-pass filter or ICA.',
-	},
-	{
-		name: 'Head movement',
-		icon: '🔄',
-		cause: 'Electrode-cable movement changes impedance and creates motion artifacts.',
-		detection: 'Large slow drifts across many channels. Sometimes detected with accelerometer data.',
-	},
-	{
-		name: 'Poor electrode contact',
-		icon: '⚡',
-		cause: 'An electrode lifting off the scalp creates intermittent or saturated signals.',
-		detection: 'Flatlines, saturation at rails, or extreme impedance values. Bad channels are usually interpolated or excluded.',
-	},
-	{
-		name: 'Power-line noise',
-		icon: '🔌',
-		cause: 'Electrical mains at 50 Hz (Europe) or 60 Hz (US) couples into the recording.',
-		detection: 'Sharp spectral peak at 50/60 Hz and harmonics. Removed with a notch filter.',
-	},
+	{ name: 'Blink', kind: 'EOG', cause: 'A blink moves the eyelid and the eye together, which throws a large field change across the forehead.',
+		tell: 'Large, stereotyped deflections over the frontal sites, worst at Fp1/Fp2.', fix: 'ICA component, or regression against a dedicated eye channel.' },
+	{ name: 'Eye movement', kind: 'EOG', cause: 'The eye carries a standing charge that shifts as it rotates, so looking sideways drags the potential with it.',
+		tell: 'Slow, step-like shifts at frontal sites; horizontal movements reverse polarity between left and right.', fix: 'ICA removal, or exclude segments around large movements.' },
+	{ name: 'Muscle tension', kind: 'EMG', cause: 'Jaw clenching and facial muscles emit broadband activity that reaches far beyond the usual EEG range.',
+		tell: 'Energy spread across the spectrum rather than sitting in one band, often strongest at temporal sites.', fix: 'ICA component rejection, or discarding the contaminated segments.' },
+	{ name: 'Head movement', kind: 'Motion', cause: 'Shifting the cap changes electrode impedance and drags the cables.',
+		tell: 'Slow drifts across many channels at once.', fix: 'Accelerometer gating, robust re-referencing, or segment rejection.' },
+	{ name: 'Bad electrode', kind: 'Hardware', cause: 'An electrode lifting off the scalp goes flat or saturates.',
+		tell: 'Flatlines, rail-to-rail clipping, or an impedance spike.', fix: 'Interpolate from the surrounding electrodes, or drop the channel entirely.' },
+	{ name: 'Power-line hum', kind: 'Environment', cause: 'Mains electricity at 50 Hz (Europe and much of the world) or 60 Hz (North America) couples into every lead.',
+		tell: 'A sharp spectral spike at 50/60 Hz and its harmonics.', fix: 'A narrow notch filter, applied early.' },
 ];
 ---
 
-<figure class="artifact-figure" role="group" aria-labelledby="artifact-title">
-	<figcaption id="artifact-title" class="artifact-title">
-		What can contaminate an EEG recording
-	</figcaption>
+<figure class="fig fig--paper art-fig">
+	<p class="fig-kicker">Figure · contamination</p>
+	<h3 class="fig-title">Six ways a recording picks up something that isn't brain</h3>
 
-	<div class="artifact-list">
+	<div class="art-list">
 		{artifacts.map((a, i) => (
-			<details class="artifact-item" open={i === 0}>
+			<details class="art" open={i === 0}>
 				<summary>
-					<span class="artifact-icon" aria-hidden="true">{a.icon}</span>
-					<span class="artifact-name">{a.name}</span>
-					<span class="artifact-toggle" aria-hidden="true">+</span>
+					<span class="art-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+					<span class="art-name">{a.name}</span>
+					<span class="art-kind">{a.kind}</span>
+					<span class="art-caret" aria-hidden="true"></span>
 				</summary>
-				<div class="artifact-body">
-					<p><strong>Cause:</strong> {a.cause}</p>
-					<p><strong>Detection:</strong> {a.detection}</p>
+				<div class="art-body">
+					<dl>
+						<dt>Cause</dt><dd>{a.cause}</dd>
+						<dt>How you spot it</dt><dd>{a.tell}</dd>
+						<dt>What people do</dt><dd>{a.fix}</dd>
+					</dl>
 				</div>
 			</details>
 		))}
 	</div>
 
-	<p class="artifact-caption">
-		<em>Figure 5:</em> Common EEG artifacts. None of these are "brain waves" — but the computer sees them all as voltage changes.
+	<p class="fig-note">
+		The amplifier can't tell a blink from a thought — both are voltage. Every one of these has to be
+		<em>found and dealt with</em> before the data is honest enough to model.
 	</p>
 </figure>
 
 <style>
-	.artifact-figure {
-		margin: 2rem 0 2.5rem;
-		padding: 1.4rem;
-		background: #eeedf9;
-		border: 1px solid #dcd6ee;
-		border-inline-start: 4px solid var(--accent-dim);
-		border-radius: 0 14px 14px 0;
-	}
+	.art-list{display:flex;flex-direction:column;gap:.55rem}
+	.art{background:#fff;border:1px solid #e2ddf0;border-radius:12px;overflow:hidden;transition:box-shadow .18s,border-color .18s}
+	.art[open]{box-shadow:0 4px 0 #ece7f6;border-color:#d3c8ea}
+	.art summary{display:flex;align-items:center;gap:.75rem;padding:.7rem .95rem;cursor:pointer;list-style:none;
+		min-height:48px;font-weight:650;font-size:.92rem}
+	.art summary::-webkit-details-marker{display:none}
+	.art summary:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:12px}
+	.art-num{flex-shrink:0;width:29px;height:29px;display:grid;place-items:center;background:#eeebf8;color:#614293;
+		border-radius:8px;font-size:.68rem;font-weight:750;font-variant-numeric:tabular-nums;transition:background .18s,color .18s}
+	.art[open] .art-num{background:var(--accent-dim);color:#fff;box-shadow:2px 2px 0 #c6b6e5}
+	.art-name{flex:1;min-width:0}
+	.art-kind{font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);
+		background:#edf0fb;padding:.18rem .5rem;border-radius:5px}
+	.art-caret{flex-shrink:0;width:9px;height:9px;border-inline-end:2px solid var(--accent-dim);
+		border-bottom:2px solid var(--accent-dim);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+	.art[open] .art-caret{transform:rotate(225deg) translate(-2px,-2px)}
 
-	.artifact-title {
-		font-size: 0.7rem;
-		font-weight: 650;
-		color: #634a98;
-		margin-bottom: 0.85rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
+	.art-body{padding:.15rem 1rem .9rem 1rem;border-top:1px solid #efebf7}
+	.art-body dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.45rem .9rem;font-size:.84rem;line-height:1.75}
+	.art-body dt{font-weight:700;color:var(--accent-dim);white-space:nowrap}
+	.art-body dd{margin:0;color:var(--text)}
 
-	.artifact-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.artifact-item {
-		background: #fff;
-		border: 1px solid #d0c8e8;
-		border-radius: 8px;
-		overflow: hidden;
-	}
-
-	.artifact-item summary {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		padding: 0.7rem 1rem;
-		cursor: pointer;
-		min-height: 44px;
-		font-weight: 600;
-		font-size: 0.88rem;
-		list-style: none;
-		transition: background 0.12s;
-	}
-	.artifact-item summary::-webkit-details-marker { display: none; }
-	.artifact-item summary:hover { background: #f4f2fc; }
-	.artifact-item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-	.artifact-icon {
-		font-size: 1.2rem;
-		flex-shrink: 0;
-	}
-
-	.artifact-name {
-		flex: 1;
-	}
-
-	.artifact-toggle {
-		font-size: 1.2rem;
-		font-weight: 400;
-		color: var(--accent-dim);
-		transition: transform 0.2s;
-		flex-shrink: 0;
-	}
-	.artifact-item[open] .artifact-toggle {
-		transform: rotate(45deg);
-	}
-
-	.artifact-body {
-		padding: 0 1rem 0.8rem;
-		border-top: 1px solid #e8e4f2;
-	}
-	.artifact-body p {
-		margin: 0.6rem 0 0;
-		font-size: 0.85rem;
-		line-height: 1.7;
-		color: var(--text);
-	}
-	.artifact-body strong {
-		color: var(--accent-dim);
-	}
-
-	.artifact-caption {
-		font-size: 0.95rem;
-		line-height: 1.5;
-		font-weight: 700;
-		color: var(--text);
-		text-wrap: balance;
-		margin: 1rem 0 0;
-	}
+	@media(prefers-reduced-motion:reduce){.art,.art-caret,.art-num{transition:none}}
+	@media(max-width:560px){.art-body dl{grid-template-columns:1fr;gap:.15rem}.art-body dd{margin-bottom:.4rem}.art-kind{display:none}}
 </style>

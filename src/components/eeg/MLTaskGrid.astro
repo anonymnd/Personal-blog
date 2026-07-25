@@ -1,0 +1,57 @@
+---
+interface Task { id: string; name: string; kind: string; q: string; out: string; color: string }
+
+const tasks: Task[] = [
+	{ id: 'cls', name: 'Classification', kind: 'discrete label', q: 'Task A or task B?', out: 'one of N categories', color: '#354bc4' },
+	{ id: 'det', name: 'Detection',      kind: 'segment flag',  q: 'Is drowsiness present here?', out: 'yes / no per window', color: '#4a53c9' },
+	{ id: 'reg', name: 'Regression',     kind: 'continuous',    q: 'How drowsy, exactly?', out: 'a number on a scale', color: '#7041bd' },
+	{ id: 'prj', name: 'Prediction',     kind: 'forward in time', q: 'What happens next?', out: 'a future value', color: '#8b3fbe' },
+];
+
+// tiny illustrative marks
+const marks: Record<string, string> = {
+	cls: 'M4 30 L4 18 M4 18 L20 18 M20 18 L20 8 M20 8 L36 8 M4 30 L20 30 M20 30 L36 30',
+	det: 'M4 22 L14 22 L18 10 L24 32 L30 22 L36 22',
+	reg: 'M4 30 L36 8 M4 30 L36 30',
+	prj: 'M4 26 L14 18 L24 24 L34 10 M34 10 L34 16 M34 10 L28 10',
+};
+---
+
+<figure class="fig fig--paper ml-fig">
+	<p class="fig-kicker">Figure · four questions</p>
+	<h3 class="fig-title">Same signal, four different things you can ask of it</h3>
+
+	<ul class="ml-grid" role="list">
+		{tasks.map((t) => (
+			<li class="task">
+				<svg class="task-mark" viewBox="0 0 40 40" aria-hidden="true">
+					<path d={marks[t.id]} fill="none" stroke={t.color} stroke-width="2.2"
+						stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+				<span class="task-name" style={`color:${t.color}`}>{t.name}</span>
+				<span class="task-q">“{t.q}”</span>
+				<span class="task-out"><b>{t.kind}</b> → {t.out}</span>
+			</li>
+		))}
+	</ul>
+
+	<p class="fig-note">
+		Driver fatigue — the question that started this article — can be framed as <em>detection</em> or
+		<em>regression</em>. But every one of them inherits the same preprocessing choices above.
+	</p>
+</figure>
+
+<style>
+	.ml-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem}
+	.task{display:flex;flex-direction:column;gap:.4rem;padding:.9rem .8rem .85rem;background:#fff;border:1px solid #e2ddf0;
+		border-bottom:4px solid #cfc5e6;border-radius:12px 12px 22px 12px;transition:transform .18s,box-shadow .18s}
+	.task:hover{transform:translateY(-3px);box-shadow:0 7px 0 #e6e1f3}
+	.task-mark{width:34px;height:34px}
+	.task-name{font-size:.85rem;font-weight:750;letter-spacing:-.01em;line-height:1.3}
+	.task-q{font-size:.78rem;line-height:1.6;color:var(--text);font-style:italic}
+	.task-out{font-size:.7rem;line-height:1.6;color:var(--text-muted);margin-top:auto;padding-top:.4rem;border-top:1px dashed #ddd6ec}
+	.task-out b{color:var(--accent-dim);font-weight:700}
+
+	@media(max-width:760px){.ml-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+	@media(prefers-reduced-motion:reduce){.task{transition:none}.task:hover{transform:none;box-shadow:none}}
+</style>

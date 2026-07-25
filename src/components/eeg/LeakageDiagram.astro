@@ -1,174 +1,96 @@
 ---
-// Deterministic "particles" representing data segments flowing to train/test
-const subjects = [
-	{ id: 1, color: '#6366f1' },
-	{ id: 2, color: '#8b5cf6' },
-	{ id: 3, color: '#a78bfa' },
-	{ id: 4, color: '#c084fc' },
-	{ id: 5, color: '#e879f9' },
-];
+import SourceLink from '../common/SourceLink.astro';
+
+const subjects = [1, 2, 3, 4, 5];
+
+// rows: which subjects feed train vs test
+const leaky   = subjects.map(() => [0, 1, 0, 1, 0, 1]);        // every subject split
+const valid   = subjects.map((_, i) => i < 3 ? [1,1,1,1,1,1] : [0,0,0,0,0,0]);
+const tile = (state: boolean) => (state ? 'on' : 'off');
 ---
 
-<figure class="leakage-figure" role="group" aria-labelledby="leakage-title">
-	<figcaption id="leakage-title" class="leakage-title">
-		Why the train/test split matters
-	</figcaption>
+<figure class="fig fig--paper leak-fig">
+	<p class="fig-kicker">Figure · leakage</p>
+	<h3 class="fig-title">Two ways to split the same data — only one survives contact with reality</h3>
 
-	<div class="leakage-demo">
-		<div class="split-panel split-leaky">
-			<h4 class="panel-title">Random split <span class="panel-badge badge-bad">Leaky</span></h4>
-			<div class="panel-subjects">
-				{subjects.map((s) => (
-					<div class="subj" style={`--c: ${s.color}`}>
-						<span class="subj-label">S{s.id}</span>
-						<div class="subj-dots">
-							{Array.from({ length: 6 }, (_, i) => (
-								<span class={`dot ${i % 2 === 0 ? 'dot-train' : 'dot-test'}`} />
-							))}
-						</div>
-					</div>
-				))}
-			</div>
-			<p class="panel-result result-bad">
-				⚠ Test data contains segments from <strong>every subject</strong> also seen in training. The model can "recognize" the person, not the state.
-			</p>
-			<p class="panel-acc">Reported accuracy: <strong class="acc-bad">96%</strong> <span class="acc-note">— inflated</span></p>
-		</div>
-
-		<div class="split-panel split-valid">
-			<h4 class="panel-title">Subject-wise split <span class="panel-badge badge-good">Valid</span></h4>
-			<div class="panel-subjects">
+	<div class="leak">
+		<section class="panel is-bad" aria-labelledby="p-bad">
+			<header>
+				<h4 id="p-bad">Random split</h4>
+				<span class="chip chip-bad">leaky</span>
+			</header>
+			<div class="rows">
 				{subjects.map((s, i) => (
-					<div class="subj" style={`--c: ${s.color}`}>
-						<span class="subj-label">S{s.id}</span>
-						<div class="subj-dots">
-							{Array.from({ length: 6 }, (_, j) => (
-								<span class={`dot ${i < 3 ? 'dot-train' : 'dot-test'}`} />
-							))}
-						</div>
+					<div class="row">
+						<span class="subj">S{s}</span>
+						<span class="tiles">
+							{leaky[i].map((v) => <i class={`tile ${tile(!!v)}`}></i>)}
+						</span>
 					</div>
 				))}
 			</div>
-			<p class="panel-result result-good">
-				✓ Subjects 1–3 for training, 4–5 for testing. The model has never seen subjects 4 or 5.
-			</p>
-			<p class="panel-acc">Realistic accuracy: <strong class="acc-good">71%</strong> <span class="acc-note">— honest</span></p>
-		</div>
+			<p class="verdict bad">Every subject appears in <b>both</b> sets. The model can win by recognising <b>who</b>, not <b>what state</b>.</p>
+			<p class="takeaway bad">The score looks excellent — and it is measuring familiarity, not the condition.</p>
+		</section>
+
+		<section class="panel is-good" aria-labelledby="p-good">
+			<header>
+				<h4 id="p-good">Leave-subjects-out</h4>
+				<span class="chip chip-good">honest</span>
+			</header>
+			<div class="rows">
+				{subjects.map((s, i) => (
+					<div class="row">
+						<span class="subj">S{s}</span>
+						<span class="tiles">
+							{valid[i].map((v) => <i class={`tile ${tile(!!v)}`}></i>)}
+						</span>
+					</div>
+				))}
+			</div>
+			<p class="verdict good">Subjects 1–3 train, 4–5 test. The model has <b>never seen</b> a test brain before.</p>
+			<p class="takeaway good">The score is lower — and it is the only one that would survive contact with a new person.</p>
+		</section>
 	</div>
 
-	<p class="leakage-caption">
-		<em>Figure 6:</em> EEG carries individual "fingerprints." A random split lets the model cheat by recognizing <em>who</em> instead of <em>what state</em>.
+	<p class="fig-note">
+		Each row is one participant, each tile one epoch. Segments from one person really are more alike
+		than segments from different people, so a random split quietly hands the model that signature for
+		free — and the score stops meaning what we think it means.
+		<SourceLink authors="Brookshire et al." year="2024"
+			title="Data leakage in deep learning studies of translational EEG"
+			href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" />
 	</p>
 </figure>
 
 <style>
-	.leakage-figure {
-		margin: 2rem 0 2.5rem;
-		padding: 1.4rem;
-		background: #eeedf9;
-		border: 1px solid #dcd6ee;
-		border-inline-start: 4px solid var(--accent-dim);
-		border-radius: 0 14px 14px 0;
-	}
+	.leak{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 
-	.leakage-title {
-		font-size: 0.7rem;
-		font-weight: 650;
-		color: #634a98;
-		margin-bottom: 0.85rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
+	.panel{background:#fff;border:1px solid #e2ddf0;border-radius:14px;padding:1rem 1.05rem 1.05rem;
+		display:flex;flex-direction:column}
+	.panel.is-bad{border-top:4px solid #c26a12}
+	.panel.is-good{border-top:4px solid var(--accent)}
+	.panel header{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.85rem}
+	.panel h4{margin:0;font-size:.95rem;font-weight:750;letter-spacing:-.01em}
+	.chip{font-size:.62rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;padding:.22rem .55rem;border-radius:6px}
+	.chip-bad{background:#fbeee0;color:#a5560d}
+	.chip-good{background:#edf0fb;color:var(--accent)}
 
-	.leakage-demo {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
+	.rows{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.85rem}
+	.row{display:flex;align-items:center;gap:.6rem}
+	.subj{font-size:.68rem;font-family:var(--font-mono);color:var(--text-muted);min-width:1.7rem;font-weight:650}
+	.tiles{display:flex;gap:4px}
+	.tile{width:15px;height:15px;border-radius:4px;display:block}
+	.tile.on{background:var(--accent);box-shadow:1.5px 1.5px 0 #c6b6e5}
+	.is-bad .tile.on{background:#c26a12;box-shadow:1.5px 1.5px 0 #e7cba6}
+	.tile.off{background:#fff;border:1.5px dashed #b6abd4}
 
-	.split-panel {
-		background: #fff;
-		border: 1px solid #d0c8e8;
-		border-radius: 8px;
-		padding: 1rem;
-	}
+	.verdict{font-size:.8rem;line-height:1.7;margin:0 0 .6rem}
+	.verdict b{font-weight:750}
+	.verdict.bad{color:#8a4a10}.verdict.good{color:var(--text)}
+	.takeaway{margin:0;font-size:.78rem;line-height:1.7;font-weight:650;padding-top:.6rem;border-top:1px dashed #ddd6ec}
+	.takeaway.bad{color:#a5560d}
+	.takeaway.good{color:var(--accent-dim)}
 
-	.panel-title {
-		font-size: 0.9rem;
-		margin: 0 0 0.7rem;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.panel-badge {
-		font-size: 0.62rem;
-		padding: 0.15rem 0.5rem;
-		border-radius: 10px;
-		font-weight: 650;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-	.badge-bad { background: #fee2e2; color: #b91c1c; }
-	.badge-good { background: #dcfce7; color: #15803d; }
-
-	.panel-subjects {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		margin-bottom: 0.7rem;
-	}
-
-	.subj {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	.subj-label {
-		font-size: 0.68rem;
-		font-family: var(--font-mono);
-		color: var(--text-muted);
-		min-width: 1.6rem;
-	}
-	.subj-dots {
-		display: flex;
-		gap: 3px;
-	}
-	.dot {
-		width: 14px;
-		height: 14px;
-		border-radius: 3px;
-	}
-	.dot-train { background: var(--c, #6366f1); }
-	.dot-test { background: #d1d5db; border: 1px solid #9ca3af; }
-
-	.panel-result {
-		font-size: 0.78rem;
-		line-height: 1.6;
-		margin: 0 0 0.5rem;
-	}
-	.result-bad { color: #991b1b; }
-	.result-good { color: #166534; }
-
-	.panel-acc {
-		font-size: 0.82rem;
-		margin: 0;
-		color: var(--text);
-	}
-	.acc-bad { color: #dc2626; }
-	.acc-good { color: #16a34a; }
-	.acc-note { font-size: 0.72rem; color: var(--text-muted); }
-
-	.leakage-caption {
-		font-size: 0.95rem;
-		line-height: 1.5;
-		font-weight: 700;
-		color: var(--text);
-		text-wrap: balance;
-		margin: 1rem 0 0;
-	}
-
-	@media (max-width: 600px) {
-		.leakage-demo { grid-template-columns: 1fr; }
-	}
+	@media(max-width:620px){.leak{grid-template-columns:1fr}}
 </style>

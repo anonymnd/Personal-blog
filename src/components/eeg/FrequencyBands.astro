@@ -1,178 +1,109 @@
 ---
 interface Band {
-	name: string;
-	range: string;
-	color: string;
-	desc: string;
+	name: string; range: string; hz: number; color: string; assoc: string; desc: string;
 }
 
+// Ranges are conventions, not natural joints in the spectrum — different studies
+// draw the edges slightly differently (see Newson & Thiagarajan, 2019).
+// `assoc` is deliberately phrased as an association, never as a definition.
 const bands: Band[] = [
-	{ name: 'Delta', range: '0.5–4 Hz', color: '#6366f1', desc: 'Dominant during deep, dreamless sleep. In adults, strong delta while awake can indicate brain dysfunction.' },
-	{ name: 'Theta', range: '4–8 Hz', color: '#8b5cf6', desc: 'Seen in drowsiness, light sleep, and sometimes during deep meditation. Also appears in memory tasks.' },
-	{ name: 'Alpha', range: '8–13 Hz', color: '#a78bfa', desc: 'Strongest when relaxed with eyes closed, especially at posterior (occipital) sites. Suppresses when eyes open.' },
-	{ name: 'Beta', range: '13–30 Hz', color: '#c084fc', desc: 'Associated with active thinking, focus, and motor planning. High beta can accompany anxiety or muscle tension.' },
-	{ name: 'Gamma', range: '30–100+ Hz', color: '#e879f9', desc: 'The fastest band; linked to binding features into perception and high-level cognitive processing.' },
+	{ name: 'Delta', range: '0.5–4 Hz',  hz: 1.5, color: '#354bc4', assoc: 'Slow-wave sleep', desc: 'The slow, high-amplitude rhythm that dominates deep sleep. A lot of it in an awake recording usually means look closer, not relax.' },
+	{ name: 'Theta', range: '4–8 Hz',    hz: 3,   color: '#4a53c9', assoc: 'Drowsiness',     desc: 'Comes up as someone drifts off, and in light sleep. It also shows up in memory tasks and in meditation research, so context decides what it means.' },
+	{ name: 'Alpha', range: '8–13 Hz',   hz: 5,   color: '#7041bd', assoc: 'Eyes closed',    desc: 'The classic resting rhythm, strongest at the back of the head when the eyes are closed. Opening the eyes suppresses it almost immediately.' },
+	{ name: 'Beta',  range: '13–30 Hz',  hz: 11,  color: '#8b3fbe', assoc: 'Active thinking', desc: 'Fast and low-amplitude during movement and active thinking. Muscle activity reaches into this band as well, so it is not a clean window onto the brain.' },
+	{ name: 'Gamma', range: '30–100 Hz', hz: 24,  color: '#a83a9a', assoc: 'High-level processing', desc: 'The fastest band, often proposed as a way of linking features into a single percept. It is also the easiest to contaminate with muscle activity, so it deserves suspicion.' },
 ];
+
+// Build a fixed-width polyline for one band (240 wide, amplitude scaled by band)
+function wave(hz: number, amp: number, w = 240, h = 44, cyclesScale = 1): string {
+	const pts: string[] = [];
+	for (let x = 0; x <= w; x += 2) {
+		const y = h / 2 - Math.sin((x / w) * hz * cyclesScale * Math.PI * 2) * amp
+			- Math.sin((x / w) * hz * 3.7) * (amp * 0.16);
+		pts.push(`${x},${y.toFixed(1)}`);
+	}
+	return pts.join(' ');
+}
 ---
 
-<figure class="freq-bands-figure" role="group" aria-labelledby="freq-bands-title">
-	<figcaption id="freq-bands-title" class="freq-bands-title">
-		EEG frequency bands
-	</figcaption>
+<figure class="fig fig--paper bands-fig">
+	<p class="fig-kicker">Figure · the spectrum</p>
+	<h3 class="fig-title">Five frequency bands, five different conversations</h3>
 
-	<div class="spectrum" role="img" aria-label="Spectrum bar from delta (0.5 Hz) to gamma (100+ Hz)">
-		{bands.map((band, i) => (
-			<div
-				class="band-segment"
-				style={`--band-color: ${band.color}; --band-pos: ${i / bands.length};`}
-				data-band={band.name}
-				tabindex="0"
-				role="button"
-				aria-label={`${band.name}: ${band.range}`}
-			>
-				<span class="band-name">{band.name}</span>
-				<span class="band-range">{band.range}</span>
-			</div>
+	<ul class="band-grid" role="list">
+		{bands.map((b, i) => (
+			<li class={`band${i === 0 ? ' is-on' : ''}`} data-band={b.name}
+				tabindex="0" role="button" aria-pressed={i === 0 ? 'true' : 'false'}
+				aria-label={`${b.name}, ${b.range}, often seen with ${b.assoc}`}>
+				<div class="band-top">
+					<span class="band-name">{b.name}</span>
+					<span class="band-range">{b.range}</span>
+				</div>
+				<svg class="band-wave" viewBox="0 0 240 44" preserveAspectRatio="none" aria-hidden="true">
+					<polyline points={wave(b.hz, 15 - i * 1.4)} fill="none" stroke={b.color} stroke-width="2" stroke-linecap="round" />
+				</svg>
+				<span class="band-assoc-lab" aria-hidden="true">often seen with</span>
+				<span class="band-assoc">{b.assoc}</span>
+			</li>
+		))}
+	</ul>
+
+	<div class="band-read" aria-live="polite">
+		{bands.map((b, i) => (
+			<p class="band-line" data-band={b.name} hidden={i !== 0}>
+				<strong style={`color:${b.color}`}>{b.name}</strong> — {b.desc}
+			</p>
 		))}
 	</div>
 
-	<div class="band-details" aria-live="polite">
-		{bands.map((band, i) => (
-			<div class="band-detail" data-band={band.name} hidden={i !== 0}>
-				<h4 style={`color: ${band.color}`}>{band.name} <span class="detail-range">{band.range}</span></h4>
-				<p>{band.desc}</p>
-			</div>
-		))}
-	</div>
-
-	<p class="freq-bands-caption">
-		<em>Figure 2:</em> The five canonical EEG frequency bands. Hover or tap a band to read what it typically indicates — remembering that interpretation always depends on context (region, task, individual).
+	<p class="fig-note">
+		A real recording mixes all five at once. Isolating one is a <em>filtering</em> decision — and the
+		edges are conventions, not joints in the spectrum, so the exact ranges shift from paper to paper.
+		Everything above is an <em>association</em>, not a definition: the same band can mean different
+		things depending on where it sits and what the person was doing.
 	</p>
 </figure>
 
 <style>
-	.freq-bands-figure {
-		margin: 2rem 0 2.5rem;
-		padding: 1.4rem;
-		background: #eeedf9;
-		border: 1px solid #dcd6ee;
-		border-inline-start: 4px solid var(--accent-dim);
-		border-radius: 0 14px 14px 0;
-	}
+	.band-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.7rem}
+	.band{display:flex;flex-direction:column;gap:.5rem;padding:.85rem .7rem .75rem;background:#fff;border:1px solid #e2ddf0;
+		border-bottom:4px solid #cfc5e6;border-radius:12px 12px 20px 12px;cursor:pointer;min-height:44px;
+		transition:transform .18s,box-shadow .18s,background .18s}
+	.band:hover{transform:translateY(-3px);box-shadow:0 7px 0 #e6e1f3}
+	.band:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+	.band.is-on{background:#fff;border-bottom-color:var(--accent-dim);box-shadow:0 6px 0 #d9cfef;transform:translateY(-2px)}
+	.band-top{display:flex;flex-direction:column;gap:.1rem}
+	.band-name{font-size:.82rem;font-weight:750;letter-spacing:-.01em;color:var(--text)}
+	.band-range{font-size:.66rem;font-family:var(--font-mono);color:var(--text-muted)}
+	.band-wave{width:100%;height:36px;opacity:.9}
+	.band-assoc-lab{font-size:.55rem;font-weight:650;letter-spacing:.09em;text-transform:uppercase;color:#9a93b5}
+	.band-assoc{font-size:.66rem;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-dim)}
 
-	.freq-bands-title {
-		font-size: 0.7rem;
-		font-weight: 650;
-		color: #634a98;
-		margin-bottom: 0.85rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
+	.band-read{margin-top:1rem;min-height:3.4rem}
+	.band-line{margin:0;font-size:.9rem;line-height:1.8;color:var(--text)}
+	.band-line strong{font-weight:750}
 
-	.spectrum {
-		display: flex;
-		height: 64px;
-		border-radius: 8px;
-		overflow: hidden;
-		border: 1px solid #d0c8e8;
-	}
-
-	.band-segment {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.15rem;
-		background: color-mix(in srgb, var(--band-color) 22%, #fff);
-		border-inline-end: 1px solid #d0c8e8;
-		cursor: pointer;
-		transition: background 0.15s, transform 0.15s;
-		outline: none;
-		min-width: 0;
-		padding: 0.3rem;
-	}
-	.band-segment:last-child { border-inline-end: none; }
-
-	.band-segment:hover,
-	.band-segment:focus-visible,
-	.band-segment[aria-pressed="true"] {
-		background: color-mix(in srgb, var(--band-color) 45%, #fff);
-		z-index: 1;
-	}
-
-	.band-segment:focus-visible {
-		box-shadow: inset 0 0 0 2px var(--accent);
-	}
-
-	.band-name {
-		font-size: 0.78rem;
-		font-weight: 700;
-		color: var(--text);
-	}
-
-	.band-range {
-		font-size: 0.65rem;
-		color: var(--text-muted);
-		font-family: var(--font-mono);
-	}
-
-	.band-details {
-		margin-top: 1rem;
-		min-height: 4.5rem;
-	}
-
-	.band-detail h4 {
-		font-size: 0.95rem;
-		margin: 0 0 0.4rem;
-	}
-	.detail-range {
-		font-size: 0.78rem;
-		font-weight: 400;
-		color: var(--text-muted);
-		font-family: var(--font-mono);
-	}
-	.band-detail p {
-		font-size: 0.88rem;
-		line-height: 1.75;
-		margin: 0;
-		color: var(--text);
-	}
-
-	.freq-bands-caption {
-		font-size: 0.95rem;
-		line-height: 1.5;
-		font-weight: 700;
-		color: var(--text);
-		text-wrap: balance;
-		margin: 1rem 0 0;
-	}
-
-	@media (max-width: 560px) {
-		.band-name { font-size: 0.68rem; }
-		.band-range { font-size: 0.58rem; }
-		.spectrum { height: 56px; }
-	}
+	@media(max-width:700px){.band-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.band:last-child{grid-column:1/-1}}
+	@media(prefers-reduced-motion:reduce){.band{transition:none}.band:hover{transform:none;box-shadow:none}}
 </style>
 
 <script>
-	const segments = document.querySelectorAll<HTMLElement>('.band-segment');
-	const details = document.querySelectorAll<HTMLElement>('.band-detail');
-
-	const activate = (bandName: string) => {
-		segments.forEach((s) => s.setAttribute('aria-pressed', String(s.dataset.band === bandName)));
-		details.forEach((d) => { d.hidden = d.dataset.band !== bandName; });
+	const items = document.querySelectorAll<HTMLElement>('.band');
+	const lines = document.querySelectorAll<HTMLElement>('.band-line');
+	const pick = (name: string) => {
+		items.forEach((el) => {
+			const on = el.dataset.band === name;
+			el.classList.toggle('is-on', on);
+			el.setAttribute('aria-pressed', String(on));
+		});
+		lines.forEach((l) => { l.hidden = l.dataset.band !== name; });
 	};
-
-	segments.forEach((seg) => {
-		seg.addEventListener('mouseenter', () => activate(seg.dataset.band ?? ''));
-		seg.addEventListener('focus', () => activate(seg.dataset.band ?? ''));
-		seg.addEventListener('click', () => activate(seg.dataset.band ?? ''));
-		seg.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				activate(seg.dataset.band ?? '');
-			}
+	items.forEach((el) => {
+		el.addEventListener('click', () => pick(el.dataset.band ?? ''));
+		el.addEventListener('mouseenter', () => pick(el.dataset.band ?? ''));
+		el.addEventListener('focus', () => pick(el.dataset.band ?? ''));
+		el.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(el.dataset.band ?? ''); }
 		});
 	});
 </script>

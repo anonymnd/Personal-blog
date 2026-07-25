@@ -1,189 +1,77 @@
 ---
-interface Step {
-	id: string;
-	label: string;
-	desc: string;
-	section?: string; // optional anchor link
-}
+interface Step { id: string; label: string; desc: string; section?: string }
 
 const steps: Step[] = [
-	{ id: 'raw', label: 'Raw EEG', desc: 'Continuous voltage recordings from all electrodes.', section: 'from-a-person-to-a-matrix-of-numbers' },
-	{ id: 'filter', label: 'Filtering', desc: 'Remove drifts, line noise, and out-of-band frequencies.', section: 'what-is-filtering-doing' },
-	{ id: 'artifact', label: 'Artifact handling', desc: 'Detect and remove blinks, muscle activity, and movement.', section: 'and-there-is-a-lot-of-noise' },
-	{ id: 'channels', label: 'Channel selection', desc: 'Keep relevant electrodes; interpolate or drop bad ones.', section: 'channels-also-have-spatial-meaning' },
-	{ id: 'epoch', label: 'Time windows', desc: 'Cut the continuous signal into epochs around events.', section: 'events-give-the-signal-context' },
-	{ id: 'features', label: 'Features', desc: 'Extract spectral, temporal, or spatial features.', section: 'raw-data-is-not-ready-for-machine-learning' },
-	{ id: 'model', label: 'Model', desc: 'Train a classifier or regressor on prepared data.', section: 'where-machine-learning-enters' },
+	{ id: 'raw',      label: 'Raw EEG',         desc: 'Continuous voltage from every electrode.',        section: 'from-a-person-to-a-matrix-of-numbers' },
+	{ id: 'filter',   label: 'Filtering',        desc: 'Strip drift, line hum, and out-of-band noise.',   section: 'what-is-filtering-doing' },
+	{ id: 'artifact', label: 'Artifacts',        desc: 'Find and remove blinks, muscle, movement.',       section: 'and-there-is-a-lot-of-noise' },
+	{ id: 'refer',    label: 'Re-referencing',   desc: 'Choose the common signal everything is measured against.', section: 'first-what-is-eeg-measuring' },
+	{ id: 'epoch',    label: 'Epochs',           desc: 'Cut windows locked to each event.',               section: 'events-give-the-signal-context' },
+	{ id: 'feature',  label: 'Features',         desc: 'Reduce to spectral, temporal, or spatial summaries.', section: 'raw-data-is-not-ready-for-machine-learning' },
+	{ id: 'model',    label: 'Model',            desc: 'Finally: learn a mapping from prepared data.',    section: 'where-machine-learning-enters' },
 ];
 ---
 
-<nav class="pipeline-stepper" aria-label="Preprocessing pipeline overview">
-	<p class="pipeline-title">The preprocessing pipeline at a glance</p>
-	<ol class="stepper-list">
-		{steps.map((step, i) => (
-			<li class="step" data-step={step.id}>
-				{step.section ? (
-					<a href={`#${step.section}`} class="step-link">
-						<span class="step-num" aria-hidden="true">{i + 1}</span>
-						<span class="step-body">
-							<strong class="step-label">{step.label}</strong>
-							<span class="step-desc">{step.desc}</span>
-						</span>
-					</a>
-				) : (
-					<div class="step-link step-link--static">
-						<span class="step-num" aria-hidden="true">{i + 1}</span>
-						<span class="step-body">
-							<strong class="step-label">{step.label}</strong>
-							<span class="step-desc">{step.desc}</span>
-						</span>
-					</div>
-				)}
+<nav class="fig fig--paper pipe" aria-label="Preprocessing pipeline">
+	<p class="fig-kicker">Overview · the pipeline</p>
+	<h3 class="fig-title">Seven steps sit between the scalp and the model</h3>
+
+	<ol class="steps">
+		{steps.map((s, i) => (
+			<li class="step" data-step={s.id}>
+				<a class="step-a" href={`#${s.section}`}>
+					<span class="step-n" aria-hidden="true">{i + 1}</span>
+					<span class="step-txt">
+						<strong>{s.label}</strong>
+						<span class="step-d">{s.desc}</span>
+					</span>
+				</a>
 			</li>
 		))}
 	</ol>
-	<p class="pipeline-note">The model sits at the end — most of the work happens before it.</p>
+
+	<p class="fig-note">
+		The model is <em>last</em>. Most of the scientific judgement — and most of the room to get it wrong —
+		happens in the six steps before it ever runs.
+	</p>
 </nav>
 
 <style>
-	.pipeline-stepper {
-		margin: 2rem 0 2.5rem;
-		padding: 1.4rem;
-		background: #eeedf9;
-		border: 1px solid #dcd6ee;
-		border-inline-start: 4px solid var(--accent-dim);
-		border-radius: 0 14px 14px 0;
-	}
+	.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
 
-	.pipeline-title {
-		font-size: 0.7rem;
-		font-weight: 650;
-		color: #634a98;
-		margin-bottom: 0.85rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
+	.step{position:relative}
+	.step-a{display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .85rem;background:#fff;border:1px solid #e2ddf0;
+		border-radius:12px;text-decoration:none;color:var(--text);min-height:48px;transition:transform .18s,box-shadow .18s,border-color .18s}
+	.step-a:hover{transform:translateY(-2px);box-shadow:0 4px 0 #e6e1f3;border-color:#cfc5e6}
+	.step-a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-	.stepper-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
+	.step-n{flex-shrink:0;width:34px;height:34px;display:grid;place-items:center;background:var(--accent);color:#fff;
+		border-radius:10px;font-size:.95rem;font-weight:800;letter-spacing:-.02em;box-shadow:3px 3px 0 #c6b6e5}
+	.step-txt{display:flex;flex-direction:column;gap:.12rem;min-width:0}
+	.step-txt strong{font-size:.88rem;font-weight:700;line-height:1.4}
+	.step-d{font-size:.76rem;line-height:1.6;color:var(--text-muted)}
 
-	.step {
-		position: relative;
-	}
-	.step:not(:last-child)::after {
-		content: '';
-		position: absolute;
-		inset-inline-start: 17px;
-		bottom: -0.5rem;
-		width: 2px;
-		height: 0.5rem;
-		background: #c5bee0;
-	}
-
-	.step-link {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.75rem;
-		padding: 0.6rem 0.75rem;
-		border-radius: 8px;
-		text-decoration: none;
-		color: var(--text);
-		min-height: 44px;
-		transition: background 0.15s;
-	}
-	a.step-link:hover { background: #e1d9f2; }
-	.step-link:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-	.step-num {
-		flex-shrink: 0;
-		width: 34px;
-		height: 34px;
-		display: grid;
-		place-items: center;
-		background: #fff;
-		border: 2px solid #c5bee0;
-		border-radius: 50%;
-		font-size: 0.78rem;
-		font-weight: 700;
-		color: var(--accent-dim);
-	}
-
-	.step-body {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		min-width: 0;
-	}
-
-	.step-label {
-		font-size: 0.88rem;
-		font-weight: 650;
-	}
-
-	.step-desc {
-		font-size: 0.8rem;
-		line-height: 1.6;
-		color: var(--text-muted);
-	}
-
-	.pipeline-note {
-		margin: 1rem 0 0;
-		padding: 0.6rem 0.8rem;
-		border-inline-start: 3px solid var(--accent);
-		background: #e1e6fa;
-		color: #333c75;
-		font-size: 0.82rem;
-		line-height: 1.7;
-	}
-
-	@media (max-width: 560px) {
-		.step-num { width: 28px; height: 28px; font-size: 0.7rem; }
-	}
+	@media(prefers-reduced-motion:reduce){.step-a{transition:none}.step-a:hover{transform:none;box-shadow:none}}
+	@media(max-width:560px){.steps{grid-template-columns:1fr}}
 </style>
 
 <script>
-	// Scroll-spy: highlight step as user scrolls through related sections
 	const steps = document.querySelectorAll<HTMLElement>('.step');
 	if (steps.length && 'IntersectionObserver' in window) {
-		const observer = new IntersectionObserver(
-			(entries) => {
-				entries.forEach((entry) => {
-					if (entry.isIntersecting) {
-						steps.forEach((s) => s.classList.remove('step-active'));
-						const id = entry.target.getAttribute('id');
-						const matching = document.querySelector<HTMLElement>(`.step[data-step] .step-link[href="#${id}"]`);
-						if (matching) {
-							matching.closest('.step')?.classList.add('step-active');
-						}
-					}
-				});
-			},
-			{ rootMargin: '-20% 0px -60% 0px' }
-		);
-
-		document.querySelectorAll<HTMLElement>('section[id], h2[id]').forEach((el) => {
-			observer.observe(el);
+		const bySection = new Map<string, HTMLElement>();
+		steps.forEach((s) => {
+			const href = s.querySelector<HTMLAnchorElement>('a')?.getAttribute('href')?.slice(1);
+			if (href) bySection.set(href, s);
 		});
+		const io = new IntersectionObserver((entries) => {
+			entries.forEach((e) => {
+				if (!e.isIntersecting) return;
+				const s = bySection.get(e.target.id);
+				if (!s) return;
+				steps.forEach((x) => x.classList.remove('step-active'));
+				s.classList.add('step-active');
+			});
+		}, { rootMargin: '-15% 0px -70% 0px' });
+		document.querySelectorAll<HTMLElement>('h2[id],section[id]').forEach((el) => io.observe(el));
 	}
 </script>
-
-<style>
-	.step-active .step-num {
-		background: var(--accent-dim);
-		border-color: var(--accent-dim);
-		color: #fff;
-	}
-	.step-active .step-label {
-		color: var(--accent-dim);
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.step-link { transition: none; }
-	}
-</style>
