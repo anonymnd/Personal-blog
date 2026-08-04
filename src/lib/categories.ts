@@ -13,7 +13,7 @@ export type CategorySlug =
 	| 'devops'
 	| 'research';
 
-const categories: CategorySlug[] = [
+export const categories: CategorySlug[] = [
 	'engineering',
 	'java',
 	'spring',
