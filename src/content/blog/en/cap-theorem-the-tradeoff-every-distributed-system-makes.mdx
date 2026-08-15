@@ -1,0 +1,48 @@
+---
+title: "The CAP Theorem: The Tradeoff Every Distributed System Makes"
+description: "Why consistency and availability can't both survive a network partition, what CP and AP actually mean in practice, and why partition tolerance was never really the choice."
+pubDate: 2026-10-12T00:00:00.000Z
+translationKey: cap-theorem-the-tradeoff-every-distributed-system-makes
+locale: en
+interactive: true
+tags: ["system-design", "distributed-systems", "databases"]
+draft: false
+---
+
+import CapChoiceDiagram from '../../../components/common/CapChoiceDiagram.astro';
+
+Once a system has more than one copy of its data—two database replicas, three nodes in a cluster, any setup where a write has to reach more than one machine—a question comes up that a single server never has to answer: what happens when those machines can't talk to each other? The CAP theorem, formalized by Eric Brewer and later proven by Gilbert and Lynch, says a distributed data store can give you at most two of three properties: **Consistency**, **Availability**, and **Partition tolerance**. In practice, the choice is narrower and more useful than "pick two."
+
+## The three letters
+
+**Consistency** here means every read gets the most recent write, or an error—never stale data. This is a stronger guarantee than it sounds: it means if node A just accepted a write, node B has to reflect it too, instantly, or refuse to answer.
+
+**Availability** means every request gets a response, period—no timeouts, no refusals, even if that response can't be guaranteed to be the latest value.
+
+**Partition tolerance** means the system keeps working even when the network between nodes drops some messages or splits the cluster into groups that can't reach each other.
+
+## Why "pick two" is the wrong way to hear it
+
+A system with only one machine trivially has consistency and availability—there's nothing to partition. The moment you have more than one, partitions are not a design choice you opt into; they're a fact of networks, and they will happen (a switch fails, a cable gets cut, a region loses connectivity). So partition tolerance isn't really the third slider you choose between—any real distributed system has to tolerate partitions, because the alternative is pretending the network is perfectly reliable, which it never is.
+
+What's actually being chosen is what happens **during** a partition, when some nodes can't reach others:
+
+<CapChoiceDiagram />
+
+Outside of a partition—when the network is healthy—most systems give you both consistency and availability at once. CAP only forces a choice in the failure case, which is exactly why it's easy to design a system that behaves well in testing and then reveals its choice the first time a data center link actually drops.
+
+## CP and AP in the systems you've heard of
+
+A **CP** system (traditional relational clusters using a consensus protocol, HBase, most configurations of ZooKeeper and etcd) refuses to serve a read it can't guarantee is current. This is the right default when an answer being *wrong* is worse than an answer being *missing*—a bank balance, a lock, a leader election.
+
+An **AP** system (Cassandra, DynamoDB, most CDN edge caches) answers from whatever replica it can reach, and reconciles the data later once the partition heals (often using [consistent hashing](/Personal-blog/en/blog/217-what-is-consistent-hashing/) to decide which replicas hold which keys in the first place). This is the right default when an answer being *stale* is better than no answer at all—a product page, a social media feed, a view count.
+
+Neither is "more correct." A payments ledger choosing AP would let two replicas both think they have the last dollar in an account. A news feed choosing CP would go blank across the globe every time one data center has a bad network day.
+
+## One extra letter: PACELC
+
+CAP only describes behavior *during* a partition, but there's a second tradeoff that exists even when the network is perfectly healthy: **latency vs. consistency**. A system can make a write durable on every replica before confirming it (consistent, slower) or confirm as soon as one replica has it and sync the rest afterward (fast, briefly inconsistent). This is what **PACELC** adds to CAP: if Partitioned, choose A or C; **E**lse (normal operation), choose **L**atency or **C**onsistency. It's the reason a system described as "CP" still has a knob for how long a write waits before it's considered done—that knob is the ELC half of the tradeoff, and it's the one you tune far more often than the CAP half, because partitions are rare and every single write pays the latency-consistency cost.
+
+## What this changes about how you design
+
+The useful question when picking a datastore is never "is this CP or AP" in the abstract—it's "for this specific kind of data, is a wrong answer or a missing answer worse?" A system built from [microservices](/Personal-blog/en/blog/253-monolith-vs-microservices/) usually has both kinds of data living next to each other: an inventory count that must never oversell (lean CP) and a recommendation list that can be five minutes stale without anyone noticing (lean AP). Treating the whole system as one CAP choice is how a team ends up with a payments table that's eventually consistent, or a feed that goes down every time one node hiccups.

@@ -1,0 +1,62 @@
+---
+---
+
+<figure class="fig fig--paper cap-fig">
+	<p class="fig-kicker">Figure · CAP theorem</p>
+	<h3 class="fig-title">The network splits. Each replica must answer anyway — but with what?</h3>
+
+	<div class="cap">
+		<section class="panel is-cp" aria-labelledby="p-cp">
+			<header>
+				<h4 id="p-cp">Choose consistency (CP)</h4>
+				<span class="chip chip-cp">refuses</span>
+			</header>
+			<p class="verdict">
+				A replica that can't confirm it has the latest write <b>refuses the request</b>
+				(or blocks until the partition heals) rather than risk answering with stale data.
+			</p>
+			<p class="takeaway">Every answer given is correct. Some requests get no answer at all.</p>
+		</section>
+
+		<section class="panel is-ap" aria-labelledby="p-ap">
+			<header>
+				<h4 id="p-ap">Choose availability (AP)</h4>
+				<span class="chip chip-ap">answers</span>
+			</header>
+			<p class="verdict">
+				Every replica <b>answers with whatever it has</b>, even if another replica,
+				unreachable right now, holds a newer write.
+			</p>
+			<p class="takeaway">Every request gets an answer. Some answers are stale until the split heals.</p>
+		</section>
+	</div>
+
+	<p class="fig-note">
+		<strong>Partition tolerance isn't the third option on the menu</strong> — in a real distributed system,
+		the network <em>will</em> partition eventually, so P is a fact you design for, not a property you
+		pick. The actual choice CAP describes is C vs A, and only <em>during</em> a partition: outside one,
+		most systems give you both.
+	</p>
+</figure>
+
+<style>
+	.cap{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+
+	.panel{background:#fff;border:1px solid #e2ddf0;border-radius:14px;padding:1rem 1.05rem 1.05rem;
+		display:flex;flex-direction:column}
+	.panel.is-cp{border-top:4px solid var(--accent)}
+	.panel.is-ap{border-top:4px solid #c26a12}
+	.panel header{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.7rem}
+	.panel h4{margin:0;font-size:.95rem;font-weight:750;letter-spacing:-.01em}
+	.chip{font-size:.62rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;padding:.22rem .55rem;border-radius:6px}
+	.chip-cp{background:#edf0fb;color:var(--accent)}
+	.chip-ap{background:#fbeee0;color:#a5560d}
+
+	.verdict{font-size:.82rem;line-height:1.75;margin:0 0 .6rem;color:var(--text)}
+	.verdict b{font-weight:750}
+	.takeaway{margin:0;font-size:.78rem;line-height:1.7;font-weight:650;padding-top:.6rem;border-top:1px dashed #ddd6ec}
+	.is-cp .takeaway{color:var(--accent-dim)}
+	.is-ap .takeaway{color:#a5560d}
+
+	@media(max-width:620px){.cap{grid-template-columns:1fr}}
+</style>
