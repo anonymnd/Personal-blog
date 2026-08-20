@@ -1,0 +1,97 @@
+---
+title: How Much Data From One New Person Does a Model Need?
+description: Starting from a model that has never seen you, how many of your own trials does it take to start closing the gap? A small calibration-curve experiment on real motor-imagery EEG.
+pubDate: 2026-09-14T10:00:00.000Z
+translationKey: how-much-data-from-one-new-person-does-a-model-need
+locale: en
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: 'Per-subject calibration is an established topic in the BCI literature, not something new here — this review is where I learned the vocabulary and the usual tradeoffs.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: 'The acquisition system behind the PhysioNet EEG Motor Movement/Imagery dataset used for this experiment.',
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+	{
+		authors: 'Jayaram & Barachant',
+		year: '2018',
+		title: 'MOABB: trustworthy algorithm benchmarking for BCIs',
+		why: 'Shows the same pipeline behaving very differently across different motor-imagery datasets — a reminder not to generalize a single-dataset calibration curve too far.',
+		href: 'https://iopscience.iop.org/article/10.1088/1741-2552/aadea0',
+	},
+];
+
+<a href={withBase('/en/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>Last post</a> ended with a weak but real cross-subject gap: a model trained on nine people and tested on a tenth it had never seen scored noticeably below one trained and tested on everyone pooled together.
+
+That leaves an obvious next question. The model has never seen this tenth person. What if it got to see a *little* of them first?
+
+<Callout type="key-insight" label="The question this answers">
+Starting from zero, how many of a new person's own trials does it take before the model's score on them starts to recover?
+</Callout>
+
+## The setup
+
+Same data as last time: 10 subjects, PhysioNet motor-imagery dataset, left vs. right imagined fist, band-power features (log power across four frequency bands, 32 channels), logistic regression.
+
+For each of the 10 subjects in turn, I held them out completely: trained only on the other 9. Then, before testing, I let the model see a small number of that held-out subject's *own* trials too — added into the training set, not swapped in — and retested. I used calibration sizes of 0, 2, 5, 10 and 20 trials.
+
+To keep the comparison fair, I fixed 20 of each subject's trials as an evaluation set that is *never* used for calibration, no matter how many calibration trials were added. Calibration trials are drawn from the remaining pool. This is the same subject-wise discipline from last post, just with a controlled leak of a few trials back in on purpose — which is the whole point of calibration.
+
+<Callout type="definition" label="Why this isn't just retraining on everyone">
+Calibration is deliberately small and asymmetric: the new person contributes a handful of trials, the model already has the other nine people's worth of data. It's closer to "a BCI system learning a little about you in the first few minutes" than "collecting a full new dataset."
+</Callout>
+
+## The result
+
+<DataTable caption="Calibration curve: mean balanced accuracy across 10 held-out subjects">
+<thead><tr><th>Calibration trials</th><th>Mean balanced accuracy</th><th>Std</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0.559</td><td>±0.106</td></tr>
+<tr><td>2</td><td>0.554</td><td>±0.121</td></tr>
+<tr><td>5</td><td>0.577</td><td>±0.122</td></tr>
+<tr><td>10</td><td>0.597</td><td>±0.127</td></tr>
+<tr><td>20</td><td>0.634</td><td>±0.069</td></tr>
+</tbody>
+</DataTable>
+
+Two trials of calibration did nothing — if anything the mean dipped slightly, which I read as noise given the ±0.121 spread, not a real effect. From 5 trials on, the trend turns upward and keeps climbing: by 20 trials the average balanced accuracy is 0.634, about 7.5 points above the zero-calibration baseline.
+
+The standard deviation also shrinks as calibration trials increase — 0.106 at zero calibration down to 0.069 at 20. That's a second effect worth naming separately from the average going up: calibration isn't just raising the mean, it's making the model's performance more *consistent* from person to person. Some of what a leave-subject-out model gets wrong is genuinely person-specific, and a handful of that person's own trials fixes exactly the part that pooled training couldn't.
+
+<Callout type="warning" label="What this doesn't show">
+Ten subjects and five calibration sizes is enough to see a trend, not enough to report a precise number of trials you'd need in practice. I also only tested calibration sizes up to 20 — I don't know yet whether the curve keeps climbing, flattens, or needs a different model entirely past that point. And this is one dataset, one task (left vs. right fist), and one feature set; <SourceLink authors="Jayaram & Barachant" year="2018" title="MOABB: trustworthy algorithm benchmarking for BCIs" href="https://iopscience.iop.org/article/10.1088/1741-2552/aadea0" /> is a good reminder that the same pipeline can behave very differently on a different motor-imagery dataset.
+</Callout>
+
+## Where this leaves the thread
+
+Two posts, one real loop: pool everyone and you inflate your score with person-recognition; hold a person out entirely and the score drops to something closer to the truth; let the model see a *little* of that person and some, but not all, of the drop recovers. That's the "sense, interpret, adapt, measure again" cycle this whole project keeps coming back to, run once, honestly, on real EEG.
+
+<Callout type="further-reading" label="Next">
+The next open question on this thread is whether the same pattern — pooling hurts, a little calibration helps — shows up on a different kind of signal entirely. Wearable sensors (wrist and chest, not scalp EEG) are next.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />

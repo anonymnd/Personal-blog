@@ -1,0 +1,73 @@
+---
+title: Wrist vs. Chest — How Much Does Sensor Placement Change the Answer?
+description: Same people, same task, same evaluation discipline — just a comfortable wrist band instead of a clinical chest rig. What does that actually cost, in numbers?
+pubDate: 2026-09-28T10:00:00.000Z
+translationKey: wrist-vs-chest-how-much-does-sensor-placement-change-the-answer
+locale: en
+interactive: true
+tags:
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Schmidt et al.',
+		year: '2018',
+		title: 'Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection',
+		why: 'The dataset used in this post: 15 subjects, chest (RespiBAN) and wrist (Empatica E4) physiological sensors recorded simultaneously during a lab stress protocol.',
+		href: 'https://dl.acm.org/doi/10.1145/3242969.3242985',
+	},
+];
+
+Every experiment on this blog so far has used scalp EEG. This one is a deliberate change of signal, to see whether the pattern I keep finding — pooling people inflates a score, evaluating properly brings it back down — shows up somewhere that isn't EEG at all.
+
+<Callout type="key-insight" label="The question this answers">
+If I switch from a clinical-grade chest sensor rig to the kind of wrist band someone might actually wear, how much accuracy does that cost — on the exact same people, the exact same task?
+</Callout>
+
+## The data
+
+<SourceLink authors="Schmidt et al." year="2018" title="Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection" href="https://dl.acm.org/doi/10.1145/3242969.3242985" /> recorded 15 people wearing two devices at once during a lab protocol with a stress-inducing task and a resting baseline: a RespiBAN chest unit (ECG, EDA, EMG, respiration, temperature, 3-axis accelerometer, all at 700 Hz) and an Empatica E4 wrist band (blood volume pulse at 64 Hz, EDA and temperature at 4 Hz, accelerometer at 32 Hz). Same person, same fifteen minutes, two different sensor placements.
+
+I cut both signals into 30-second windows, kept only windows labeled entirely "baseline" or entirely "stress," and computed the mean and standard deviation of each channel per window — 12 features for chest, 8 for wrist. Same logistic regression, same subject-wise 5-fold evaluation (`GroupKFold` by subject) as the EEG experiments.
+
+## The result
+
+<DataTable caption="WESAD baseline vs. stress, subject-wise balanced accuracy">
+<thead><tr><th>Device</th><th>Features</th><th>Balanced accuracy</th><th>Null (shuffled)</th></tr></thead>
+<tbody>
+<tr><td>Chest (RespiBAN)</td><td>12</td><td>0.807 ± 0.066</td><td>0.500 ± 0.021</td></tr>
+<tr><td>Wrist (Empatica E4)</td><td>8</td><td>0.694 ± 0.060</td><td>0.494 ± 0.010</td></tr>
+</tbody>
+</DataTable>
+
+Both devices clearly separate from chance — this isn't a case of one sensor working and the other not working at all. But the gap between them is real: 0.114 balanced accuracy, over 11 points, lost by going from the chest rig to the wrist band, on the same subject-wise evaluation that the last two posts used.
+
+<Callout type="formula" label="Why the gap is believable">
+The chest unit measures ECG and EMG directly against the skin near the heart and diaphragm — signals tied closely to the physiological stress response. The wrist band infers a lot of that indirectly, through blood volume pulse and skin conductance at a much noisier location. Losing signal quality by moving the sensor further from the source is exactly what you'd expect; the question was only ever how much.
+</Callout>
+
+## Why this matters for the "sense, interpret, adapt" loop
+
+This connects back to the two posts before it, not just by reusing the same evaluation method. A wrist-worn device is the realistic form factor for anything that has to run outside a lab — which means any real adaptive system built on this kind of signal is choosing to pay this 11-point cost for comfort and practicality. Whether that tradeoff is worth it depends entirely on what the system needs to be right about, and that's a design question, not a modeling one.
+
+<Callout type="warning" label="What this doesn't show">
+Fifteen subjects is a small sample for a cost estimate like this, and the stress label here comes from a lab protocol (a timed public-speaking and arithmetic stress task), not from someone's real daily stress — so "11 points" is specific to this task, this population, and these two devices. It is a number from one experiment, not a general wrist-vs-chest constant.
+</Callout>
+
+<Callout type="further-reading" label="Where this thread goes next">
+Three real findings so far, on two different signals: a leakage gap (<a href={withBase('/en/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>random vs. subject-wise split</a>), a <a href={withBase('/en/blog/how-much-data-from-one-new-person-does-a-model-need/')}>calibration curve</a>, and now a sensor-placement cost. The next piece on this thread is trying to reproduce a result from a published paper on a different dataset, and reporting honestly where mine does and doesn't match.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />

@@ -1,0 +1,136 @@
+---
+title: The Same Model, Scored Twice — Random Split vs. Subject-Wise Split
+description: I trained the same classifier on the same EEG data and scored it two different ways. One score was a lie. Here is the experiment, the numbers, and where I got the first version wrong.
+pubDate: 2026-09-07T10:00:00.000Z
+translationKey: the-same-model-scored-twice-random-split-vs-subject-wise-split
+locale: en
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import LeakageDiagram from '../../../components/eeg/LeakageDiagram.astro';
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+
+export const papers = [
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: 'The main source for this post. Reviewed 63 published deep-learning EEG studies and found only 17 clearly avoided subject-level leakage; on one re-run, held-out-participant accuracy fell from near-perfect to roughly chance.',
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Zyma et al.',
+		year: '2019',
+		title: 'Electroencephalograms during Mental Arithmetic Task Performance (EEGMAT dataset)',
+		why: 'The dataset used for the first experiment — 36 subjects, resting vs. mental-arithmetic EEG, 23 channels, short artifact-free segments.',
+		href: 'https://physionet.org/content/eegmat/1.0.0/',
+	},
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: 'Describes the acquisition system behind the PhysioNet EEG Motor Movement/Imagery dataset used for the second experiment.',
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: 'Background on CSP and why it is a spatial filter fit to one set of recordings rather than a universal feature extractor — relevant to why pooling subjects before fitting CSP failed here.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+];
+
+I trained a classifier on EEG data, scored it, and got 0.871 balanced accuracy.
+
+Then I scored the exact same trained model a different way, on the exact same data, and got 0.690.
+
+Nothing about the model changed. Nothing about the data changed. Only one thing changed: which trials were allowed to sit in the training set together.
+
+<Callout type="key-insight" label="The question this answers">
+If a model is trained and tested on the same people — just on different moments from their recordings — how much of its score is "I understand the signal" versus "I recognize this particular brain"?
+</Callout>
+
+## Two ways to cut the same deck
+
+Say I have EEG from 36 people, and for each person I have several short segments: some recorded while resting, some while doing mental arithmetic. I want to classify rest vs. arithmetic.
+
+The ordinary way to evaluate a classifier is k-fold cross-validation: shuffle all the segments together, split into 5 folds, train on 4, test on 1, repeat. That is a **random split**.
+
+The other way is to never let a person's segments cross from train to test. Pick which *people* go in the test fold, not which *segments*. That is a **subject-wise split** — in scikit-learn, `GroupKFold` with subject ID as the group.
+
+<LeakageDiagram />
+
+The random split is leaky because segments from the same person are more alike than segments from different people — same skull shape, same electrode impedance that day, same baseline brain rhythm. A model can partly solve "rest vs. arithmetic" by solving "which person is this," and a random split lets it do that for free, on both sides of the split. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" />
+
+## Experiment 1: rest vs. mental arithmetic (EEGMAT)
+
+I used the PhysioNet EEGMAT dataset — 36 people, each with one resting recording and one mental-arithmetic recording, 21 channels at 500 Hz. I cut every recording into non-overlapping 10-second windows, and for each window I computed log band power (delta/theta/alpha/beta/gamma) on each channel — 100 features per window, 850 windows total.
+
+On top of that: logistic regression, with the feature scaler fit only inside each training fold — never on the full dataset first. Fitting a scaler before splitting is its own small leak, and it is an easy one to miss.
+
+<DataTable caption="EEGMAT: rest vs. arithmetic, balanced accuracy, 5-fold">
+<thead><tr><th>Split</th><th>Mean</th><th>Std</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Random (leaky)</td><td>0.871</td><td>±0.025</td><td>segments shuffled across people</td></tr>
+<tr><td>Subject-wise</td><td>0.690</td><td>±0.048</td><td>whole people held out</td></tr>
+<tr><td>Null (shuffled labels)</td><td>0.496</td><td>±0.015</td><td>labels randomized, subject-wise split — should sit at chance</td></tr>
+</tbody>
+</DataTable>
+
+The gap is 0.182 — about 18 points of balanced accuracy, in the direction the leakage story predicts. The null model landing almost exactly on 0.5 is what tells me the subject-wise 0.690 is real signal and not an artifact of how I built the pipeline: if the null had also scored well above chance, something in my code would have been leaking label information regardless of the split.
+
+<Callout type="warning" label="A mistake I made first">
+My first run of this scored the null model at 0.654 — well above chance. I had used plain accuracy, and the two classes were imbalanced (75% of windows were "rest," because resting recordings run about three times longer than arithmetic ones). A classifier that just guesses "rest" every time scores 0.75 on raw accuracy without learning anything. Switching the scoring metric to balanced accuracy pulled the null back down to 0.496, where it belongs. I'm leaving this in because catching it is part of the result, not a footnote to hide.
+</Callout>
+
+## Experiment 2: left vs. right imagined fist (motor imagery)
+
+Same question, harder signal. I used 10 subjects from the PhysioNet EEG Motor Movement/Imagery dataset, imagined left-fist vs. right-fist movement, 64 channels at 160 Hz, 1–40 Hz band-pass plus a 60 Hz notch filter (there is real 60 Hz line noise in this recording hardware — I checked with a zoomed power spectrum before assuming anything).
+
+My first attempt used CSP (Common Spatial Patterns), the standard spatial filter for motor-imagery decoding, followed by LDA. Fit correctly inside each cross-validation fold, no leakage. Result: everything scored at chance.
+
+<DataTable caption="Motor imagery, CSP+LDA pooled across 10 subjects (first attempt)">
+<thead><tr><th>Split</th><th>Mean</th><th>Std</th></tr></thead>
+<tbody>
+<tr><td>Random</td><td>0.452</td><td>±0.022</td></tr>
+<tr><td>Subject-wise</td><td>0.504</td><td>±0.023</td></tr>
+<tr><td>Null (shuffled)</td><td>0.490</td><td>±0.025</td></tr>
+</tbody>
+</DataTable>
+
+All three numbers sit inside each other's noise. There is no leakage gap to find here because there is no signal in the first place — not a bug, a modeling mismatch. CSP fits one spatial filter per training set, and that filter is tuned to the geometry of whichever brains are in it. Pool ten different people's trials together before fitting CSP and the filter ends up compromising between ten different spatial layouts instead of describing any one of them well. This is, in a small way, the exact generalization problem the rest of this project is about — it showed up at the very first baseline.
+
+Swapping CSP for the same band-power features used in experiment 1 (log power across four bands, 32 channels) fixed it:
+
+<DataTable caption="Motor imagery, band-power features, same 10 subjects (fixed)">
+<thead><tr><th>Split</th><th>Mean</th><th>Std</th></tr></thead>
+<tbody>
+<tr><td>Random (leaky)</td><td>0.599</td><td>±0.041</td></tr>
+<tr><td>Subject-wise</td><td>0.573</td><td>±0.043</td></tr>
+<tr><td>Null (shuffled)</td><td>0.456</td><td>±0.044</td></tr>
+</tbody>
+</DataTable>
+
+Now the null sits clearly below both real scores, so there is learned signal. The gap is small — 0.027 — much smaller than EEGMAT's 0.182. I read that as the task being genuinely harder, not as a pipeline problem: a single-subject baseline I ran earlier on the same left/right-fist task, with only 45 trials, also scored a weak 0.535 ± 0.145. Rest-vs-arithmetic has a big, slow, whole-brain signature. Left-vs-right motor imagery is a subtler, more localized one, and ten subjects and 450 trials is not a lot to find it in.
+
+## What I'm taking from this
+
+The honest finding is not "subject-wise splitting lowers your score, beware." It's narrower and more useful than that: **the size of the gap between a random split and a subject-wise split tells you how much of your model's apparent skill was person-recognition in disguise**, and that number is different for every task and every feature set. For rest-vs-arithmetic with band power, a lot of the random-split score was that. For motor imagery, once I fixed the pipeline, not very much of it was — the remaining gap is close to what you'd expect from two slightly different 5-fold samples of similar size.
+
+<Callout type="further-reading" label="Next">
+The natural next question is: given a subject-wise model that has never seen a new person, how much of that person's own data does it take to close part of the gap? That's the calibration-curve experiment — next post.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />

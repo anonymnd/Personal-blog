@@ -11,7 +11,11 @@ interface Paper {
 	href: string;
 }
 
-const papers: Paper[] = [
+interface Props {
+	papers?: Paper[];
+}
+
+const defaultPapers: Paper[] = [
 	{
 		authors: 'McWeeny & Norton',
 		year: '2020',
@@ -55,6 +59,8 @@ const papers: Paper[] = [
 		href: 'https://pubmed.ncbi.nlm.nih.gov/30909489/',
 	},
 ];
+
+const { papers = defaultPapers } = Astro.props as Props;
 ---
 
 <ol class="papers" role="list">
