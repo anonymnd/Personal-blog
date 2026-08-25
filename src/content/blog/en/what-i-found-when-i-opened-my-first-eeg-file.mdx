@@ -1,0 +1,72 @@
+---
+title: What I Found When I Opened My First EEG File
+description: Before any model, before any question about accuracy — what is actually inside a single real EEG recording, and what did I get wrong reading it the first time?
+pubDate: 2026-07-20T10:00:00.000Z
+translationKey: what-i-found-when-i-opened-my-first-eeg-file
+locale: en
+interactive: true
+tags:
+  - eeg
+  - data-science
+  - signal-processing
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+
+export const papers = [
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: 'Describes the acquisition system behind the PhysioNet EEG Motor Movement/Imagery dataset opened in this post.',
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+];
+
+I am starting a small research thread on this blog, alongside the usual engineering posts: real EEG and wearable-sensor data, real experiments, reported honestly — including the parts I got wrong before I got them right. This first post is the least impressive and most important step: opening a single file and looking at it before asking any model to do anything with it.
+
+<Callout type="key-insight" label="Why start here">
+Before "does this classify well," there is "what is actually in this recording, at what rate, with what noise." Skipping that step is how leakage, unit mistakes, and silent bugs get in.
+</Callout>
+
+## The file
+
+One subject, one run, from the PhysioNet EEG Motor Movement/Imagery dataset — a public, consented research dataset of 109 people performing real and imagined hand and foot movements while wearing a 64-channel EEG cap. <SourceLink authors="Schalk et al." year="2004" title="BCI2000: A General-Purpose Brain-Computer Interface (BCI) System" href="https://physionet.org/content/eegmmidb/1.0.0/" /> I opened the run where the subject imagines moving their left or right fist, using MNE-Python, and printed the basics before plotting anything.
+
+<CodeBlock language="text" filename="output">
+Channels:       64 ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5'] ...
+Sampling rate:  160.0 Hz
+Duration:       125.0 s
+Annotations:    ['T0', 'T1', 'T2']
+</CodeBlock>
+
+64 channels, 160 samples per second, just over two minutes. The annotations are the part that matters for anything downstream: `T0`, `T1`, `T2` are generic codes, and what they *mean* depends on which run you're looking at. For this run (imagined fist movement), `T0` is rest, `T1` is imagined left-fist movement, `T2` is imagined right-fist movement. Get that mapping wrong and every label in the dataset is wrong in a way that won't throw an error — it will just quietly train a model on swapped classes.
+
+## What the raw trace actually looks like
+
+Eight of the sixty-four channels, ten seconds, color-coded by the T0/T1/T2 windows: noisy oscillation, no flat channels, no obviously dead electrodes, amplitudes around 100–130 µV peak-to-peak. Nothing about it looks like the clean, slow "brain wave" I had pictured before I started. It looks like noise with structure buried in it, which is closer to the truth.
+
+## The spectrum, and the mistake in reading it
+
+The power spectrum (0–60 Hz) showed the shape I expected in general — power falling off steeply with frequency — but I could not find an obvious spike at 50 or 60 Hz, the frequency of AC power-line interference, which EEG recordings almost always pick up to some degree. My first note on this was uncertain: maybe this recording was unusually clean, or maybe the plot style (decibel scale, eight channels overlaid) was hiding it.
+
+<Callout type="warning" label="Check, don't assume">
+I zoomed the same spectrum to just 45–65 Hz instead of 0–60 Hz. There it was: a sharp, obvious spike at exactly 60 Hz — invisible at the wide view, unmistakable at the narrow one. The recording was never clean; I just hadn't looked closely enough to see the noise that was already there.
+</Callout>
+
+That distinction — "I don't see it" versus "it isn't there" — turned out to matter immediately. A later post in this thread needed a 60 Hz notch filter specifically because this noise is real, and confirming it here with a zoomed plot is what made that decision defensible instead of a guess.
+
+## What I'm taking into the next step
+
+Two concrete things survive this first look: the event-code mapping (`T0`/`T1`/`T2` mean different things depending on which run you're in — I have to check this per run, not assume it once) and the presence of 60 Hz line noise (confirmed, not assumed, by actually zooming in). Neither is exciting on its own. Both are the kind of detail that silently breaks an experiment three steps later if skipped now.
+
+<Callout type="further-reading" label="Next">
+Next in this thread: what changes, concretely, when that line noise and the rest of the spectrum get filtered — one real before/after comparison, not a claim.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />
