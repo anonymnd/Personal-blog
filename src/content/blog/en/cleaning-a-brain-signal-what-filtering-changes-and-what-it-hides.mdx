@@ -1,0 +1,74 @@
+---
+title: "Cleaning a Brain Signal: What Filtering Changes, and What It Hides"
+description: A band-pass filter and a notch filter, applied to one real EEG recording, with the before-and-after spectrum to show exactly what they removed.
+pubDate: 2026-08-03T10:00:00.000Z
+translationKey: cleaning-a-brain-signal-what-filtering-changes-and-what-it-hides
+locale: en
+interactive: true
+tags:
+  - eeg
+  - signal-processing
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Widmann et al.',
+		year: '2015',
+		title: 'Digital filter design for electrophysiological data — a practical approach',
+		why: 'Background on why filter choice (cutoffs, filter order, zero-phase vs. causal) is a real methodological decision in EEG processing, not a default to accept blindly.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4506252/',
+	},
+];
+
+<a href={withBase('/en/blog/what-i-found-when-i-opened-my-first-eeg-file/')}>Last post</a> ended with a confirmed 60 Hz spike in the power spectrum — invisible at a wide view, obvious once I zoomed in. This post is the follow-up: what actually happens to the signal once that noise, and everything outside the frequency range I care about, gets filtered out.
+
+<Callout type="key-insight" label="The question this answers">
+A band-pass filter and a notch filter are two lines of code. What do they actually remove, and how would I know if I'd picked the wrong cutoffs?
+</Callout>
+
+## The filter
+
+Two things applied together, on the same subject/run from the last post:
+
+- **Band-pass, 1–40 Hz.** Keeps the frequency range where the signals I'm interested in live — motor-imagery work typically looks at the mu (8–13 Hz) and beta (13–30 Hz) bands, so 1–40 Hz keeps that with margin on both sides, while dropping very slow drift below 1 Hz and high-frequency muscle/electronic noise above 40 Hz.
+- **Notch, 60 Hz.** Specifically targets the power-line interference confirmed last post, without touching the frequencies right next to it as hard as a wide band-pass cutoff would.
+
+<CodeBlock language="text" filename="output">
+Peak power at 60 Hz:
+  before = 1.395e-11
+  after  = 1.428e-16
+  ratio  = 97,686x reduction
+</CodeBlock>
+
+A 97,686-times reduction in power at exactly 60 Hz, and nowhere else in the spectrum — that's what a notch filter is supposed to do: surgical removal of one frequency, not a general cleanup.
+
+## What the before/after spectrum shows
+
+Plotted side by side, 0–80 Hz: the "before" spectrum has the expected 1/f-like downward slope plus the 60 Hz spike sitting on top of it. The "after" spectrum keeps the same overall shape through the pass-band, then drops sharply starting around 40 Hz — the band-pass cutoff — down to near-zero power above it, with the 60 Hz spike gone entirely.
+
+<Callout type="formula" label="What the filter did NOT do">
+It didn't flatten the whole spectrum or remove all high-frequency content equally — it cut sharply at the chosen cutoff (40 Hz) and surgically at the chosen notch (60 Hz), and left everything inside the pass-band looking the same shape as before. That's the difference between "the data got filtered" and "I understand what the filter did to the data."
+</Callout>
+
+## The part that's easy to get wrong
+
+Filter cutoffs are a decision, not a default. 1–40 Hz was not pulled from nowhere — it's wide enough to keep the mu/beta range I actually need with margin, and narrow enough to drop the worst of the slow drift and high-frequency noise. A different task — say, something that cares about gamma-band activity above 40 Hz — would need a different cutoff entirely, and picking the EEG-textbook default without checking what it keeps or discards for *this* task is exactly the kind of silent mistake that doesn't throw an error. <SourceLink authors="Widmann et al." year="2015" title="Digital filter design for electrophysiological data — a practical approach" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4506252/" />
+
+## What I'm taking into the next step
+
+This filter — 1–40 Hz band-pass, 60 Hz notch — becomes the fixed preprocessing step for every experiment after this one, applied identically to every subject, fit before any split happens rather than per-fold (there is nothing data-dependent to leak here; the cutoffs are chosen once, from domain knowledge, not learned from the data). Having the before/after numbers here means that choice is documented, not assumed.
+
+<Callout type="further-reading" label="Next">
+With the signal cleaned, the next post builds the first actual classifier — a boring, honest baseline on one subject, before any question about cross-subject generalization comes up.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />
