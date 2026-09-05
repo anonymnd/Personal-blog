@@ -1,0 +1,68 @@
+---
+title: "A Boring Baseline That Is Hard to Beat (CSP + LDA)"
+description: The standard motor-imagery pipeline, on one subject, with the honest number — weak, noisy, and still useful as a reference point for everything built on top of it.
+pubDate: 2026-08-17T10:00:00.000Z
+translationKey: a-boring-baseline-that-is-hard-to-beat
+locale: en
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - signal-processing
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: 'The reference for CSP, LDA, and why this particular combination is the standard first thing to try for motor-imagery EEG before reaching for anything more complex.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+];
+
+With the signal <a href={withBase('/en/blog/cleaning-a-brain-signal-what-filtering-changes-and-what-it-hides/')}>filtered</a>, the next step is the obvious, unglamorous one: build the standard pipeline, on one subject, and see what number it produces. Not to be impressive — to have an honest reference point before asking anything harder of the data.
+
+<Callout type="key-insight" label="Why a boring baseline matters">
+Before asking "does my model generalize across people," I need to know it can do the basic task at all, for one person, with a well-understood method. If this number is weak, that's useful information — not a failure to hide.
+</Callout>
+
+## The pipeline
+
+Left vs. right imagined fist movement, one subject, three runs concatenated (45 trials total — 23 left, 22 right). Filtered as in the last post, then epoched around each trial's event marker.
+
+The feature extraction method is **CSP** — Common Spatial Patterns, the standard spatial filter for motor-imagery EEG. CSP finds linear combinations of channels that maximize the variance difference between two classes; in practice, for left/right hand imagery, it tends to find filters that emphasize the motor cortex areas where the two imagined movements produce the clearest contrast. On top of that: **LDA**, a simple linear classifier. <SourceLink authors="Lotte et al." year="2018" title="A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update" href="https://pubmed.ncbi.nlm.nih.gov/29932424/" />
+
+Evaluation: 5-fold cross-validation, CSP fit fresh inside each training fold — never on the full 45 trials before splitting. It's a small detail, but fitting CSP on everything first would let information about the test trials leak into the spatial filter itself, before the classifier even sees the labels.
+
+## The result
+
+<CodeBlock language="text" filename="output">
+Epochs: 45 (left=23, right=22)
+Balanced accuracy: 0.535 +/- 0.145
+Fold scores: [0.475, 0.300, 0.525, 0.700, 0.675]
+</CodeBlock>
+
+0.535 balanced accuracy, barely above the 0.5 chance line, with a standard deviation (0.145) almost as large as the signal itself. One fold scored 0.300 — worse than guessing — and another scored 0.700.
+
+<Callout type="warning" label="Resisting the urge to explain this away">
+My first instinct was to look for a bug: wrong channels, wrong epoch window, mislabeled events. I checked all three against the event-mapping and filtering work from the last two posts, and found nothing wrong. The more honest explanation is also the less satisfying one: 45 trials is not a lot of data, single-subject motor imagery is a genuinely noisy signal, and a weak, high-variance score is a believable result here — not necessarily a mistake.
+</Callout>
+
+## Why I'm not trying to fix this yet
+
+It would be easy to try a different classifier, more CSP components, a different frequency band, and keep tuning until the number looks better. I'm deliberately not doing that here. This baseline exists to be a fixed reference point for comparison, not a target to optimize — and the next posts in this thread need exactly this number, weak as it is, to show what happens when the same pipeline gets evaluated across people instead of within one.
+
+<Callout type="further-reading" label="Next">
+The next post reuses this exact pipeline on ten subjects pooled together — and the first version of that experiment didn't just score lower than this baseline, it scored at chance. Here's what went wrong, and why.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />
