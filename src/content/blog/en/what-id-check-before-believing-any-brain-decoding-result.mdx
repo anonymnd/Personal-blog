@@ -1,0 +1,73 @@
+---
+title: What I'd Check Before Believing Any Brain-Decoding Result
+description: Six small experiments in, here is the checklist I now run against any EEG or wearable-sensor accuracy claim — including my own.
+pubDate: 2026-10-05T10:00:00.000Z
+translationKey: what-id-check-before-believing-any-brain-decoding-result
+locale: en
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: 'The single most useful paper behind this whole checklist — reviewed 63 published studies and found most had the leakage problem described here.',
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Jayaram & Barachant',
+		year: '2018',
+		title: 'MOABB: trustworthy algorithm benchmarking for BCIs',
+		why: 'Used for the point about one pipeline behaving differently across datasets — a reason not to trust a single-dataset number too far.',
+		href: 'https://iopscience.iop.org/article/10.1088/1741-2552/aadea0',
+	},
+];
+
+Six small experiments across two signal types — scalp EEG and wrist/chest wearables — have produced the same handful of failure modes, in different clothes, every time. This is a reflection post, not a new experiment: the checklist I now actually run, silently, every time I see an impressive accuracy number in a brain-decoding or wearable-sensing paper.
+
+<Callout type="key-insight" label="Why write this down">
+Every item below cost me something — a wrong number, a wasted afternoon, or a result I nearly trusted that turned out to be measuring the wrong thing. Writing the checklist down is cheaper than re-learning each item.
+</Callout>
+
+## 1. How was the data split?
+
+<a href={withBase('/en/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>The core finding of this thread</a>: the same model, same data, scored two ways, differed by up to 18 points of balanced accuracy depending only on whether segments from one person were allowed to appear on both sides of the split. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" /> reviewed 63 published deep-learning EEG studies and found only 17 clearly avoided this. If a paper doesn't say explicitly how the split was done, I now assume the leaky version until shown otherwise.
+
+## 2. Is the null model actually at chance?
+
+I got this one wrong before I got it right. My first leakage experiment reported a null (shuffled-label) model scoring 0.654 — comfortably above what I expected for chance — and the reason was class imbalance plus raw accuracy as the metric: a trivial "always guess the majority class" classifier scored close to that without learning anything. Switching to balanced accuracy fixed it; the null dropped to 0.496, where it belonged. A null model that doesn't sit at chance means something in the pipeline is leaking label information regardless of how clean the split looks.
+
+## 3. Does the feature-extraction method survive pooling?
+
+My first attempt at a cross-subject motor-imagery classifier used CSP — the standard spatial filter for this task — fit on ten subjects pooled together. It scored at chance. Not a bug: CSP tunes itself to one set of brains' spatial geometry, and pooling subjects before fitting it compromises between ten different geometries instead of describing any of them. Switching to band-power features (no per-subject spatial fitting required) fixed it immediately. The lesson generalizes past CSP: any feature-extraction step that's implicitly tuned to the training population needs checking before it's trusted to generalize past that population.
+
+## 4. Is the effect size plausible given the sample?
+
+Ten subjects, forty-five trials each, calibration curves built from five discrete trial counts — that's enough to see a trend, not enough to claim a precise number. I try to state sample sizes next to every number I report now, specifically so a reader (including future me) can judge how much weight the number deserves on sight, without digging through a methods section.
+
+## 5. Would this result survive a different dataset, task, or device?
+
+The wrist-vs-chest wearable comparison and the motor-imagery leakage experiment produced leakage gaps of similar, small size (~0.03), while the rest-vs-arithmetic EEG experiment produced a much larger one (0.182) — same evaluation method, different tasks and even different sensor types, different-sized effects. <SourceLink authors="Jayaram & Barachant" year="2018" title="MOABB: trustworthy algorithm benchmarking for BCIs" href="https://iopscience.iop.org/article/10.1088/1741-2552/aadea0" /> found the same pipeline can behave very differently across different motor-imagery datasets alone. One dataset's number is a data point, not a law.
+
+<Callout type="definition" label="The checklist, short version">
+Split by subject, not by segment. Check the null sits at chance. Check the feature method doesn't implicitly assume one person. State the sample size next to the number. Don't generalize past the one dataset the number came from.
+</Callout>
+
+## What this doesn't mean
+
+None of this is an argument that EEG or wearable decoding doesn't work — three of the six experiments in this thread found real, above-chance signal, confirmed by a null model that actually sat at chance. It's narrower than that: the *size* of an accuracy number, on its own, tells you very little without knowing how it was evaluated. A smaller, honestly-evaluated number is more useful than a larger, leaky one, because only the first one tells you something true about what happens with a new person.
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />
