@@ -1,0 +1,79 @@
+---
+title: "Reproducing a Working-Memory Figure — and What Didn't Match"
+description: I tried to reproduce a published EEG finding on public data. My version came back the opposite direction. Here's the attempt, the honest result, and why I'm not calling it a refutation.
+pubDate: 2026-10-12T10:00:00.000Z
+translationKey: reproducing-a-working-memory-figure-and-what-did-not-match
+locale: en
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Pavlov et al.',
+		year: '2022',
+		title: 'Pupillometry and electroencephalography in the digit span task',
+		why: 'The dataset and the claim this post tries to reproduce: frontal midline theta increasing in the memory condition vs. a listen-only control, reported in their Fig. 3d.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9206021/',
+	},
+];
+
+Every post so far in this thread has been my own experiment, on my own terms. This one is different on purpose: take a specific, concrete claim from a published paper, try to reproduce it on the same public data, and report what actually happened — including if it doesn't match.
+
+<Callout type="key-insight" label="The question this answers">
+If I take a published EEG finding and rerun a version of the analysis myself, on the dataset the authors released, does my number point the same direction as theirs?
+</Callout>
+
+## The claim
+
+<SourceLink authors="Pavlov et al." year="2022" title="Pupillometry and electroencephalography in the digit span task" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9206021/" /> collected EEG from 86 people doing a digit-span task: listen to a spoken sequence of 5, 9, or 13 digits, then either recall them aloud (memory condition) or do nothing (listen-only control). They report, in their Fig. 3d, that frontal midline theta — EEG power around 6 Hz at electrode Fz — increases in the memory condition compared to the control condition. No numbers are given in the paper text for this, only the figure and the qualitative claim.
+
+That's the target: a specific electrode, a specific frequency band, a specific direction of effect.
+
+## What I did
+
+I downloaded three subjects' EEG from the dataset (OpenNeuro ds003838, publicly available) — the first three subjects marked as having usable EEG in the dataset's own participant table. For each trial, I found the last digit presented, took the 3-second window right after it (the retention interval before recall, per the task's own timing description), and computed log power in the 4–8 Hz theta band at channel Fz.
+
+<Callout type="formula" label="A sanity check before trusting anything else">
+Before looking at the result, I checked that my trial-counting logic found the right number of trials: 54 control and 108 memory per subject, every time. That matches the paper's stated design (54 passive-listening trials, 108 memory trials, per participant) exactly. I take this as evidence the event parsing itself is correct, even though — as it turns out — the result it feeds into doesn't match the paper's claim.
+</Callout>
+
+## The result
+
+<DataTable caption="Frontal (Fz) theta log-power, 3 subjects">
+<thead><tr><th>Subject</th><th>Control</th><th>Memory</th><th>Memory − Control</th></tr></thead>
+<tbody>
+<tr><td>sub-032</td><td>-1.513</td><td>-1.624</td><td>-0.111</td></tr>
+<tr><td>sub-033</td><td>0.063</td><td>-0.008</td><td>-0.071</td></tr>
+<tr><td>sub-034</td><td>0.211</td><td>0.243</td><td>+0.031</td></tr>
+</tbody>
+</DataTable>
+
+Two of three subjects went the opposite direction from the paper's claim. The third went the right direction, barely. Averaged across all three: a mean difference of −0.050 (memory lower than control, not higher), with a paired t-test of t = −1.190, p = 0.356 — nowhere near significant, which with n=3 was never going to tell me much either way.
+
+<Callout type="warning" label="What I'm not claiming">
+This is not a refutation of Pavlov et al.'s finding. Three subjects against their eighty-six, a 3-second window I estimated from the task description rather than copied from their exact methods, no baseline correction (comparing power to a pre-trial resting period, which spectral EEG papers normally do and I did not here), and their recording used FCz as the online reference — a detail that can shift what you see at a nearby frontal channel like Fz if you don't re-reference to match their analysis. Any one of these could explain the mismatch without the original effect being wrong.
+</Callout>
+
+## Why I'm posting a non-replication anyway
+
+The honest version of this post is "my small, fast version of this analysis didn't show the effect the paper reports," not "I disproved a published finding" and not "I'm quietly not posting this because it didn't work." <a href={withBase('/en/blog/what-id-check-before-believing-any-brain-decoding-result/')}>The checklist from the last post</a> applies to my own results as much as anyone else's: small sample, one dataset, one set of methodological choices I made without matching the original paper's exact pipeline. A result that doesn't replicate under those conditions is informative about the limits of a quick reproduction attempt — it's not strong evidence either for or against the original claim.
+
+<Callout type="definition" label="What would make this a real test">
+Matching their exact epoching and baseline-correction method, using closer to their full sample instead of three subjects, and ideally having their actual numbers (not just a figure) to compare against rather than just a direction. None of that was in scope here — this was a first pass, reported as exactly that.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />
