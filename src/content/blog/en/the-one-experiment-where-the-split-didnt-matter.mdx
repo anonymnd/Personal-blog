@@ -1,0 +1,98 @@
+---
+title: "The One Experiment Where the Split Didn't Matter"
+description: Every EEG and wearable experiment in this thread showed a leakage gap. Then I tried the same question on education data, and the gap nearly disappeared — which turned out to be the interesting part.
+pubDate: 2026-10-12T16:00:00.000Z
+translationKey: the-one-experiment-where-the-split-didnt-matter
+locale: en
+interactive: true
+tags:
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Pashler et al.',
+		year: '2008',
+		title: 'Learning Styles: Concepts and Evidence',
+		why: 'The classic review behind the "learning styles" discussion in this post — argues the research supporting style-matched instruction lacked the randomized designs needed to trust it.',
+		href: 'https://journals.sagepub.com/doi/10.1111/j.1539-6053.2009.01038.x',
+	},
+	{
+		authors: 'Clinton-Lisell & Litzinger',
+		year: '2024',
+		title: 'A meta-analysis of learning styles',
+		why: 'A more recent, more sympathetic look at the same question — found a small positive effect of matching instruction to style, but describes it as too small and infrequent to justify adopting the theory.',
+		href: 'https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1407518/full',
+	},
+	{
+		authors: 'McDaniel, Marsh & Gouravajhala',
+		year: '2022',
+		title: 'Individual Differences in Learning From Educational Materials: The Case of Structure Building',
+		why: 'A more defensible individual-difference claim than learning styles: structure-building ability (forming coherent mental models of text) predicts comprehension consistently across studies.',
+		href: 'https://journals.sagepub.com/doi/10.1177/17456916221108124',
+	},
+	{
+		authors: 'Corbett & Anderson',
+		year: '1994',
+		title: 'Knowledge tracing: Modeling the acquisition of procedural knowledge',
+		why: 'The foundational paper behind knowledge tracing, the technique adaptive tutoring systems use to estimate what a student currently knows from their response history.',
+		href: 'https://link.springer.com/article/10.1007/BF01099821',
+	},
+];
+
+Reading about adaptive learning for this thread led somewhere I didn't expect: not another EEG dataset, but a question about whether the entire leakage story I've been telling even generalizes past neuroscience.
+
+<Callout type="key-insight" label="The question this answers">
+Every leakage gap in this thread so far came from EEG or wearable sensors. Is the gap a property of evaluating any model on people, or specifically a property of physiological signals?
+</Callout>
+
+## Why not EEG this time
+
+The original idea — log question timing, retries, and hint use from my own study sessions — needs a logging tool that doesn't exist yet. Rather than fabricate data to keep the thread moving, I looked for a real public dataset with the same shape of signal, and found one: ASSISTments, a tutoring platform whose 2009-2010 interaction logs (523,534 question attempts, 4,213 students) are a standard benchmark in educational data mining. <SourceLink authors="Corbett & Anderson" year="1994" title="Knowledge tracing: Modeling the acquisition of procedural knowledge" href="https://link.springer.com/article/10.1007/BF01099821" /> Each row records whether an answer was right, how long the first response took, how many attempts and hints were used, and how many times that student had practiced that specific skill before.
+
+<Callout type="warning" label="A detour through learning styles first">
+Before touching the data, I read around the "learning styles" idea — the claim that matching instruction to a visual/auditory/kinesthetic style improves learning. The honest summary: weak to no support. <SourceLink authors="Pashler et al." year="2008" title="Learning Styles: Concepts and Evidence" href="https://journals.sagepub.com/doi/10.1111/j.1539-6053.2009.01038.x" /> found the supporting research lacked the randomized designs needed to trust it, and a more recent <SourceLink authors="Clinton-Lisell & Litzinger" year="2024" title="A meta-analysis of learning styles" href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1407518/full" /> meta-analysis found only a small effect, described as too small to justify adopting the theory. A better-supported individual-difference claim is "structure-building" ability — <SourceLink authors="McDaniel, Marsh & Gouravajhala" year="2022" title="Individual Differences in Learning From Educational Materials: The Case of Structure Building" href="https://journals.sagepub.com/doi/10.1177/17456916221108124" /> found it predicts comprehension consistently, in the lab and the classroom. None of this fed directly into the experiment below, but it shaped what I was willing to assume going in: not much.
+</Callout>
+
+## The experiment
+
+Same structure as every leakage experiment in this thread: predict a binary outcome (here, right vs. wrong) from a small set of features, using logistic regression, compared across a random 5-fold split and a student-wise split (`GroupKFold` by student ID), plus a shuffled-label null.
+
+The features are deliberately generic — nothing about *which* skill or question, only about the interaction itself: log response time, attempt count, hint count, total hints available, log(opportunity — how many times this student has seen this skill before), and whether a bottom-out hint was used.
+
+## The result
+
+<DataTable caption="ASSISTments: predicting correctness, random vs. student-wise split">
+<thead><tr><th>Split</th><th>Balanced accuracy</th></tr></thead>
+<tbody>
+<tr><td>Random (leaky)</td><td>0.866 ± 0.002</td></tr>
+<tr><td>Student-wise</td><td>0.865 ± 0.006</td></tr>
+<tr><td>Null (shuffled)</td><td>0.500 ± 0.000</td></tr>
+</tbody>
+</DataTable>
+
+The gap is 0.001. For comparison, the smallest gap anywhere else in this thread was 0.027 (motor imagery), and the largest was 0.182 (EEGMAT). This one is effectively zero, on the largest sample in the whole series — 4,213 students, against 10-36 in the EEG and wearable experiments.
+
+<Callout type="formula" label="Why this isn't a contradiction">
+The features here — response time, hint use, attempt count — describe how hard a question is for whoever is answering it, not who that person is. A slow response and three hints predicts a wrong answer in almost the same way for any student. EEG and wearable features carry a lot more person-identity information by nature (skull geometry, skin-conductance baseline, individual spectral signatures), which is exactly what a random split lets a model exploit for free. Take that identity information away from the features, and the random-split advantage mostly goes away with it.
+</Callout>
+
+## What this adds to the checklist
+
+<a href={withBase('/en/blog/what-id-check-before-believing-any-brain-decoding-result/')}>The checklist from earlier in this thread</a> said the leakage gap's size depends on the task and the dataset. This result sharpens that: it depends specifically on how much person-identifying information is baked into the *features*, not the raw signal type or the task difficulty. A gap near zero is not proof that evaluation discipline doesn't matter here — the student-wise check is still the only way to find that out — but it is evidence that this particular feature set isn't quietly encoding "which student is this" the way spatial EEG patterns do.
+
+<Callout type="definition" label="What I'd still want to check">
+Whether a richer feature set here — including something like per-student baseline accuracy or typing speed — reintroduces a gap by smuggling identity back in. That's the same lesson as the CSP failure earlier in this thread, just pointed the other direction: adding more person-specific signal to features is a choice with consequences for what a random split will hide.
+</Callout>
+
+## Sources & papers I used while learning this
+
+<Sources papers={papers} />
