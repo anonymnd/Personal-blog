@@ -1,0 +1,40 @@
+---
+title: "Designing an API for Time Series Data"
+description: "Range queries, downsampling, and why a time-series endpoint breaks the normal REST pagination rules — a small side note from building one for a monitoring tool."
+pubDate: 2026-08-24T10:00:00.000Z
+translationKey: designing-an-api-for-time-series-data
+locale: en
+interactive: true
+tags:
+  - api
+  - data
+  - system-design
+---
+
+Most REST APIs return a list of things: users, orders, products. A time-series endpoint returns a list of *measurements of one thing over time* — CPU usage every 10 seconds, a sensor reading every minute, a stock price every tick — and that difference breaks several defaults that work fine everywhere else.
+
+## The query isn't "give me everything"
+
+A normal list endpoint asks for a page: `GET /orders?page=2&limit=50`. A time-series endpoint almost always asks for a *range*: `GET /metrics/cpu?from=2026-08-20T00:00:00Z&to=2026-08-24T00:00:00Z`. Offset-based pagination doesn't map cleanly onto that — "page 2" means nothing to a caller who wants "the last 24 hours." The range itself is the natural cursor, and most time-series APIs (Prometheus, InfluxDB, CloudWatch) use `from`/`to` or `start`/`end` instead of `page`/`limit` for exactly this reason.
+
+## Resolution is a parameter, not a constant
+
+If a sensor reports every 10 seconds and someone asks for a month of data, that's roughly 260,000 points — too many to send, too many to render in a chart, and mostly redundant for a monthly view anyway. The endpoint needs a way to say "give me this range, but downsampled" — an explicit `interval` or `step` parameter that controls how many points come back, independent of how often the underlying data was actually recorded.
+
+```text
+GET /metrics/cpu?from=2026-08-01T00:00:00Z&to=2026-09-01T00:00:00Z&step=1h
+```
+
+This single parameter is doing two jobs at once: it's a performance control (fewer points, smaller payload, faster render) and a semantic one (an hourly average means something different from an hourly max or an hourly last-value, and the API has to pick one or let the caller choose).
+
+## Aggregation has to be explicit
+
+Downsampling 10-second readings into hourly points requires an aggregation function — average, min, max, sum, or last — and different callers want different ones for the same underlying data. A dashboard showing "typical load" wants an average. An alerting system watching for spikes wants a max. Baking in one default silently answers a question the caller didn't ask, so a well-designed time-series endpoint exposes the aggregation as its own parameter rather than hardcoding it.
+
+## Writes are append-only and high-volume, reads are range-scoped and bursty
+
+The write path for time-series data looks nothing like a typical CRUD write: no updates, almost never a delete, just a constant stream of new points tagged with a timestamp. That access pattern is why purpose-built time-series databases (InfluxDB, TimescaleDB, Prometheus's own storage) exist instead of just using a general-purpose relational table — they're built around appending and range-scanning by time, not around row-level updates. An API sitting on top of one of these should reflect that asymmetry: the write endpoint is narrow and high-throughput (often batched — many points per request, not one), and the read endpoint is the one that carries all the query complexity above.
+
+## The small lesson
+
+None of this is exotic — it's the same idea behind [turning a workflow into REST endpoints](/Personal-blog/en/blog/071-how-to-turn-a-business-workflow-into-rest-endpoints/) in the first place: match the API shape to the actual access pattern instead of forcing every resource through the same list-of-things template. Time series data has a shape (ordered, dense, range-queried, often downsampled) that's different enough from a normal resource list that copying the usual CRUD conventions onto it produces an API that technically works but fights its own caller on every request.
