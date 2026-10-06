@@ -76,6 +76,16 @@ pre code {
 	padding: 0;
 }
 
+html[dir='rtl'] code,
+html[dir='rtl'] pre {
+	direction: ltr;
+	unicode-bidi: isolate;
+}
+
+html[dir='rtl'] pre {
+	text-align: left;
+}
+
 img {
 	max-width: 100%;
 	height: auto;

@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { homeLocaleHrefs } from '../../lib/localeHrefs';
 import { blogIndexHref, postHref, type Locale, locales } from '../../i18n/locales';
 import { homeStrings, layoutStrings } from '../../i18n/ui';
+import { isPublished } from '../../lib/publication.mjs';
 import { getCollection } from 'astro:content';
 
 export function getStaticPaths() {
@@ -16,7 +17,7 @@ const localeHrefs = homeLocaleHrefs();
 
 const posts = (
 	await getCollection('blog', ({ data }) => {
-		if (import.meta.env.PROD && data.draft === true) return false;
+		if (!isPublished(data, import.meta.env.PROD)) return false;
 		return data.locale === lang;
 	})
 ).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
