@@ -26,6 +26,8 @@ html {
 
 body {
 	margin: 0;
+	min-width: 0;
+	overflow-wrap: anywhere;
 	min-height: 100vh;
 	font-family: var(--font-sans);
 	background: var(--bg);
@@ -51,6 +53,8 @@ a:hover {
 
 code,
 pre {
+	max-width: 100%;
+	overflow-wrap: normal;
 	font-family: var(--font-mono);
 	font-size: 0.9em;
 }
@@ -93,6 +97,7 @@ img {
 }
 
 .prose {
+	min-width: 0;
 	max-width: var(--max-read);
 	margin: 0 auto;
 }
@@ -113,7 +118,13 @@ img {
 
 .prose ul,
 .prose ol {
-	padding-left: 1.35rem;
+	padding-inline-start: 1.35rem;
+}
+
+.prose table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
 }
 
 .prose blockquote {
