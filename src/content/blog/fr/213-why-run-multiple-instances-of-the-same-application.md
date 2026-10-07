@@ -1,36 +1,60 @@
 ---
-title: "Pourquoi exécuter plusieurs instances de la même application ?"
-description: "Une exploration de la mise à l'échelle horizontale pour améliorer la disponibilité et les performances via la distribution de la charge."
-pubDate: 2026-10-15T12:48:00.000Z
+title: "Mise à l'échelle des instances et routage via Load Balancer"
+description: "Apprenez à scaler un service de rendu de documents en externalisant l'état et en choisissant entre le routage L4 et L7."
+pubDate: 2026-10-08T13:48:00.000Z
 translationKey: 213-why-run-multiple-instances-of-the-same-application
+seriesOrder: 46
 locale: fr
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-Imaginez que vous ayez créé une application d'achats où les employés soumettent des demandes. Au début, un seul serveur gère tout parfaitement. Mais avec la croissance de l'entreprise, des centaines de personnes soumettent des demandes simultanément. Soudain, le serveur ralentit, les requêtes expirent et si ce serveur unique tombe en panne, tout le processus d'achat s'arrête. C'est le problème du « point de défaillance unique ».
+## Le problème du passage à l'échelle vertical
 
-## Mise à l'échelle horizontale vs verticale
-Lorsqu'un serveur peine, on peut ajouter du CPU ou de la RAM (Scaling Vertical), mais il existe une limite physique à la taille d'une machine. Exécuter plusieurs instances de la même application (Scaling Horizontal) permet de répartir la charge sur plusieurs petites machines. Cela garantit que si une instance échoue, les autres continuent de traiter les requêtes.
+Lorsqu'une instance unique atteint ses limites de CPU ou de mémoire, la réponse classique est d'ajouter des ressources (scaling vertical). Cependant, cela a un plafond physique et crée un point de défaillance unique. Le scaling horizontal—exécuter plusieurs instances identiques de la même application—permet de répartir la charge.
 
-## Le rôle du Load Balancer
-Pour que plusieurs instances fonctionnent, il faut un Load Balancer (répartiteur de charge). Il agit comme un agent de circulation, recevant les requêtes HTTP et les routant vers les instances disponibles. Il peut utiliser différents algorithmes : le Round Robin alterne simplement entre les serveurs, tandis que le Least Connections envoie le trafic vers l'instance ayant la charge la plus faible.
+Mais passer d'une seule instance à plusieurs introduit un défi majeur : **l'état (state)**. Si un utilisateur télécharge un document sur l'Instance A et demande ensuite le statut du rendu à l'Instance B, l'Instance B n'aura aucune trace du travail si l'état est stocké en mémoire locale ou sur un disque local. Pour scaler, l'application doit être sans état (stateless). Tout état durable (sessions, statut des tâches, fichiers) doit être déplacé vers un stockage partagé externe, comme une base de données ou un cache distribué.
 
-## Gestion de l'état partagé
-Un défi critique est que les instances doivent être sans état (stateless). Si un demandeur télécharge un document sur l'Instance A et que le manager tente de l'approuver via l'Instance B, l'Instance B ne trouvera pas le fichier s'il est stocké localement. Vous devez déplacer l'état vers un stockage externe partagé, comme une base de données ou un cache distribué tel que Redis.
+## Load Balancing L4 vs L7
 
-## Exemple concret : Approbation d'achat
-Considérons un flux de requête :
-1. **Demandeur** envoie POST `/request` → Load Balancer → **Instance 1**. L'Instance 1 enregistre la demande dans une DB PostgreSQL partagée.
-2. **Manager** envoie GET `/pending` → Load Balancer → **Instance 2**. L'Instance 2 récupère les données depuis la même DB PostgreSQL.
+Pour distribuer le trafic entrant, on utilise un Load Balancer (LB). Le choix entre le niveau 4 (Transport) et le niveau 7 (Application) dépend de la compréhension nécessaire du trafic.
 
-**Résultat :** Le système reste disponible même si l'Instance 1 plante pendant la revue du manager.
+### Load Balancing de Niveau 4 (L4)
+Le L4 opère au niveau TCP/UDP. Il regarde uniquement l'adresse IP et le port, sans inspecter le contenu du paquet.
+- **Mécanisme** : Il redirige simplement les paquets TCP vers les instances backend.
+- **Avantages** : Extrêmement rapide, faible consommation CPU, car il ne déchiffre pas le SSL/TLS et n'analyse pas les headers HTTP.
+- **Inconvénients** : Aveugle au contenu. Impossible de router selon un chemin d'URL ou un cookie.
 
-## Erreur courante : Sessions locales
-Les développeurs stockent souvent les sessions utilisateur en mémoire locale (`HttpSession` dans Jakarta EE). Dans une configuration multi-instances, un utilisateur peut être connecté à l'Instance 1 mais être routé vers l'Instance 2, provoquant une déconnexion soudaine.
-**Correction :** Utilisez un magasin de sessions distribué ou des JWT (JSON Web Tokens) pour que n'importe quelle instance puisse vérifier l'utilisateur.
+### Load Balancing de Niveau 7 (L7)
+Le L7 opère au niveau Applicatif (HTTP/HTTPS). Il termine la connexion, lit la requête, puis prend une décision de routage.
+- **Mécanisme** : Il peut inspecter les headers HTTP, les cookies et le chemin de l'URL.
+- **Avantages** : Routage intelligent. On peut envoyer les requêtes `/status` vers un pool d'instances légères et les requêtes `/render` vers un pool optimisé pour le CPU.
+- **Inconvénients** : Latence et usage CPU plus élevés car il doit parser les données applicatives.
 
-## Exercice pratique
-Si vous avez 3 instances et utilisez un load balancer Round Robin, quelle instance reçoit la 4ème requête ?
+## Algorithmes de routage : Round Robin vs Least Connections
 
-**Réponse :** L'Instance 1 (Le cycle redémarre : 1, 2, 3, puis 1).
+Round robin répartit les sélections sans égaliser le coût CPU. L4 répartit normalement connexions ou flux : plusieurs requêtes HTTP d’une connexion persistante peuvent rester sur un backend. L7 peut décider par requête selon son implémentation.
+
+Least connections utilise un indicateur, pas la charge réelle. Une connexion peut porter plusieurs streams HTTP/2, un long rendu ou seulement du keep-alive inactif. Comparez trafic, concurrence et files d’attente. Pondération et concurrence bornée aident à ne pas dépasser la capacité sûre d’un processus.
+## Exemple concret : Service de rendu de documents
+
+Imaginons un service avec deux types de trafic :
+1. `GET /status/{id}` (Rapide, faible CPU)
+2. `POST /render` (Lent, fort CPU)
+
+### Plan d'architecture
+- **État externe** : Utilisation d'une base PostgreSQL partagée pour les métadonnées et d'un stockage S3 pour les documents. Ainsi, n'importe quelle instance peut traiter n'importe quelle requête.
+- **Choix du LB** : Load Balancer L7 pour permettre le **routage basé sur le chemin (Path-Based Routing)**.
+- **Logique de routage** :
+    - Chemin `/status` → Route vers le "Pool Léger" (petites instances) via **Round Robin** (requêtes uniformes).
+    - Chemin `/render` → Route vers le "Pool Lourd" (instances optimisées CPU) via **Least Connections** (temps de rendu variables).
+- **Health Checks** : Le LB interroge périodiquement `/health`. Si une instance renvoie une erreur 500 ou expire, elle est retirée de la rotation jusqu'à son rétablissement.
+
+### Mesure de capacité
+Pour savoir quand scaler, on surveille les **Requêtes Concurrentes par Instance**. Si la moyenne du "Pool Lourd" atteint 80% de la capacité maximale de rendus simultanés, on déclenche la création d'une nouvelle instance.
+
+## Exercice
+
+Une pression mémoire inégale malgré des compteurs similaires invite à examiner coût, réutilisation des connexions, fuites et concurrence ; elle ne prouve pas la faute d’un algorithme. Profilez la mémoire des rendus et bornez les jobs simultanés. Mettez en file ou séparez les endpoints lourds si les mesures le justifient ; testez le routage adapté.
+
+Un état partagé simplifie cette API stateless, mais des services stateful peuvent aussi évoluer par partitionnement ou réplication. Un cache distribué n’est pas automatiquement durable. Les contrôles de santé et scale-out prennent du temps : vérifiez drainage, retries, protection contre doublons et capacité lors d’une panne. Le seuil 80% est une politique à tester, pas une règle universelle.

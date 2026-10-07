@@ -1,42 +1,82 @@
 ---
-title: "What Does Port Mapping Mean?"
-description: "A beginner's guide to understanding how Docker connects your computer's network ports to those inside a container."
-pubDate: 2026-10-13T11:48:00.000Z
+title: "Docker Ports, localhost and Service Discovery in One Network Model"
+description: "A deep dive into the distinction between host-published ports, container namespaces, and Compose DNS for inter-service communication."
+pubDate: 2026-10-08T04:48:00.000Z
 translationKey: 164-what-does-port-mapping-mean
+seriesOrder: 37
 locale: en
-tags: ["software-engineering","docker","learning-series"]
+tags: ["docker","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The Mental Model of Docker Networking
 
-Imagine you have a database running inside a Docker container. You try to connect to it using `localhost:5432` on your machine, but the connection is refused. Even though the database is running perfectly inside the container, it is trapped in its own isolated network namespace. To the outside world, the container is like a locked room with no doors; port mapping is the act of creating a specific door between your host machine and that room.
+One of the most common points of confusion when starting with Docker is the distinction between where a service is listening and how it is reached. To understand this, we must distinguish between the Host Network and the Container Network Namespace.
 
-## The Mechanism of Mapping
-By default, containers have their own internal IP addresses and ports. However, your browser or API client communicates with your host OS. Port mapping (or port forwarding) tells Docker: "Any traffic hitting the host on port X should be forwarded to the container on port Y." This is expressed as `host_port:container_port`. It is important to remember that the container's `localhost` is different from your machine's `localhost`.
+Every container runs in its own isolated network namespace. This means it has its own virtual network interface and its own loopback address (`127.0.0.1`). When a process inside a container binds to `localhost:8080`, it is binding to the container's internal loopback, not the host's. If you try to access `localhost:8080` from your browser on the host machine, the request will fail because the host's loopback is entirely separate from the container's.
 
-## A Worked Example: Procurement App
-Suppose you are building a procurement app where a requester submits a request. The backend runs on port 8080 inside the container, but you want to access it via port 9000 on your laptop to avoid conflicts with other apps.
+## Port Mapping: The Bridge
 
-```bash
-# Mapping host port 9000 to container port 8080
-docker run -p 9000:8080 procurement-backend
+For normal Compose bridge networking, 5332:5432 publishes host port 5332 to the container’s port 5432. The process must actually listen on that container port and an appropriate interface such as 0.0.0.0. EXPOSE only documents a port; it does not start a listener or publish one. Binding only to container loopback can make port publishing ineffective.
+
+Use 127.0.0.1:5332:5432 for a host-local development database; an unqualified mapping may publish on all host interfaces. Containers sharing the Compose network reach db:5432 directly through service discovery and do not need a published DB port. This description assumes the ordinary bridge configuration, not host networking or shared network namespaces.
+## Service Discovery and Internal Communication
+
+While port mapping is essential for the developer or the end-user, it is irrelevant for communication between containers on the same Docker network. 
+
+When using Docker Compose, Docker creates a default bridge network. Every service defined in the `docker-compose.yml` is assigned a DNS entry corresponding to its service name. Containers communicate using these names and their **internal** ports, bypassing the host's network stack entirely.
+
+## Worked Example: Search API and Database
+
+Let's apply this to a scenario where a Search API (Java/Spring) needs to connect to a PostgreSQL database.
+
+### The Configuration (`docker-compose.yml` illustrative snippet)
+```yaml
+services:
+  db:
+    image: postgres:15
+    ports:
+      - "127.0.0.1:5332:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD locally}
+
+  search-api:
+    image: search-api:latest
+    ports:
+      - "8088:8080"
+    environment:
+      # Note: We use the service name 'db' and the internal port 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD locally}
+    depends_on:
+      - db
 ```
 
-**Outcome:** When you visit `http://localhost:9000`, Docker intercepts the request and routes it to port 8080 inside the container. The app processes the request and sends the response back through the same tunnel.
+### Traffic Flow Analysis
 
-## Common Mistake: Reversing the Order
-A frequent error for beginners is swapping the ports, such as writing `-p 8080:9000` when the app inside is actually listening on 8080. 
+1. **External User → API:** The user visits `http://localhost:8088`. The host forwards this to the `search-api` container on port `8080`.
+2. **API → Database:** The `search-api` container needs data. It looks up the hostname `db` via Docker's internal DNS, resolves it to the container's internal IP, and connects to port `5432`. It does **not** use `localhost:5332` because `localhost` inside the API container refers to itself, not the host.
+3. **Developer → Database:** The developer uses a GUI tool (like pgAdmin) on the host to check the data. They connect to `localhost:5332`. Docker forwards this to the `db` container on port `5432`.
 
-**Correction:** Always remember the pattern `External:Internal`. If your Java Spring Boot app uses `server.port=8080`, the second number in your mapping must be 8080.
+### Failure Cases
+- **Using `localhost:5432` in the API config:** The API will try to find PostgreSQL inside its own container. Since Postgres isn't running in the API container, the connection will be refused.
+- **Using `localhost:5332` in the API config:** The API will try to find a service on its own port 5332. Again, this will fail.
+- **Omitting the `ports` section for `db`:** The API can still connect to the DB because they are on the same network. However, the developer cannot connect via a GUI tool from the host because no bridge exists from the host to the container.
 
-## Inter-Container Communication
-If you have a procurement manager service and a buyer service in the same Docker Compose network, they don't use port mapping to talk to each other. They use the service name and the internal port. For example, the manager service reaches the buyer service via `http://buyer:8080`, bypassing the host's network entirely.
+## Focused Exercise
 
-## Practical Exercise
-You have a PostgreSQL container that listens on port 5432 internally. You want to connect to it using port 5332 on your host machine. What is the correct docker run flag?
+**Scenario:** You have a service `cache` running on port `6379` and a service `app` running on port `80`. You want the `app` to reach the `cache`, and you want to be able to run `redis-cli` from your host machine to inspect the cache.
 
-**Answer:** `-p 5332:5432`
+**Question:** 
+1. What should the `ports` mapping for the `cache` service be in `docker-compose.yml`?
+2. What connection string should the `app` use to reach the `cache`?
+3. If you change the mapping to `7000:6379`, does the `app` connection string change?
+
+**Answer:**
+1. `6379:6379` (or any host port like `6379:6379`).
+2. `cache:6379`.
+3. No. The `app` uses the internal network; it doesn't care about the host-published port `7000`.
 
 ## Further reading
 

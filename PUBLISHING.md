@@ -1,11 +1,9 @@
-# Hourly publishing
+# Curated hourly series
 
-The 280-topic series is released in English, French and Moroccan Darija together.
+The original 280 overlapping titles have been consolidated into 57 distinct articles (171 language versions). All original topics are mapped in article-series.json. Removed article URLs redirect to their merged replacement only once that replacement is published; they are not separate blog entries.
 
-Topic 001 starts at 2026-10-06T16:48:00.000Z; each subsequent topic is one hour later. GitHub Actions rebuilds Pages every hour at minute 48 UTC. Schedules can be delayed by GitHub; the next successful build includes all topics whose publication time has passed.
+The cadence remains one article per hour with English, French and Moroccan Darija released together. Start: 2026-10-06T16:48:00.000Z. End: 2026-10-09T00:48:00.000Z. Dates and the GitHub Actions minute-48 trigger are UTC. Future articles are excluded from production indexes, navigation and routes.
 
-Future articles are excluded from production indexes, language links, navigation and generated URLs. npm run dev shows all local drafts. npm run build and npm run preview show only released posts.
+GitHub can delay scheduled runs; the monitoring heartbeat can dispatch the same deployment workflow to recover a missed release. It does not duplicate articles. Development mode shows local drafts; production builds show only due articles. BLOG_BUILD_TIME can override the clock for local verification.
 
-The scheduled builds stop after the last release (plus one final hourly window). Existing posts stay available. workflow_dispatch and pushes to main can always rebuild. To pause hourly publishing, remove the schedule trigger in .github/workflows/deploy.yml.
-
-Run node scripts/test-publication.mjs to verify boundaries and translation parity. BLOG_BUILD_TIME can override the build clock for local testing. All dates are UTC; Moroccan local display follows the reader’s locale.
+Run node scripts/test-publication.mjs to check publication boundaries and coverage. Remove the schedule trigger to stop hourly rebuilds. Existing unrelated posts remain available. Original content has a local backup under work/editorial-revision/backup and in the previous Git commit.

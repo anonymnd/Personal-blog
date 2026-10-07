@@ -1,45 +1,50 @@
 ---
-title: "What Is a Cache?"
-description: "A beginner-friendly guide to understanding how caching optimizes system performance by storing frequently accessed data in high-speed memory."
-pubDate: 2026-10-15T17:48:00.000Z
+title: "Use Redis Cache-Aside Without Serving Incorrect Data"
+description: "A deep dive into the Cache-Aside pattern to manage cinema screening data while preventing stale reads and cache stampedes."
+pubDate: 2026-10-08T15:48:00.000Z
 translationKey: 218-what-is-a-cache
+seriesOrder: 48
 locale: en
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The Cache-Aside Mechanism
 
-Imagine you are a procurement manager. Every time a requester asks for the status of a purchase order, you have to walk to a physical archive room in the basement, find the folder, and read the status. If ten people ask for the same order, you make ten trips. This is how a system feels when it fetches data from a slow disk-based database every single time.
+In a Cache-Aside (or Lazy Loading) architecture, the application is responsible for managing the relationship between the database (the source of truth) and the cache (the fast-access layer). Unlike write-through caching, the cache does not automatically update when the database does. Instead, the application follows a specific logic flow: check the cache; if missing (a miss), fetch from the DB and populate the cache; if present (a hit), return the data immediately.
 
-## The Core Mechanism
-Caching is the process of storing copies of data in a temporary, high-speed storage layer (the cache) so that future requests for that data can be served faster. While a database lives on a hard drive (slow), a cache typically lives in RAM (fast). When a request comes in, the system first checks the cache. If the data is there, it is a 'cache hit'; if not, it is a 'cache miss,' and the system must fetch it from the primary source.
+While this decouples the cache from the database, it introduces the risk of stale data. If a cinema screening is cancelled in the database but the cache still holds the old schedule, users will see incorrect information.
 
-## Cache-Aside Pattern
-In a procurement app, the most common strategy is 'Cache-Aside'. Here is how it works:
-1. The app checks the cache for `order_123`.
-2. **Miss:** The app queries the database, gets the order, and stores it in the cache for next time.
-3. **Hit:** The app returns the cached data immediately.
+## Scenario: Cinema Screening Management
 
-```java
-// Illustrative excerpt of Cache-Aside logic
-public Order getOrder(String id) {
-    Order order = cache.get(id);
-    if (order == null) {
-        order = database.findOrder(id);
-        cache.put(id, order, Duration.ofMinutes(10));
-    }
-    return order;
-}
+Consider a system where users query screening times for a specific movie. The data is read-heavy but occasionally updated (e.g., a screening is cancelled due to technical issues).
+
+### The Workflow Trace
+
+1. **Initial Read (Miss):** User requests `movie_123`. Cache is empty. App queries DB → DB returns "19:00". App stores "19:00" in Redis with a TTL (Time-to-Live) of 3600s. User sees "19:00".
+2. **Subsequent Read (Hit):** Another user requests `movie_123`. App finds "19:00" in Redis. User sees "19:00" instantly.
+3. **The Update (Invalidation):** An admin cancels the 19:00 screening. The app updates the DB to "Cancelled". To prevent stale data, the app must immediately issue a `DEL movie_123` command to Redis.
+4. **Post-Update Read:** User requests `movie_123`. Cache is empty (due to deletion). App queries DB → DB returns "Cancelled". App stores "Cancelled" in Redis. User sees "Cancelled".
+
+## Handling Edge Cases and Failures
+
+A reader can load an old screening, pause, then refill the cache after another transaction commits a cancellation and invalidates the key. Invalidation after commit avoids clearing for a transaction that later rolls back, but does not by itself prevent this late stale refill. A TTL bounds how long that particular entry survives; repeated stale writes, replica lag or resets require additional analysis. Version-aware writes, coordinated invalidation or an explicit bounded-staleness policy are possible designs. Booking eligibility must still use authoritative state.
+
+For a hot-key miss, coalesce requests so one loader refreshes while others wait or use permitted stale data. In a multi-instance service, a local mutex coalesces only within one instance; distributed leases need expiry and safe ownership handling. Negative caching stores an explicit not-found marker with a short TTL, not a Java null indistinguishable from a miss. Include tenant and relevant query dimensions in the key.
+## Worked Example: Implementation Logic
+
+Use a typed cache envelope with separate found and value fields, and a configured serializer. Redis stores bytes; Java null is not a reliable negative-cache marker. The following flow is illustrative pseudocode:
+
+```text
+GET screening:tenant-7:id-123
+  MISS → database lookup
+  FOUND → SET {found:true,value:...} with positive TTL
+  ABSENT → SET {found:false,value:null} with short negative TTL
+HIT {found:false,...} → return absent without a DB lookup
+UPDATE → commit authoritative change → invalidate key
 ```
 
-## The Trade-off: Stale Data
-The biggest challenge is 'cache invalidation'. If a manager approves a request, the database is updated, but the cache still holds the old 'Pending' status. This is called stale data. To fix this, you must either delete the cache entry when the data changes or set a Time-to-Live (TTL) so the data expires automatically.
+A cache hit saves a DB read. It does not guarantee only one DB query per hour: eviction, retries, concurrent misses and invalidations can cause more reads. If Redis fails, decide whether to fall back with bounded concurrency or fail; unlimited fallback can overload the database. Observe hit rate, load duration and stale-data incidents. After-commit invalidation still needs retry or reconciliation when the cache operation fails. The baseline trace demonstrates the normal flow, not strict consistency under all races.
+## Exercise
 
-## Common Mistake: The Cache as a Database
-A frequent error is treating a cache like Redis as a primary database. Caches are volatile; if the server restarts, the data is gone. Always ensure your primary database remains the 'source of truth'.
-
-## Practical Exercise
-**Scenario:** A user updates their profile name. You have a cache with a 24-hour TTL. Why is this a problem, and how do you fix it?
-
-**Answer:** The user will see their old name for up to 24 hours (stale data). The fix is to explicitly call `cache.remove(userId)` immediately after the database update.
+A single premiere key expiring can trigger many concurrent misses: use request coalescing for that key. TTL jitter spreads expiration across different keys or independently cached entries; it does not stagger requests for the same single Redis key. Test a burst at expiry, a Redis outage, and a reader paused across a cancellation. Confirm the chosen staleness policy and that booking decisions remain authoritative.

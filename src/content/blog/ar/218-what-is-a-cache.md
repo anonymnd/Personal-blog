@@ -1,45 +1,50 @@
 ---
-title: "شنو هو الـ Cache؟"
-description: "دليل مبسط باش تفهم كيفاش الـ caching كايسرع السيستيم عن طريق تخزين البيانات اللي كنحتاجو بزاف فبلاصة سريعة."
-pubDate: 2026-10-15T17:48:00.000Z
+title: "كيفاش تخدم بـ Redis Cache-Aside بلا ما تخرج داتا غالطة"
+description: "شرح مفصل لـ Cache-Aside باش تسير داتا ديال سينما بلا ما يوقع ليك مشكل ديال داتا قديمة (stale) ولا يطيح ليك السيرفر (stampede)."
+pubDate: 2026-10-08T15:48:00.000Z
 translationKey: 218-what-is-a-cache
+seriesOrder: 48
 locale: ar
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## شنو هو الـ Cache-Aside؟
 
-تخيل راسك مدير ديال المشتريات (procurement manager). كل مرة شي حد كايسولك على الحالة ديال واحد الطلبية، خاصك تهبط لواحد الأرشيف فالسرداب، تقلب على الدوسي، وعاد تجاوبو. إلا سولوك 10 دالناس على نفس الطلبية، غادي تهبط 10 دالمرات. هكا كايخدم السيستيم ملي كيبقى يجييب البيانات من قاعدة بيانات (database) ثقيلة كل مرة.
+فـ Cache-Aside (لي كيتسمى حتى Lazy Loading)، التطبيق ديالك هو لي كيكون مسؤول على العلاقة بين الـ Database (لي هي المصدر الحقيقي للداتا) والـ Cache (لي هي بلاصة سريعة). هنا الـ cache ما كيتحدثش بوحدو ملي كتبدل شي حاجة فـ DB. التطبيق كيتبع هاد المنطق: كيشوف واش الداتا كاين فـ cache؛ إلا كانت (hit)، كيرجعها ديريكت؛ إلا ما كانتش (miss)، كيمشي يجيبها من الـ DB، كيحطها فـ cache، وعاد كيرجعها للمستخدم.
 
-## كيفاش كايخدم الـ Cache
-الـ Caching هو ملي كنخبيو نسخة من البيانات فواحد البلاصة مؤقتة وسريعة بزاف (كتسمى cache) باش المرة الجاية نلقاوها دغيا. الـ database كتكون فالديكس (ثقيلة)، ولكن الـ cache كيكون فـ RAM (سريعة). ملي كايجي طلب، السيستيم كايشوف الـ cache هي الأولى. إلا لقاها، كنسميوها 'cache hit'، وإلا مالقاهاش، كنسميوها 'cache miss' وكيضطر يمشي يجيبها من الـ database.
+المشكل فهاد الطريقة هو أن الداتا تقدر تولي قديمة (stale). مثلاً، إلا تلغات شي حصة ديال فيلم فـ DB ولكن الـ cache باقي شاد التوقيت القديم، المستخدم غادي يشوف معلومة غالطة.
 
-## طريقة Cache-Aside
-فـ application ديال المشتريات، أكثر طريقة مستعملة هي 'Cache-Aside'. ها كيفاش كادوز:
-1. التطبيق كايقلب على `order_123` فالـ cache.
-2. **Miss:** مالقاهاش، كيمشي للـ database، كايجيب الطلبية، وكايحطها فالـ cache باش المرة الجاية يلقاها.
-3. **Hit:** لقاها فـ cache، كايعطيها للمستخدم ديك الساعة.
+## سيناريو: تسيير حصص السينما
 
-```java
-// مثال بسيط ديال Cache-Aside
-public Order getOrder(String id) {
-    Order order = cache.get(id);
-    if (order == null) {
-        order = database.findOrder(id);
-        cache.put(id, order, Duration.ofMinutes(10));
-    }
-    return order;
-}
+تخيل عندك سيستيم كيعطي توقيت الأفلام. الداتا كتقرا بزاف ولكن كتبدل مرة مرة (مثلاً شي حصة تلغات).
+
+### تتبع العملية (Trace)
+
+1. **قراءة أولى (Miss):** مستخدم طلب `movie_123`. الـ cache خاوي. التطبيق مشى لـ DB → لقا "19:00". حط "19:00" فـ Redis وعطاها TTL (وقت انتهاء) ديال 3600 ثانية. المستخدم شاف "19:00".
+2. **قراءة تانية (Hit):** مستخدم آخر طلب `movie_123`. التطبيق لقا "19:00" فـ Redis. المستخدم شافها ديريكت بلا ما يصدع الـ DB.
+3. **تحديث الداتا (Invalidation):** الأدمن لغى حصة 19:00. التطبيق بدل الداتا فـ DB لـ "Cancelled". باش ما يبقاش الـ cache فيه داتا غالطة، خاص التطبيق يدير `DEL movie_123` فـ Redis دابا.
+4. **قراءة مورا التحديث:** مستخدم طلب `movie_123`. الـ cache خاوي (حيت مسحناه). التطبيق مشى لـ DB → لقا "Cancelled". حط "Cancelled" فـ Redis. المستخدم شاف "Cancelled".
+
+## كيفاش تعامل مع المشاكل التقنية
+
+Reader تقدر تقرا screening قديمة وتوقف، ومن بعد تعمر cache من بعد transaction أخرى commit وإلغاء key. Invalidation بعد commit كتفادى حذف cache لـ transaction غادي rollback، ولكن ما كتمنعش بوحدها stale refill متأخرة. TTL كتحد عمر هاد entry؛ stale writes متكررين ولا replica lag ولا resets خاصهم analysis. Version-aware writes ولا coordinated invalidation ولا bounded-staleness policy اختيارات ممكنة. Booking eligibility خاصها authoritative state.
+
+فـ hot-key miss، جمع requests باش loader وحدة تعمر والآخرين يتسناو ولا يستعملو stale data مسموحة. Local mutex كتغطي غير instance وحدة؛ distributed leases خاصهم expiry وownership آمنة. Negative caching كتخزن not-found marker واضحة مع TTL قصيرة، ماشي Java null اللي كتتشابه مع miss. دخل tenant وquery dimensions فالـ key.
+## مثال تطبيقي: الكود بالـ Java
+
+استعمل cache envelope typed فيها found وvalue منفصلين وserializer configured. Redis كتخزن bytes؛ Java null ماشي negative marker موثوقة. هادا pseudocode توضيحي:
+
+```text
+GET screening:tenant-7:id-123
+  MISS → database lookup
+  FOUND → SET {found:true,value:...} with positive TTL
+  ABSENT → SET {found:false,value:null} with short negative TTL
+HIT {found:false,...} → return absent without a DB lookup
+UPDATE → commit authoritative change → invalidate key
 ```
 
-## المشكل ديال البيانات القديمة (Stale Data)
-أكبر تحدي هو 'cache invalidation'. مثلاً، إلا المدير وافق على طلبية، الـ database كتبدل، ولكن الـ cache كيبقى فيه الحالة القديمة 'Pending'. هادشي كايتسمى stale data. باش نحلوا هاد المشكل، خاصنا يا إما نمسحو ديك المعلومة من الـ cache ملي تبدل، يا إما نديرو ليها وقت ديال انتهاء (TTL).
+Hit كتفادى DB read، ما كتضمنش غير query وحدة فالساعة: eviction وretries وconcurrent misses وinvalidation يقدرو يزيدو reads. إلا Redis فشلات، اختار bounded fallback ولا failure؛ fallback بلا حدود تقدر تغرق DB. راقب hit rate وload duration وstale incidents. Invalidation بعد commit خاصها retry ولا reconciliation إلا فشلات. Trace العادية ما كتضمنش strict consistency فكل races.
+## تمرين
 
-## غلط شائع: الـ Cache ماشي Database
-بزاف دالناس كايتعاملو مع Redis بحال إلا هو database أساسية. الـ cache كيكون volatile، يعني إلا طفا السيرفر، كاع البيانات كايتمسحو. ديما خلي الـ database هي المصدر الحقيقي والوحيد ديال المعلومات.
-
-## تمرين تطبيقي
-**حالة:** واحد المستخدم بدل سميتو. نتا داير cache كايسالي مورا 24 ساعة. شنو هو المشكل هنا وكيفاش تحلو؟
-
-**الجواب:** المستخدم غادي يبقى يشوف سميتو القديمة لمدة 24 ساعة. الحل هو أنك دير `cache.remove(userId)` مباشرة ملي تبدل السمية فالـ database.
+Key وحدة ديال premiere إلا سالات تقدر تعطي misses متزامنين بزاف: دير request coalescing لهاد key. TTL jitter كتفرق expiration بين keys مختلفة ولا entries مستقلين، ما كتفرقش requests ديال نفس Redis key الوحدة. جرب burst وقت expiry وRedis outage وreader واقفة وقت cancellation. تأكد من staleness policy وأن booking decisions باقين authoritative.

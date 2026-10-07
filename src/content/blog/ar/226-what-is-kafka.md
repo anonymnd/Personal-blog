@@ -1,37 +1,48 @@
 ---
-title: "شنو هو Kafka؟"
-description: "شرح مبسط على Apache Kafka كيفاش كيخدم باش يفرق بين microservices فواحد السيستيم."
-pubDate: 2026-10-16T01:48:00.000Z
+title: "استعمل Messaging و Kafka ملي كيكون الخدمة خاصها تبقى واخا تسالي Request"
+description: "تعلم كيفاش تفصل الخدمات (decouple) باستعمال Kafka، وركز على Outbox pattern و partition ordering و idempotency باش تضمن أن طباعة labels و analytics تخدم بلا مشاكل."
+pubDate: 2026-10-08T18:48:00.000Z
 translationKey: 226-what-is-kafka
+seriesOrder: 51
 locale: ar
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-تخيل معايا كتصاوب تطبيق ديال الشراء (procurement). ملي الموظف كيدفع طلب شراء، خاص بزاف ديال الحوايج يوقعوا: manager يوصلو notification، service budget يتأكد واش كاين الفلوس، و audit log يقيد العملية. إلا خدمتي بـ API calls نيشان، السيستيم غيولي معقد بزاف. وإلا كان service budget طايح، الطلب كامل غيفشل. هنا فين كيجي Kafka باش يحل هاد المشكل، حيت كيخدم بحال واحد الـ distributed commit log.
+## الفرق بين Synchronous و Asynchronous
 
-## كيفاش كيخدم Kafka
-Kafka خدام بنظام publish-subscribe. بلاصة ما تصيفط ميساج لشي واحد نيشان، الـ 'Producer' كيصيفط البيانات (event) لواحد الـ 'Topic'. هاد الـ topic بحال شي دوسي أو تصنيف. البيانات كتقسم على 'Partitions' باش Kafka يقدر يوزع الخدمة على بزاف ديال السيرفورات. الـ 'Consumers' كيتسجلو فهاد الـ topics باش يقراو البيانات فلوقت اللي كيناسبهم. وبما أن Kafka كيسجل البيانات فـ disk، إلا طاح شي consumer، يقدر يرجع يكمل من فين وقف.
+ملي شي client كيصيفط request لـ API، السيرفر عندو جوج خيارات: إما يكمل كاع داكشي اللي خاص يدار عاد يجاوب (Synchronous)، ولا يأكد بلي توصل بالطلب ويخلي الخدمة تدار من بعد (Asynchronous).
 
-## مثال ديال تطبيق الشراء
-فالتطبيق ديالنا، الـ topic سميتو 'Request-Submitted' وهو اللي كيسير الخدمة:
-1. **Producer**: الـ Request Service كيصيفط event JSON: `{"id": 101, "item": "Laptop", "amount": 1200}`.
-2. **Topic**: Kafka كيخزن هاد الـ event فـ topic سميتو `purchase_requests`.
-3. **Consumers**:
-   - **Notification Service** كيقرا الـ event ويصيفط email لـ manager.
-   - **Budget Service** كيقرا نفس الـ event باش يحجز الفلوس.
+فـ flow synchrone، إلا كان السيرفيس ديال طباعة labels طايح، الـ request ديال la commande كاملة غادي تفشل، واخا la commande تسجلات فـ database. هادشي كيخلي السيستيم ضعيف حيت أي حاجة طاحت كتوقف كلشي.
 
-النتيجة: الـ Request Service ما محتاجش يعرف شكون اللي كيسمع ليه، هو غير كيصيفط الـ event ويسالي خدمتو.
+التواصل asynchrone باستعمال message broker بحال Kafka كيحل هاد المشكل. الـ API كتسجل la commande وكتصيفط message. من بعد الـ API تقدر ترجع `202 Accepted` لـ client. السيرفيس ديال labels و analytics كيقراو هاد message كل واحد على حساب السرعة ديالو. إلا طاحت imprimante واحد 10 دقايق، لي messages كيبقاو مجموعين فـ Kafka؛ ما كيضيعوش، و la commande ديال الكليان ما كتحبسش.
 
-## الترتيب و Idempotency
-واحد الحاجة مهمة هي أن Kafka كيضمن الترتيب ديال الميساجات غير *داخل نفس الـ partition*. إلا كانو عندك بزاف ديال partitions، الميساجات يقدروا يتسيروا ماشي بالترتيب. وزيد عليها، حيت يقدر يوقع مشكل فـ network ويصيفط الـ producer نفس الميساج جوج مرات، خاص الـ consumers يكونوا 'idempotent'. يعني واخا يتعالج نفس الـ request ID جوج مرات، ما خاصش ينقص الفلوس جوج مرات من الميزانية.
+## الفرق بين Broker و Database و Cache
 
-## غلط شائع: استعمال Kafka كقاعدة بيانات
-بزاف ديال المطورين كيسحاب ليهم Kafka هو database حيت كيخزن البيانات. ولكن Kafka مصاوب باش يدوز البيانات (streaming)، ماشي باش تدير فيه recherches معقدين.
+Relational DB مناسبة للحالة وtransactions وqueries؛ DB-backed work queue حتى هي تقدر تكون design صالحة حسب scale. قيس polling وcontention بلا رفض عام. Redis pub/sub transient؛ structures أخرى فـ Redis عندها persistence وdelivery مختلفة.
 
-**التصحيح**: خدم بـ Kafka باش تنقل البيانات بين services، ولكن خزن الحالة النهائية (مثلا status ديال الطلب) فـ database بحال PostgreSQL أو MongoDB.
+Kafka كتقدم partitioned logs وreplay وconsumer groups. ما كتبدلش order DB وما كتخليش كل event durable للأبد أوتوماتيكيا. Configure replication وacks وretention وrecovery. خلي label printing وanalytics فـ consumer groups مختلفين إلا بجوج خاصهم يشوفو كل events.
+## كيفاش خدام Kafka
 
-## تمرين تطبيقي
-إلا كان عندك topic فيه 3 ديال partitions و 4 ديال consumers فـ نفس الـ consumer group، شنو غيوقع لـ consumer الرابع؟
+كل partition فيها records مرتبين بـ offsets. Committed group offset غالبا كتحدد next record تقراها، ما كتثبتش كاع external side effects سالاو. فـ group العادية، partition كتكون عند consumer وحدة فالوقت، ولكن retries وrebalances وcrashes يقدرو يعاودو processing.
 
-**الجواب**: الـ consumer الرابع غيبقى بلا خدمة (idle) حيت كل partition فـ group واحد كتمشي لـ consumer واحد فقط.
+Order_id key وpartitioning ثابتين كيجمعو events ديال order؛ تبديل partition count ولا routing خاصو الحذر. Log order ما كتضمنش completion order إلا handlers asynchronous. Key بوحدها ما كتصلحش producers كيصيفطو events بترتيب business غلط.
+## ضمان الخدمة: Outbox Pattern و Idempotency
+
+Commit order وoutbox row فنفس SQL transaction. Relay كتpublish بـ event_id ثابتة وكتعلم progress غير بعد broker ack configured. هادشي كيخلي publication قابلة للاسترجاع، ماشي مضمونة بلا relay خدامة وdata محفوظة وretry policy. Crash بعد publish تقدر تعاود publication.
+
+| وقت failure | شنو خاص recovery |
+| --- | --- |
+| قبل SQL commit | لا order لا outbox row كيتحفظو |
+| بعد commit وقبل publish | Relay كتعاود row المحفوظة |
+| بعد publish وقبل confirmation | Event تقدر تعاود تتنشر |
+| بعد printing وقبل local receipt | Outcome مشكوك فيها؛ خاص printer-side idempotency |
+
+لـ analytics update داخلية، دخل event_id مع unique constraint وعدل counter فنفس DB transaction. Check-then-act منفصلة فيها race. Commit Kafka offset غير بعد نجاح transaction.
+
+Printing أثر فيزيكي خارجي. تشوف processed_events وتطبع ومن بعد تحفظ marker ماشي آمنة: process تقدر تطيح بعد printing وretry كتعاودها. Marker قبل printing تقدر تخليك ما تطبعش نهائيا. صيفط idempotency key ثابتة لـ label service كتدير durable deduplication وكتعرض job status، ولا صمم reconciliation/manual review للنتائج المشكوك فيها. بلا تعاون external system، ما تضمنش physical print وحدة. Outbox كتصلح SQL-to-event coordination ماشي كاع downstream effects.
+## تمرين
+
+مع3 partitions و4 consumers فـ conventional group، على الأكثر3 عندهم assignments؛ واش فعلا خدامين كيتعلق بالـ records. A وC فنفس partition عندهم log order، ولكن processing completion كتتبعو غير إلا handler كتحتافظ بيه.
+
+Kafka transactions كتنسق reads/writes Kafka المدعومين حسب contract. ما كتدخلش فيها أوتوماتيكيا printer ولا أي external DB. حدد transaction boundary وcrash windows قبل claims ديال exactly-once business outcome.

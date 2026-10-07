@@ -1,57 +1,114 @@
 ---
-title: "Comment Convertir un Modèle de Base de Données en Entités JPA"
-description: "Apprenez le processus systématique de transformation d'un schéma de base de données conceptuel en entités Java Persistence API via un exemple d'application d'achat."
-pubDate: 2026-10-08T11:48:00.000Z
+title: "Mapper Correctement les Relations d'Entités avec JPA"
+description: "Analyse approfondie des côtés propriétaires, du mappedBy et de la conversion des relations Many-to-Many en entités de jointure avec attributs."
+pubDate: 2026-10-06T22:48:00.000Z
 translationKey: 044-how-to-convert-a-database-model-into-jpa-entities
+seriesOrder: 7
 locale: fr
-tags: ["software-engineering","database-design","learning-series"]
+tags: ["database-design","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Piège du @ManyToMany Simple
 
-Beaucoup de développeurs hésitent lors du passage d'un diagramme ER visuel au code Java, devinant souvent où placer les annotations `@OneToMany` ou `@ManyToMany`. La difficulté réside dans la traduction des cardinalités relationnelles en références orientées objet sans créer de boucles de dépendances circulaires.
+Dans beaucoup de projets JPA, on commence par une annotation `@ManyToMany` pour lier deux entités. Si cela fonctionne pour des associations simples, cela échoue dès que la relation elle-même doit porter des données. Dans notre scénario, un Étudiant s'inscrit à un Cours. Si nous voulons seulement savoir *quels* étudiants sont dans *quels* cours, une table de jointure suffit. Cependant, dès que nous devons suivre la `dateInscription` ou la `note`, la relation n'est plus un lien invisible ; elle devient un concept métier à part entière : l' `Inscription`.
 
-## Mapper les Entités de Base
-Chaque table de votre modèle physique devient une classe Java annotée avec `@Entity`. La clé primaire est marquée par `@Id`. Pour une application d'achat, une entité `Request` représente la table principale. Utilisez les imports `jakarta.persistence.*` pour respecter les standards modernes. Chaque colonne devient un champ privé avec ses getters et setters.
+Convertir un `@ManyToMany` en deux relations `@OneToMany` / `@ManyToOne` permet à l'entité de jointure de posséder son propre état. Cela transforme le modèle d'un lien direct vers une entité pivot.
 
-## Gérer les Relations One-to-Many
-Dans un système d'achat, un `Manager` peut approuver plusieurs `Requests`. Dans la base de données, cela se traduit par une clé étrangère dans la table `Request`. En JPA, l'entité `Request` est le 'côté propriétaire' car elle détient la clé étrangère. Utilisez `@ManyToOne` côté `Request` et `@OneToMany(mappedBy = "manager")` côté `Manager` pour créer un lien bidirectionnel.
+## Définir le Côté Propriétaire et mappedBy
 
-## Résoudre le Many-to-Many avec des Entités de Jointure
-Si une `Request` peut contenir plusieurs `Products` et qu'un `Product` peut figurer dans plusieurs `Requests`, un `@ManyToMany` simple peut suffire. Cependant, si vous devez suivre la 'quantité' de chaque produit par demande, vous devez créer une entité `RequestItem`. Cela transforme la relation plusieurs-à-plusieurs en deux relations un-à-plusieurs, permettant à l'entité de jointure de stocker des attributs supplémentaires.
+Dans les mappings bidirectionnels one-to-many/many-to-one ci-dessous, Enrollment.student et Enrollment.course possèdent leurs relations de clé étrangère. Les collections sont les côtés inverses : mappedBy nomme le champ Java réel dans Enrollment, pas une table ni une colonne. Cette règle concerne ce mapping ; d’autres types de relation définissent la propriété autrement.
 
-## Exemple Concret : Flux d'Achat
-Considérons une `Request` et un `Buyer`.
+Un OneToMany unidirectionnel sans mapping explicite de clé étrangère utilise généralement une table de jointure. Si vous voulez le côté inverse de Enrollment.student, indiquez mappedBy="student". Un OneToMany volontairement unidirectionnel avec JoinColumn est aussi valide ; l’absence de mappedBy ne constitue donc pas toujours une erreur.
+## Exemple Concret : Le Modèle d'Inscription
+
+Voici l'implémentation du triad Etudiant-Cours-Inscription. Notez l'utilisation d'entités standards pour l'ORM.
 
 ```java
-@Entity
-public class Request {
-    @Id @GeneratedValue
-    private Long id;
-    private String description;
-
-    @ManyToOne
-    @JoinColumn(name = "buyer_id")
-    private Buyer buyer;
-}
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Entity
-public class Buyer {
+public class Student {
     @Id @GeneratedValue
     private Long id;
     private String name;
 
-    @OneToMany(mappedBy = "buyer")
-    private List<Request> assignedRequests;
+    // Côté référencé : mappedBy pointe vers le champ 'student' dans Enrollment
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Enrollment> enrollments = new ArrayList<>();
+
+    public void addCourse(Course course, LocalDate date) {
+        Enrollment enrollment = new Enrollment(this, course, date);
+        this.enrollments.add(enrollment);
+        course.getEnrollments().add(enrollment);
+    }
+    // Getters omis
+    public List<Enrollment> getEnrollments() { return enrollments; }
+}
+
+@Entity
+public class Course {
+    @Id @GeneratedValue
+    private Long id;
+    private String title;
+
+    // Côté référencé : mappedBy pointe vers le champ 'course' dans Enrollment
+    @OneToMany(mappedBy = "course")
+    private List<Enrollment> enrollments = new ArrayList<>();
+
+    public List<Enrollment> getEnrollments() { return enrollments; }
+}
+
+@Entity
+public class Enrollment {
+    @Id @GeneratedValue
+    private Long id;
+
+    private LocalDate enrollmentDate;
+    private Double grade;
+
+    // Côté propriétaire : Cette entité gère les FK
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id")
+    private Student student;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
+
+    protected Enrollment() {}
+
+    public Enrollment(Student student, Course course, LocalDate date) {
+        this.student = student;
+        this.course = course;
+        this.enrollmentDate = date;
+    }
+    // Getters omis
 }
 ```
-Résultat : La table `Request` contient une colonne `buyer_id`, tandis que l'objet `Buyer` peut accéder à toutes ses demandes via une liste.
 
-## Erreur Courante : L'oubli du mappedBy
-Une erreur fréquente est l'omission de l'attribut `mappedBy` dans les relations bidirectionnelles. Sans cela, JPA considère qu'il y a deux relations indépendantes et tentera de créer une table de jointure inutile dans la base de données.
+### Analyse du Mécanisme
+1. **Placement des Clés Étrangères** : La table `Enrollment` contiendra `student_id` et `course_id`. Les tables `Student` et `Course` restent propres.
+2. **Stratégies de Fetch** : `@ManyToOne` est `EAGER` par défaut. Nous le passons explicitement en `LAZY` pour éviter les chargements immédiats inutiles. Notez que le problème « N+1 » survient lors du chargement d'une liste d'inscriptions et de l'accès à leurs associations ; on le résout via des requêtes JOIN FETCH, et non simplement avec LAZY.
+3. **Aides à la Synchronisation** : La méthode `addCourse` dans `Student` est une aide à la synchronisation. Comme JPA ne met pas à jour automatiquement l'autre côté d'une relation bidirectionnelle en mémoire, oublier d'ajouter l'inscription aux deux listes peut mener à des données obsolètes avant le flush.
 
-## Exercice Pratique
-Scénario : Un `Department` possède plusieurs `Employees`. Comment mappez-vous le côté `Employee` de cette relation ?
+## Cas d'Échec et Conséquences
 
-Réponse : Utilisez `@ManyToOne` dans l'entité `Employee` avec un `@JoinColumn(name = "dept_id")`.
+- **Table inattendue :** Le mapping OneToMany unidirectionnel par défaut peut introduire une table d’association. Vérifiez le schéma voulu au lieu de considérer chaque table supplémentaire comme incorrecte.
+- **JSON circulaire :** Des objets bidirectionnels peuvent provoquer une récursion avec un sérialiseur non configuré. Employez une représentation bornée, souvent un DTO, ou une configuration de sérialisation adaptée. Les DTO sont utiles sans être universellement obligatoires.
+- **Orphan removal :** Avec orphanRemoval=true, retirer une inscription de la collection gérée de Student programme sa suppression. Sans cette option, modifier seulement la collection inverse ne met pas automatiquement la clé étrangère à null et ne supprime pas la ligne. Modifiez explicitement la relation propriétaire ou supprimez l’inscription selon la règle métier. Maintenez les deux collections en mémoire quand les liens sont bidirectionnels.
+## Exercice Ciblé
+
+**Scénario** : Vous devez ajouter une entité `CourseSection`. Un `Course` a plusieurs `CourseSections`, et une `Enrollment` lie désormais un `Student` à une `CourseSection` spécifique plutôt qu'au `Course` général.
+
+**Question** : Quelle entité devient le nouveau côté propriétaire pour la relation avec `Student`, et comment l'attribut `mappedBy` change-t-il dans l'entité `Student` ?
+
+**Réponse** : L'entité `Enrollment` reste le côté propriétaire car elle détient toujours la clé étrangère vers `Student`. Cependant, l'entité `Enrollment` remplace désormais le `@ManyToOne Course` par un `@ManyToOne CourseSection`. Le `mappedBy` de l'entité `Student` reste `"student"` car le nom du champ dans `Enrollment` n'a pas changé, mais le chemin logique vers le `Course` passe désormais par `Enrollment` → `CourseSection` → `Course`.
+
+## Pour approfondir
+
+- [Spring declarative transactions](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-decl-explained.html)

@@ -1,57 +1,94 @@
 ---
-title: "Pourquoi faut-il tester la couche Service ?"
-description: "Comprendre le rôle critique des tests de la couche service pour isoler la logique métier des dépendances d'infrastructure."
-pubDate: 2026-10-10T20:48:00.000Z
+title: "Choisir ses tests selon le risque réel détectable"
+description: "Guide stratégique pour mapper les modes de défaillance au bon niveau de test via un scénario de conversion monétaire."
+pubDate: 2026-10-07T12:48:00.000Z
 translationKey: 101-why-should-you-test-the-service-layer
+seriesOrder: 21
 locale: fr
-tags: ["software-engineering","backend-testing","learning-series"]
+tags: ["backend-testing","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le sophisme de la suite "au vert"
 
-Imaginez que vous développiez une application d'achats où un demandeur soumet une requête. La logique est complexe : le système doit vérifier le budget, s'assurer que l'article n'est pas restreint, puis notifier le manager. Si vous testez uniquement le Contrôleur (API) ou le Repository (Base de données), vous créez un 'vide de test' où les règles métier—le cœur de votre application—ne sont jamais vérifiées.
+Une prise de conscience courante pour les développeurs est qu'un projet peut avoir une couverture de tests de 100 % et tout de même planter en production. Cela arrive quand on teste l'implémentation (comment le code est écrit) plutôt que le risque (ce qui peut réellement casser). Si vous moquez votre repository de base de données dans un test unitaire, vous testez votre capacité à appeler une méthode, pas si votre requête SQL est valide ou si votre mapping ORM est correct.
 
-## Le rôle de la couche Service
-La couche service agit comme un orchestrateur. Alors que le Contrôleur gère les requêtes HTTP et le Repository gère le SQL, la couche Service décide de *ce qui* se passe. Tester cette couche permet de vérifier les règles métier sans avoir besoin d'une base de données active ou d'un serveur web, rendant les tests beaucoup plus rapides.
+## Mapper les risques aux niveaux de test
 
-## Isoler la logique avec Mockito
-Pour tester le service de manière isolée, on utilise Mockito. Au lieu de se connecter à une vraie base de données, on 'moque' le repository. Cela garantit qu'un échec du test est causé par un bug dans la logique métier, et non par un problème de connexion ou une table manquante.
+Pour construire un portfolio robuste, vous devez assigner chaque défaillance potentielle au niveau de test capable de la détecter. Prenons un exemple de fonctionnalité de conversion de devises : elle calcule une valeur basée sur un flux de taux distant, applique une logique d'arrondi et sauvegarde l'historique dans une base de données.
 
-## Exemple concret : Approbation de demande
-Voici comment tester la logique qui rejette une demande si le budget est dépassé :
+### 1. Tests Unitaires : Logique et Cas Limites
+Les tests unitaires doivent cibler la logique "pure". Dans notre scénario, la logique d'arrondi est le risque principal. Arrondit-on au demi supérieur ? Comment sont gérés les montants négatifs ?
+
+**Ce qu'ils détectent :** Erreurs algorithmiques, erreurs de décalage (off-by-one) et NullPointerException dans la logique métier.
+**Ce qu'ils ignorent :** Violations de contraintes de base de données, timeouts réseau ou erreurs de parsing JSON de l'API.
+
+### 2. Tests d'Intégration : Les Frontières
+Les tests d'intégration valident le contrat entre votre code et un système externe (Base de données, API, Message Broker).
+
+**Ce qu'ils détectent :** Syntaxe SQL incorrecte, colonnes manquantes en base, noms de champs JSON erronés provenant du flux de taux, ou échecs de rollback de transaction.
+**Ce qu'ils ignorent :** Les permutations complexes de logique métier (qui rendraient la suite de tests trop lente si elles étaient testées ici).
+
+### 3. Le dilemme des méthodes privées
+Les développeurs hésitent souvent à tester les méthodes privées. Si une méthode privée contient une logique complexe (comme notre arrondi), la solution n'est pas de la rendre publique ou d'utiliser la réflexion. Il faut tester le comportement public qui dépend de cette méthode. Si la logique privée est si complexe qu'elle nécessite sa propre suite, c'est le signal que cette logique doit être déplacée dans une classe "Strategy" ou "Utility" injectable, où elle peut être testée publiquement comme une unité.
+
+## Exemple concret : Plan de distribution des risques
+
+Voici la répartition des modes de défaillance pour la fonctionnalité de conversion.
+
+| Mode de défaillance | Niveau de risque | Niveau de test approprié | Pourquoi ? |
+| :--- | :--- | :--- | :--- |
+| L'arrondi de 1,005 à 1,01 échoue | Élevé | Test Unitaire | Logique pure ; exécution rapide de nombreuses permutations. |
+| L'API distante retourne 404 ou un JSON malformé | Moyen | Test d'Intégration | Valide le client HTTP et le mapping DTO. |
+| La colonne `amount` en DB est trop petite | Élevé | Test d'Intégration | Seule une vraie DB (ou Testcontainer) détecte les erreurs de schéma. |
+| Le service n'appelle pas le Repository | Faible | Test Unitaire (Mock) | Vérifie le flux d'orchestration (interaction). |
+| La transaction ne commit pas après conversion | Moyen | Test d'Intégration | Nécessite un gestionnaire de transactions réel pour être vérifié. |
+
+## Trace d'implémentation : Logique vs Persistance
+
+Considérez ce snippet illustratif d'un service de conversion :
 
 ```java
-@ExtendWith(MockitoExtension.class)
-public class ProcurementServiceTest {
-    @Mock
-    private BudgetRepository budgetRepo;
-    @InjectMocks
-    private ProcurementService service;
+public record ConversionResult(BigDecimal amount, LocalDateTime timestamp) {}
 
-    @Test
-    void shouldRejectRequestWhenBudgetExceeded() {
-        // Arrange
-        when(budgetRepo.getBalance(101)).thenReturn(50.0);
+public class CurrencyService {
+    private final RateClient rateClient;
+    private final HistoryRepository repository;
+
+    public CurrencyService(RateClient rateClient, HistoryRepository repository) {
+        this.rateClient = rateClient;
+        this.repository = repository;
+    }
+
+    public ConversionResult convert(BigDecimal amount, String from, String to) {
+        BigDecimal rate = rateClient.getRate(from, to);
+        BigDecimal result = amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
         
-        // Act & Assert
-        assertThrows(InsufficientFundsException.class, () -> {
-            service.submitRequest(101, 100.0);
-        });
+        var entity = new ConversionEntity(result, from, to);
+        repository.save(entity);
+        
+        return new ConversionResult(result, LocalDateTime.now());
     }
 }
 ```
-Ici, `when(...).thenReturn(...)` simule la réponse de la base de données. Le test confirme que le service lève bien une exception quand le coût (100) dépasse le solde (50).
 
-## Erreur courante : confondre interaction et résultat complet
-Une vérification d'interaction peut être une assertion de comportement valide lorsqu'un effet attendu est un appel à un collaborateur, comme l'envoi d'une notification. Vérifier un appel à save ne prouve cependant ni la justesse des données ni leur commit en base. Vérifiez l'état retourné ou les exceptions lorsque cela convient, et capturez les arguments pour examiner les effets attendus. Utilisez un test d'intégration si le résultat à vérifier est la persistance réelle.
-## Exercice pratique
-**Scénario :** Une méthode `approveRequest(Long id)` doit appeler `repo.findById(id)` puis `repo.save(request)`. Si la demande est déjà approuvée, elle doit lancer une `IllegalStateException`.
+**Le cas d'échec :** Si `ConversionEntity` a une annotation `@Column(precision = 5, scale = 2)` mais que le résultat est `123456.78`, un test unitaire utilisant un `HistoryRepository` moqué **réussira** car `repository.save()` n'est qu'une interaction simulée. Seul un test d'intégration touchant une vraie base de données lèvera une `DataIntegrityViolationException`.
 
-**Question :** Comment testeriez-vous le scénario 'déjà approuvé' ?
+## Exercice ciblé
 
-**Réponse :** Moquer le repository pour qu'il retourne un objet demande où `isApproved()` est vrai, puis utiliser `assertThrows(IllegalStateException.class, ...)` lors de l'appel au service.
+**Scénario :** Vous ajoutez une fonctionnalité qui calcule une remise basée sur les points de fidélité d'un utilisateur. Elle récupère les points depuis un cache Redis et sauvegarde l'application de la remise dans une DB PostgreSQL.
 
+**Question :** Où placez-vous les tests suivants et pourquoi ?
+1. Vérifier qu'un utilisateur avec 0 point a 0 % de remise.
+2. Vérifier que le timeout de connexion Redis est géré.
+3. Vérifier que la valeur de la remise est stockée en DB sans perte de précision.
+
+**Réponse :**
+1. **Test Unitaire :** Logique pure reliant les points au pourcentage.
+2. **Test d'Intégration :** Valide la frontière réseau réelle et la configuration du timeout du client Redis.
+3. **Test d'Intégration :** Valide le type de colonne DB (ex: `NUMERIC` vs `FLOAT`) et le mapping ORM.
+
+Pour l’exemple de dépassement numérique, utilisez réellement NUMERIC(5,2) dans PostgreSQL et forcez flush/commit dans le test. L’annotation ne modifie pas seule un schéma existant ; la traduction d’exception dépend de la frontière de persistance. Un parsing JSON pur peut aussi être testé unitairement ; le test de frontière vérifie la configuration réelle du client.
 
 ## Pour approfondir
 

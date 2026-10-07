@@ -1,57 +1,114 @@
 ---
-title: "How to Convert a Database Model Into JPA Entities"
-description: "Learn the systematic process of transforming a conceptual database schema into Java Persistence API entities using a procurement application example."
-pubDate: 2026-10-08T11:48:00.000Z
+title: "Map Entity Relationships Correctly with JPA"
+description: "Deep dive into owning sides, mappedBy, and converting Many-to-Many relationships into join entities with attributes."
+pubDate: 2026-10-06T22:48:00.000Z
 translationKey: 044-how-to-convert-a-database-model-into-jpa-entities
+seriesOrder: 7
 locale: en
-tags: ["software-engineering","database-design","learning-series"]
+tags: ["database-design","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The Pitfall of Bare @ManyToMany
 
-Many developers struggle when moving from a visual ER diagram to Java code, often guessing where to place `@OneToMany` or `@ManyToMany` annotations. The challenge lies in translating relational cardinalities into object-oriented references without creating circular dependency loops or inefficient queries.
+In many JPA projects, developers start with a `@ManyToMany` annotation to link two entities. While this works for simple associations, it fails the moment the relationship itself needs data. In our scenario, a Student enrolls in a Course. If we only need to know *which* students are in *which* courses, a join table suffices. However, once we need to track the `enrollmentDate` or the `grade`, the relationship is no longer a invisible link; it is a first-class domain concept: the `Enrollment`.
 
-## Mapping Basic Entities
-Every table in your physical model becomes a Java class annotated with `@Entity`. The primary key is marked with `@Id`. For a procurement app, a `Request` entity represents the core table. Ensure you use `jakarta.persistence.*` imports to follow modern standards. Each column becomes a private field with a getter and setter.
+Converting a `@ManyToMany` into two `@OneToMany` / `@ManyToOne` relationships allows the join entity to hold its own state. This transforms the model from a direct link to a bridge entity.
 
-## Handling One-to-Many Relationships
-In a procurement system, one `Manager` can approve many `Requests`. In the database, this is a foreign key in the `Request` table. In JPA, the `Request` entity is the 'owning side' because it holds the foreign key. Use `@ManyToOne` on the `Request` side and `@OneToMany(mappedBy = "manager")` on the `Manager` side to create a bidirectional link.
+## Defining the Owning Side and mappedBy
 
-## Resolving Many-to-Many with Join Entities
-If a `Request` can contain multiple `Products` and a `Product` can be in many `Requests`, a simple `@ManyToMany` might suffice. However, if you need to track the 'quantity' of each product per request, you must create a separate `RequestItem` entity. This converts the many-to-many relationship into two one-to-many relationships, allowing the join entity to hold additional attributes.
+In the bidirectional one-to-many/many-to-one mappings below, Enrollment.student and Enrollment.course own their respective foreign-key relationships. The collection sides are inverse: mappedBy names the actual Java field on Enrollment, not a table or column. This rule is specific to this mapping; other relationship types choose ownership differently.
 
-## Worked Example: Procurement Flow
-Consider a `Request` and a `Buyer`.
+An unidirectional OneToMany without an explicit foreign-key mapping commonly uses a join table. If you intend the inverse of Enrollment.student, say mappedBy="student". A deliberately unidirectional OneToMany with JoinColumn is another valid mapping; omitting mappedBy does not universally imply a design mistake.
+## Worked Example: The Enrollment Model
+
+Here is the implementation of the Student-Course-Enrollment triad. Note the use of Java records for DTOs (not shown) and standard entities for the ORM.
 
 ```java
-@Entity
-public class Request {
-    @Id @GeneratedValue
-    private Long id;
-    private String description;
-
-    @ManyToOne
-    @JoinColumn(name = "buyer_id")
-    private Buyer buyer;
-}
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Entity
-public class Buyer {
+public class Student {
     @Id @GeneratedValue
     private Long id;
     private String name;
 
-    @OneToMany(mappedBy = "buyer")
-    private List<Request> assignedRequests;
+    // Referenced side: mappedBy refers to the 'student' field in Enrollment
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Enrollment> enrollments = new ArrayList<>();
+
+    public void addCourse(Course course, LocalDate date) {
+        Enrollment enrollment = new Enrollment(this, course, date);
+        this.enrollments.add(enrollment);
+        course.getEnrollments().add(enrollment);
+    }
+    // Getters omitted for brevity
+    public List<Enrollment> getEnrollments() { return enrollments; }
+}
+
+@Entity
+public class Course {
+    @Id @GeneratedValue
+    private Long id;
+    private String title;
+
+    // Referenced side: mappedBy refers to the 'course' field in Enrollment
+    @OneToMany(mappedBy = "course")
+    private List<Enrollment> enrollments = new ArrayList<>();
+
+    public List<Enrollment> getEnrollments() { return enrollments; }
+}
+
+@Entity
+public class Enrollment {
+    @Id @GeneratedValue
+    private Long id;
+
+    private LocalDate enrollmentDate;
+    private Double grade;
+
+    // Owning side: This entity manages the FKs
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id")
+    private Student student;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
+
+    protected Enrollment() {}
+
+    public Enrollment(Student student, Course course, LocalDate date) {
+        this.student = student;
+        this.course = course;
+        this.enrollmentDate = date;
+    }
+    // Getters omitted
 }
 ```
-Outcome: The `Request` table contains a `buyer_id` column, while the `Buyer` object can easily access all its requests via a list.
 
-## Common Mistake: Forgetting mappedBy
-A frequent error is omitting the `mappedBy` attribute in bidirectional relationships. Without it, JPA thinks there are two independent relationships and will try to create an unnecessary join table in the database.
+### Analysis of the Mechanism
+1. **Foreign Key Placement**: The `Enrollment` table will contain `student_id` and `course_id`. The `Student` and `Course` tables remain clean of relationship columns.
+2. **Fetch Strategies**: `@ManyToOne` defaults to `EAGER`. We explicitly set it to `LAZY` to prevent unnecessary immediate loads. Note that the "N+1 problem" occurs when loading a list of enrollments and accessing their associations; this is solved using JOIN FETCH in your queries, not just by setting LAZY.
+3. **Synchronization Helpers**: The `addCourse` method in `Student` is a synchronization helper. Because JPA does not automatically update the other side of a bidirectional relationship in memory, failing to add the enrollment to both lists can lead to stale data in the current persistence context before a flush/refresh.
 
-## Practical Exercise
-Scenario: A `Department` has many `Employees`. How do you map the `Employee` side of this relationship?
+## Failure Cases and Consequences
 
-Answer: Use `@ManyToOne` on the `Employee` entity with a `@JoinColumn(name = "dept_id")`.
+- **Unexpected join table:** With the default unidirectional OneToMany mapping, omitting mappedBy can introduce an additional association table. Inspect the intended mapping and schema rather than assuming every extra table is wrong.
+- **Circular JSON:** Bidirectional objects can recurse under an unconfigured serializer. Use a deliberately bounded response shape, often a DTO, or suitable serialization configuration. DTOs are a useful choice, not universally mandatory.
+- **Orphan removal:** With orphanRemoval=true, removing an enrollment from the managed Student collection schedules its deletion. Without it, changing only this inverse collection does not automatically null the owning foreign key or delete the row. Explicitly update the owning relationship or delete the enrollment according to the business rule. Synchronize both in-memory collections when maintaining bidirectional links.
+## Focused Exercise
+
+**Scenario**: You need to add a `CourseSection` entity. A `Course` has many `CourseSections`, and an `Enrollment` now links a `Student` to a specific `CourseSection` instead of the general `Course`.
+
+**Question**: Which entity becomes the new owning side for the relationship with `Student`, and how does the `mappedBy` attribute change in the `Student` entity?
+
+**Answer**: The `Enrollment` entity remains the owning side because it still holds the foreign key to `Student`. However, the `Enrollment` entity now replaces the `@ManyToOne Course` with a `@ManyToOne CourseSection`. The `Student` entity's `mappedBy` remains `"student"` because the field name in `Enrollment` hasn't changed, but the logical path to the `Course` now goes through `Enrollment` → `CourseSection` → `Course`.
+
+## Further reading
+
+- [Spring declarative transactions](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-decl-explained.html)

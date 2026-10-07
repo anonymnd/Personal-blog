@@ -1,57 +1,94 @@
 ---
-title: "علاش خاصك تتيستي الـ Service Layer؟"
-description: "فهم علاش التيست ديال الـ service layer مهم باش تعزل الـ business logic على المشاكل ديال الـ infrastructure."
-pubDate: 2026-10-10T20:48:00.000Z
+title: "كيفاش تختار التستات على حساب الريسك لي كيقدروا يلقاو"
+description: "دليل باش تعرف فين تحط كل تست على حساب المشكل لي بغيتي تكتشف، بمثال ديال تحويل العملات."
+pubDate: 2026-10-07T12:48:00.000Z
 translationKey: 101-why-should-you-test-the-service-layer
+seriesOrder: 21
 locale: ar
-tags: ["software-engineering","backend-testing","learning-series"]
+tags: ["backend-testing","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## الخدعة ديال "كلشي أخضر"
 
-تخيل معايا خدام على app ديال الشرا (procurement) فين الموظف كيصيفط طلب شراء. هاد العملية فيها بزاف ديال الشروط: خاص السيستيم يشوف واش كاين الميزانية، واش هاد السلعة مسموح بها، وعاد يعلم المدير. إلا تيستيتي غير الـ Controller (API) ولا الـ Repository (Database)، غادي تبقى واحد الفجوة فين الـ business rules—لي هي القلب ديال app—ماتكونش مأكدة واش خدامة مزيان.
+بزاف ديال لي ديفلوبور كيوقع ليهم واحد الاكتشاف: تقدر تكون عندك coverage ديال 100% وتلقى لابليكاسيون كاطيح فـ production. هادشي كيوقع حيت كنكونو كنطستيو *كيفاش* مكتوب الكود (implementation) ماشي *شنو* لي يقدر يهرس (risk). إلا كنتي داير mock للـ repository ديال الداتابيز فـ unit test، راك كتطستي غير واش كتعرف تعيط للميتود، ماشي واش الـ SQL query صحيحة ولا واش الـ ORM mapping خدام.
 
-## الدور ديال الـ Service Layer
-الـ service layer هي اللي كتنظم كلشي. الـ Controller كيتكلف بـ HTTP والـ Repository كيتكلف بـ SQL، ولكن الـ Service هي اللي كتقرر *شنو* غادي يوقع. ملي كنتيستي هاد الطبقة، كتقدر تأكد من القواعد ديال الخدمة بلا ما تحتاج قاعدة بيانات حقيقية ولا سيرفر خدام، وهادشي كيخلي التيستات سريعة بزاف.
+## توزيع الريسك على أنواع التستات
 
-## عزل الـ Logic باستعمال Mockito
-باش نتيستيو الـ service بوحدها، كنستعملو Mockito. بلاصت ما نتصلو بـ DB حقيقية، كنديرو 'mock' للـ repository. هكذا، إلا طاح التيست، كنعرفو بلي المشكل كاين في الـ business logic ماشي حيت الـ DB طافية ولا كاين مشكل في الكونيكسيون.
+باش تبني suite ديال تستات صحيحة، خاصك كل مشكل محتمل تعطيه التست لي قادر يلقاه. تخيل عندنا ميزة (feature) ديال تحويل العملات: كتحسب القيمة على حساب واحد الـ API ديال الأسعار، كدير rounding (تقريب)، وكتسجل العملية فالداتابيز.
 
-## مثال تطبيقي: الموافقة على الطلب
-ها كيفاش نتيستيو الـ logic اللي كتمنع الطلب إلا كانت الميزانية ماكافياش:
+### 1. Unit Tests: اللوجيك والحالات الخاصة
+الـ unit tests خاصهم يركزو على اللوجيك "الصافي". فهاد المثال، الـ rounding هو فين كاين أكبر ريسك. واش كيقرّب لـ half-up؟ واش كيتعامل مع الأرقام السالبة؟
+
+**شنو كيكتشف:** أغلاط فالحساب، مشاكل ديال off-by-one، و NullPointerException فـ business logic.
+**شنو مكيشوفش:** مشاكل ديال constraints فالداتابيز، network timeouts، ولا غلط فـ JSON parsing ديال الـ API.
+
+### 2. Integration Tests: الحدود (Boundaries)
+هاد التستات كيتحققو من الربط بين الكود ديالك وسيستيم خارجي (Database, API, Message Broker).
+
+**شنو كيكتشف:** SQL syntax غلط، كولون ناقصة فالداتابيز، سميات ديال fields غلط فـ JSON، ولا مشاكل فـ transaction rollback.
+**شنو مكيشوفش:** الحالات المعقدة ديال business logic (حيت إلا درناهم هنا، التستات غيوليو تقال بزاف).
+
+### 3. المشكل ديال الـ Private Methods
+بزاف كيتحيرو واش يطستيو الميتودات الـ private. إلا كانت ميتود private فيها لوجيك معقد (بحال الـ rounding)، الحل ماشي هو تردها public ولا تخدم بـ reflection. الحل هو تطستي الـ behavior public لي كيخدم بهاد الميتود. وإلا كانت الميتود معقدة بزاف لدرجة خاصها suite بوحدها، فهذا دليل بلي خاصك تخرج داك اللوجيك لـ class بوحدها (Strategy ولا Utility) وتطستيها كـ unit test عادي.
+
+## مثال تطبيقي: توزيع الريسك
+
+ها كيفاش نقسمو المشاكل ديال feature تحويل العملات على أنواع التستات:
+
+| المشكل المحتمل | مستوى الريسك | نوع التست المناسب | علاش؟ |
+| :--- | :--- | :--- | :--- |
+| تقريب 1.005 لـ 1.01 مخدامش | عالي | Unit Test | لوجيك صافي؛ سريعة باش تجرب بزاف ديال الحالات. |
+| الـ API رجعات 404 ولا JSON خاسر | متوسط | Integration Test | كيتحقق من الـ HTTP client و DTO mapping. |
+| الكولون `amount` فالداتابيز صغيرة بزاف | عالي | Integration Test | غير داتابيز حقيقية (أو Testcontainer) لي تفيق بهاد الغلط. |
+| السيرفيس مكيطستيش يعيط للـ Repository | طايح | Unit Test (Mock) | كيتحقق غير من الترتيب ديال الخدمة (interaction). |
+| الـ Transaction مكديرش commit مورا التحويل | متوسط | Integration Test | خاصو transaction manager حقيقي باش يتأكد. |
+
+## تحليل الكود: اللوجيك ضد الداتابيز
+
+شوف هاد الكود التوضيحي ديال service ديال التحويل:
 
 ```java
-@ExtendWith(MockitoExtension.class)
-public class ProcurementServiceTest {
-    @Mock
-    private BudgetRepository budgetRepo;
-    @InjectMocks
-    private ProcurementService service;
+public record ConversionResult(BigDecimal amount, LocalDateTime timestamp) {}
 
-    @Test
-    void shouldRejectRequestWhenBudgetExceeded() {
-        // Arrange
-        when(budgetRepo.getBalance(101)).thenReturn(50.0);
+public class CurrencyService {
+    private final RateClient rateClient;
+    private final HistoryRepository repository;
+
+    public CurrencyService(RateClient rateClient, HistoryRepository repository) {
+        this.rateClient = rateClient;
+        this.repository = repository;
+    }
+
+    public ConversionResult convert(BigDecimal amount, String from, String to) {
+        BigDecimal rate = rateClient.getRate(from, to);
+        BigDecimal result = amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
         
-        // Act & Assert
-        assertThrows(InsufficientFundsException.class, () -> {
-            service.submitRequest(101, 100.0);
-        });
+        var entity = new ConversionEntity(result, from, to);
+        repository.save(entity);
+        
+        return new ConversionResult(result, LocalDateTime.now());
     }
 }
 ```
-هنا `when(...).thenReturn(...)` كتمثل لينا الجواب اللي غادي يجي من الـ DB. التيست كيتأكد بلي الـ service كتلوح exception ملي كيكون الثمن (100) كبر من الصولد (50).
 
-## غلط شائع: العيطة ما كتعنيش كل النتيجة
-Verify تقدر تكون اختبار صحيح ديال السلوك إلا كانت النتيجة المطلوبة هي عيطة لـ collaborator، بحال تصيفط notification. ولكن غير تتأكد بلي save تعيطات ما كيثبتش بلي المعطيات صحيحة ولا بلي database دارت commit. تحقق من الحالة اللي رجعات ولا من exception إلا كان هادشي مناسب، وشد arguments باش تشوف النتائج الجانبية المطلوبة. إلا كنتي باغي تثبت التخزين الحقيقي، دير integration test مع database.
+**حالة الفشل:** تخيل `ConversionEntity` فيها `@Column(precision = 5, scale = 2)` ولكن النتيجة هي `123456.78`. الـ unit test لي خدام بـ mocked `HistoryRepository` غادي **يدوز (pass)** حيت `repository.save()` غير ميتود وهمية. غير الـ integration test لي كيضرب داتابيز حقيقية لي غادي يعطيك `DataIntegrityViolationException`.
+
 ## تمرين تطبيقي
-**السيناريو:** ميثود `approveRequest(Long id)` خاصها تعيط لـ `repo.findById(id)` ومن بعد `repo.save(request)`. إلا كان الطلب ديجا مقبول، خاصها تلوح `IllegalStateException`.
 
-**السؤال:** كيفاش تتيستي الحالة ديال 'ديجا مقبول'؟
+**السيناريو:** بغيتي تزيد ميزة كتحسب تخفيض (discount) على حساب نقط الوفاء (loyalty points). كاتجيب النقط من Redis cache وكتسجل التخفيض فـ PostgreSQL.
 
-**الجواب:** دير mock للـ repository باش يرجع request object فيه `isApproved()` هي true، ومن بعد استعمل `assertThrows(IllegalStateException.class, ...)` ملي تعيط للميثود ديال الـ service.
+**السؤال:** فين تحط هاد التستات وعلاش؟
+1. تست باش تأكد بلي لي عندو 0 نقط كياخد 0% تخفيض.
+2. تست باش تأكد بلي الـ timeout ديال Redis مخدّام.
+3. تست باش تأكد بلي قيمة التخفيض كتسجل فالداتابيز بلا ما يضيعو الأرقام (precision loss).
 
+**الجواب:**
+1. **Unit Test:** لوجيك صافي كيربط النقط بالنسبة المئوية.
+2. **Integration Test:** كيتحقق من الربط الحقيقي مع Redis و configuration ديال timeout.
+3. **Integration Test:** كيتحقق من نوع الكولون فالداتابيز (مثلا `NUMERIC` vs `FLOAT`) و الـ ORM mapping.
+
+فمثال numeric overflow، خاص colonne تكون فعلا NUMERIC(5,2) فـ PostgreSQL ودير flush/commit فالـ integration test. Annotation بوحدها ما كتبدلش schema الموجودة، وexception wrapping كتعلق بالحدود. JSON parsing بوحدها تقدر تختبرها بـ unit test؛ boundary test كتزيد تحقق من configuration الحقيقية ديال client.
 
 ## باش تزيد تفهم
 

@@ -1,37 +1,48 @@
 ---
-title: "Qu'est-ce que Kafka ?"
-description: "Une introduction à Apache Kafka en tant que plateforme de streaming d'événements distribuée pour découpler les microservices."
-pubDate: 2026-10-16T01:48:00.000Z
+title: "Utiliser la Messagerie et Kafka quand le Travail doit Survivre à la Requête"
+description: "Apprenez à découpler les flux critiques avec Kafka, en vous concentrant sur le pattern Outbox, l'ordre des partitions et l'idempotence pour l'impression d'étiquettes et l'analytique."
+pubDate: 2026-10-08T18:48:00.000Z
 translationKey: 226-what-is-kafka
+seriesOrder: 51
 locale: fr
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-Imaginez que vous développiez un système d'approvisionnement. Lorsqu'un demandeur soumet une demande d'achat, plusieurs actions doivent être déclenchées : le manager doit être notifié, le service budget doit vérifier les fonds et le journal d'audit doit enregistrer l'entrée. Si vous utilisez des appels API directs, votre système devient un ensemble de dépendances complexes. Si le service budget est hors ligne, toute la demande échoue. C'est là qu'Apache Kafka intervient en agissant comme un journal de validation distribué.
+## Arbitrage entre Synchrone et Asynchrone
 
-## Le Mécanisme Fondamental
-Kafka fonctionne sur un modèle de publication-abonnement. Au lieu d'envoyer un message directement à un destinataire, un 'Producer' envoie des données (un événement) vers un 'Topic'. Un topic est comme une catégorie. Ces données sont stockées dans des 'Partitions', ce qui permet à Kafka de s'étendre sur plusieurs serveurs. Les 'Consumers' s'abonnent ensuite à ces topics pour lire les données à leur propre rythme. Comme Kafka persiste les données sur disque, un consommateur peut planter et reprendre exactement là où il s'était arrêté.
+Lorsqu'un client envoie une requête à une API, le serveur a deux options : terminer tous les effets de bord avant de répondre (Synchrone) ou accuser réception et traiter le travail plus tard (Asynchrone).
 
-## Exemple d'Application d'Approvisionnement
-Dans notre application, le topic 'Request-Submitted' gère le flux :
-1. **Producer** : Le service de demande envoie un événement JSON : `{"id": 101, "item": "Laptop", "amount": 1200}`.
-2. **Topic** : Kafka stocke cet événement dans le topic `purchase_requests`.
-3. **Consumers** :
-   - Le **Service de Notification** lit l'événement et envoie un email au manager.
-   - Le **Service Budget** lit le même événement pour réserver les fonds.
+Dans un flux synchrone, si le service d'impression d'étiquettes est hors ligne, toute la requête de commande échoue, même si la commande a été enregistrée avec succès dans la base de données. Cela crée un couplage fort où la disponibilité du système est le produit de la disponibilité de chaque dépendance.
 
-Résultat : Le service de demande n'a pas besoin de savoir qui écoute ; il publie l'événement et continue son travail.
+La communication asynchrone via un broker comme Kafka brise cette chaîne. L'API enregistre la commande et produit un message. L'API peut ensuite retourner un code `202 Accepted`. L'imprimante et le moteur d'analytique consomment ce message à leur propre rythme. Si l'imprimante est indisponible pendant dix minutes, les messages s'accumulent simplement dans Kafka ; ils ne sont pas perdus, et le processus de commande du client n'est pas bloqué.
 
-## Ordre et Idempotence
-Un détail crucial est que Kafka garantit l'ordre des messages *uniquement au sein d'une seule partition*. Si vous avez plusieurs partitions, les messages peuvent être traités dans le désordre. De plus, comme des pannes réseau peuvent pousser un producteur à envoyer le même message deux fois, vos consommateurs doivent être 'idempotents'. Cela signifie que traiter deux fois le même ID de demande ne doit pas entraîner deux déductions budgétaires.
+## Rôles du Broker : Kafka vs Base de Données vs Cache
 
-## Erreur Courante : Utiliser Kafka comme Base de Données
-Certains développeurs confondent Kafka avec une base de données principale car il stocke des données. Cependant, Kafka est optimisé pour le streaming séquentiel, pas pour les requêtes d'accès aléatoire.
+Une base relationnelle sert état, transactions et requêtes ; une file de travail en base peut aussi convenir. Mesurez polling et contention sans la rejeter universellement. Redis pub/sub est transitoire ; d’autres structures Redis ont d’autres possibilités de persistance et livraison.
 
-**Correction** : Utilisez Kafka pour déplacer les données entre les services, mais stockez l'état final (comme le statut de la commande) dans une base de données comme PostgreSQL ou MongoDB.
+Kafka fournit logs partitionnés, replay et groupes. Il ne remplace pas la base des commandes et ne conserve pas automatiquement chaque événement pour toujours. Configurez réplication, acknowledgements, rétention et récupération. Séparez les groupes étiquettes et analytics si chacun doit voir tous les événements.
+## Mécanismes Fondamentaux de Kafka
 
-## Exercice Pratique
-Si vous avez un topic avec 3 partitions et 4 consommateurs dans le même groupe de consommation, qu'arrive-t-il au 4ème consommateur ?
+Chaque partition contient des enregistrements ordonnés avec offsets. L’offset committé d’un groupe désigne normalement le prochain enregistrement à consommer, sans prouver tous les effets externes. Dans un groupe classique, une partition est affectée à un consumer à la fois ; retries, rebalances et crashes peuvent répéter le traitement.
 
-**Réponse** : Le 4ème consommateur restera inactif car chaque partition d'un groupe ne peut être assignée qu'à un seul consommateur.
+Une clé order_id et un partitionnement stables regroupent les événements ; changer nombre de partitions ou routage demande attention. L’ordre du log ne garantit pas l’ordre de fin de handlers asynchrones. Une clé ne corrige pas non plus des producteurs émettant dans le désordre métier.
+## Fiabilité : Pattern Outbox et Idempotence
+
+Validez commande et outbox dans une même transaction SQL. Le relay publie avec event_id stable et marque sa progression après l’acknowledgement configuré. Cela rend la publication récupérable, sans la garantir sans relay fonctionnel, données conservées et retries. Un crash après publication peut la dupliquer.
+
+| Moment de panne | Récupération requise |
+| --- | --- |
+| Avant commit SQL | Ni commande ni ligne outbox ne persistent |
+| Après commit, avant publication | Le relay réessaie la ligne conservée |
+| Après publication, avant confirmation | Un doublon peut être publié |
+| Après impression, avant reçu local | Résultat incertain ; idempotence côté imprimante nécessaire |
+
+Pour analytics interne, insérez event_id sous contrainte unique et modifiez le compteur dans la même transaction DB. Un check-then-act séparé est racy. Committez l’offset Kafka après réussite de cette transaction.
+
+L’impression est un effet physique externe. Vérifier processed_events, imprimer puis enregistrer un marqueur permet un crash après impression et une réimpression au retry. Marquer avant risque de ne jamais imprimer. Envoyez une clé idempotente stable à un service qui déduplique durablement et expose le statut, ou prévoyez rapprochement/revue des résultats incertains. Sans coopération externe, ne promettez pas une impression physique unique. L’outbox coordonne SQL et événement, pas tous les effets ultérieurs.
+## Exercice
+
+Avec trois partitions et quatre consumers d’un groupe classique, au plus trois reçoivent une affectation ; l’activité réelle dépend des données. A et C dans une partition ont un ordre dans le log, mais leur fin de traitement ne le suit que si le handler le préserve.
+
+Les transactions Kafka coordonnent les lectures/écritures Kafka prises en charge selon leur contrat. Elles n’incluent pas automatiquement une imprimante ou une base externe quelconque. Identifiez frontière et fenêtres de crash avant de promettre un résultat métier exactly-once.

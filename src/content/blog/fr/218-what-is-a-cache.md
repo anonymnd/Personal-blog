@@ -1,45 +1,50 @@
 ---
-title: "Qu'est-ce qu'un Cache ?"
-description: "Un guide pour débutants sur la manière dont la mise en cache optimise les performances système en stockant les données fréquentes en mémoire rapide."
-pubDate: 2026-10-15T17:48:00.000Z
+title: "Mise en œuvre du Cache-Aside Redis pour les horaires de cinéma"
+description: "Analyse approfondie du pattern Cache-Aside pour gérer les données de séances de cinéma tout en évitant les lectures obsolètes et les cache stampedes."
+pubDate: 2026-10-08T15:48:00.000Z
 translationKey: 218-what-is-a-cache
+seriesOrder: 48
 locale: fr
-tags: ["software-engineering","system-design","learning-series"]
+tags: ["system-design","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Mécanisme Cache-Aside
 
-Imaginez que vous êtes un gestionnaire d'achats. Chaque fois qu'un demandeur demande le statut d'un bon de commande, vous devez descendre dans les archives au sous-sol, trouver le dossier et lire le statut. Si dix personnes demandent la même commande, vous faites dix allers-retours. C'est exactement ce que ressent un système lorsqu'il récupère des données depuis une base de données lente sur disque à chaque requête.
+Dans une architecture Cache-Aside (ou Lazy Loading), l'application est responsable de la gestion de la relation entre la base de données (source de vérité) et le cache (couche d'accès rapide). Contrairement au cache write-through, le cache ne se met pas à jour automatiquement lors d'une modification en base de données. L'application suit un flux logique précis : vérifier le cache ; en cas d'absence (miss), récupérer la donnée en DB et remplir le cache ; si présente (hit), retourner la donnée immédiatement.
 
-## Le Mécanisme Fondamental
-Le caching consiste à stocker des copies de données dans une couche de stockage temporaire et rapide (le cache) afin que les demandes futures soient traitées plus rapidement. Alors qu'une base de données réside sur un disque dur (lent), un cache réside généralement dans la RAM (rapide). Quand une requête arrive, le système vérifie d'abord le cache. Si la donnée s'y trouve, c'est un 'cache hit' ; sinon, c'est un 'cache miss'.
+Bien que cela découple le cache de la base de données, cela introduit un risque de données obsolètes (stale data). Si une séance de cinéma est annulée dans la base de données mais que le cache contient toujours l'ancien horaire, les utilisateurs verront une information erronée.
 
-## Le Pattern Cache-Aside
-Dans une application d'achats, la stratégie la plus courante est le 'Cache-Aside'. Voici le fonctionnement :
-1. L'application cherche `commande_123` dans le cache.
-2. **Miss :** L'application interroge la base de données, récupère la commande et l'enregistre dans le cache.
-3. **Hit :** L'application retourne immédiatement la donnée du cache.
+## Scénario : Gestion des séances de cinéma
 
-```java
-// Extrait illustratif de la logique Cache-Aside
-public Order getOrder(String id) {
-    Order order = cache.get(id);
-    if (order == null) {
-        order = database.findOrder(id);
-        cache.put(id, order, Duration.ofMinutes(10));
-    }
-    return order;
-}
+Imaginons un système où les utilisateurs consultent les horaires d'un film. Les données sont massivement lues mais occasionnellement mises à jour (ex: annulation d'une séance).
+
+### Trace du flux de travail
+
+1. **Lecture Initiale (Miss) :** L'utilisateur demande `movie_123`. Le cache est vide. L'app interroge la DB → la DB retourne "19:00". L'app stocke "19:00" dans Redis avec un TTL (Time-to-Live) de 3600s. L'utilisateur voit "19:00".
+2. **Lecture Suivante (Hit) :** Un autre utilisateur demande `movie_123`. L'app trouve "19:00" dans Redis. L'utilisateur voit "19:00" instantanément.
+3. **Mise à jour (Invalidation) :** Un administrateur annule la séance de 19:00. L'app met à jour la DB en "Annulé". Pour éviter les données obsolètes, l'app doit immédiatement envoyer une commande `DEL movie_123` à Redis.
+4. **Lecture Post-Mise à jour :** L'utilisateur demande `movie_123`. Le cache est vide (suite à la suppression). L'app interroge la DB → la DB retourne "Annulé". L'app stocke "Annulé" dans Redis. L'utilisateur voit "Annulé".
+
+## Gestion des cas limites et des pannes
+
+Un lecteur peut charger un ancien horaire, attendre puis remplir le cache après commit et invalidation d’une annulation. Invalider après commit évite de vider pour une transaction annulée, sans empêcher seul ce remplissage tardif. Un TTL borne la durée de cette entrée ; écritures répétées, retard de réplica ou resets demandent analyse. Versions, invalidation coordonnée ou politique explicite de fraîcheur sont des choix possibles. L’éligibilité de réservation utilise toujours l’état autoritatif.
+
+Pour une clé chaude absente, regroupez les demandes : un loader recharge, les autres attendent ou utilisent une valeur ancienne autorisée. Un mutex local ne couvre qu’une instance ; un lease distribué exige expiration et gestion sûre de propriété. Le cache négatif stocke un marqueur explicite avec TTL court, pas null confondu avec un miss. Incluez tenant et dimensions de requête pertinentes.
+## Exemple concret : Logique d'implémentation
+
+Utilisez une enveloppe typée avec found et value séparés et un serializer configuré. Redis stocke des octets ; null Java n’est pas un marqueur négatif fiable. Voici un pseudocode illustratif :
+
+```text
+GET screening:tenant-7:id-123
+  MISS → database lookup
+  FOUND → SET {found:true,value:...} with positive TTL
+  ABSENT → SET {found:false,value:null} with short negative TTL
+HIT {found:false,...} → return absent without a DB lookup
+UPDATE → commit authoritative change → invalidate key
 ```
 
-## Le Compromis : Les Données Périmées
-Le plus grand défi est l'invalidation du cache. Si un manager approuve une demande, la base de données est mise à jour, mais le cache contient toujours le statut 'En attente'. C'est ce qu'on appelle des données périmées (stale data). Pour corriger cela, il faut soit supprimer l'entrée du cache lors de la modification, soit définir un TTL (Time-to-Live).
+Un hit évite une lecture DB, sans garantir une seule requête par heure : éviction, retries, misses concurrents et invalidations peuvent en ajouter. Si Redis échoue, choisissez fallback borné ou échec ; un fallback illimité peut saturer la base. Observez taux de hits, durée de chargement et incidents de fraîcheur. L’invalidation après commit exige retries ou rapprochement si elle échoue. La trace normale ne promet pas une cohérence stricte face à toutes les courses.
+## Exercice
 
-## Erreur Courante : Le Cache comme Base de Données
-Une erreur fréquente est de traiter un cache comme Redis comme une base de données principale. Les caches sont volatils ; si le serveur redémarre, les données disparaissent. Assurez-vous toujours que votre base de données reste la source de vérité.
-
-## Exercice Pratique
-**Scénario :** Un utilisateur modifie son nom de profil. Vous avez un cache avec un TTL de 24 heures. Quel est le problème et comment le résoudre ?
-
-**Réponse :** L'utilisateur verra son ancien nom pendant 24 heures. La solution est d'appeler explicitement `cache.remove(userId)` juste après la mise à jour de la base de données.
+L’expiration d’une seule clé de première peut déclencher beaucoup de misses concurrents : regroupez les demandes de cette clé. Le jitter répartit l’expiration entre différentes clés ou entrées indépendantes, pas les requêtes d’une unique clé Redis. Testez burst à expiration, panne Redis et lecteur suspendu pendant annulation. Vérifiez la politique de fraîcheur et les décisions autoritatives de réservation.

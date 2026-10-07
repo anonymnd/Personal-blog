@@ -13,6 +13,7 @@ const blog = defineCollection({
 		updatedDate: z.coerce.date().optional(),
 		tags: z.array(z.string()).optional(),
 		draft: z.boolean().optional(),
+		seriesOrder: z.number().int().positive().optional(),
 		/** Same value in every language file so URLs stay aligned (e.g. welcome-to-this-blog). */
 		translationKey: z.string(),
 		locale: localeEnum,

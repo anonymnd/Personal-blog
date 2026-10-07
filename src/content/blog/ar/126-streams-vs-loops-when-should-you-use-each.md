@@ -1,58 +1,107 @@
 ---
-title: "Streams vs Loops: فوقاش تستعمل كل وحدة؟"
-description: "دليل عملي باش تعرف تختار بين for-loops العادية و Java Streams فاش كتكون خدام على البيانات."
-pubDate: 2026-10-11T21:48:00.000Z
+title: "كيفاش تختار بين Loops و Streams و Method References على حساب الـ Readability"
+description: "مقارنة تقنية بين الطريقة العادية (iterative) والطريقة الوظيفية (functional) في Java باستعمال بيانات ديال sensors باش نشوفو شكون اللي ساهلة في القراية وشكون اللي فيها مخاطر."
+pubDate: 2026-10-07T18:48:00.000Z
 translationKey: 126-streams-vs-loops-when-should-you-use-each
+seriesOrder: 27
 locale: ar
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## الفرق بين Imperative و Functional
 
-تخيل راسك خدام على تطبيق ديال المشتريات (procurement app)، وفين كيكون manager خاصو يفلتر لستة ديال الطلبات اللي باقين pending باش يخرج غير دوك اللي فايتين 5,000 دولار. تقدر تبدا تكتب for-loop عادية، ولكن كتشوف واحد زميلك خدام بـ `.filter().collect()`. هنا غاتسول راسك: واش هاد Stream API غير زواق باش نبانو موديرن، ولا بصح كاين فرق فكيفاش الكود كيخدم؟
+فاش كتكون خدام مع collections في Java، الاختيار بين `for-each` loop و `Stream` ماشي مسألة سرعة، ولكن مسألة "قصد" (intent). الـ loops العادية كتوصف *كيفاش* نديرو الحاجة (خطوة بخطوة)، بينما الـ Streams كتوصف *شنو* بغينا يوقع (سلسلة ديال التحويلات).
 
-## الطريقة العادية: Loops
-الـ loops كيتسماو imperative، حيت كتقول لـ Java بالضبط *كيفاش* تدير الخدمة. نتا اللي كتحكم فـ index، وفـ الحالة ديال الـ accumulator، وفوقاش تحبس. هاد الطريقة مزيانة بزاف يلا كنتي محتاج تبدل شي حاجة برا الـ loop (side effects) أو يلا بغيتي تخرج من الـ loop قبل الوقت باستعمال `break` أو `continue`. الـ loops ساهلين فـ debugging حيت كتمشي معاهم خطوة بخطوة.
+## السيناريو: تلخيص بيانات ديال sensors
 
-## الطريقة الوظيفية: Streams
-الـ Streams كيتسماو declarative؛ يعني كتقول لـ Java *شنو* بغيتي، ماشي كيفاش تديرو. بلاصة ما تسير loop، كدير سلسلة ديال العمليات بحال `filter` و `map` و `reduce`. الـ Streams واعرين فاش كتكون باغي تحول البيانات (transformation). كايفرقو بين "شنو بغينا نديرو" و "كيفاش غاندوزو على البيانات"، وهادشي كيخلي الكود يكون قصير وسهل فـ القراية.
+تخيل عندنا سيستيم كيجيب قراءات ديال sensors. خاصنا نحيدو القراءات اللي ماشي صحيحة (null أو negative) ونحسبو شحال من مرة الحرارة فاتت واحد السقف (threshold) محدد.
 
-## مثال تطبيقي: تصفية المشتريات
-نفترضو عندنا record سميتو `PurchaseRequest` فيه `double amount` و `String status`.
+### الطريقة العادية (Loop)
+
+في الـ loop، حنا اللي كنتحكمو في الـ state. هاد الطريقة كتكون ساهلة في القراية فاش كتكون الـ logic معقدة أو فاش كنبغيو نبدلو شي حاجة برا الـ loop (side effects).
 
 ```java
-// باستعمال Loop
-List<PurchaseRequest> expensiveRequests = new ArrayList<>();
-for (PurchaseRequest req : allRequests) {
-    if ("PENDING".equals(req.status()) && req.amount() > 5000) {
-        expensiveRequests.add(req);
+// Illustrative: Imperative loop approach
+public long countThresholdCrossingsLoop(List<Double> readings, double threshold) {
+    long count = 0;
+    for (Double reading : readings) {
+        if (reading != null && reading >= 0) {
+            if (reading > threshold) {
+                count++;
+            }
+        }
     }
+    return count;
 }
-
-// باستعمال Stream
-List<PurchaseRequest> expensiveRequestsStream = allRequests.stream()
-    .filter(req -> "PENDING".equals(req.status()))
-    .filter(req -> req.amount() > 5000)
-    .toList();
 ```
-فـ الـ loop، حنا اللي كنعمرو لستة `expensiveRequests` بيدينا. أما فـ الـ stream، الـ pipeline هو اللي كيتكلف بكلشي.
 
-## غلط شائع: كذبة السرعة
-بزاف ديال المطورين كيسحاب ليهم بلي الـ Streams ديما أسرع حيت هوما الجداد. فالحقيقة، فـ لستات الصغار، for-loop العادية تقدر تكون أسرع حيت مافيهاش كثرة الـ objects. الـ Streams كينفعو فـ السرعة غير يلا خدمتي بـ `.parallelStream()` ومع بيانات كبيرة بزاف باش تستغل كاع الـ cores ديال CPU.
+### الطريقة الوظيفية (Stream)
 
-## جدول المقارنة
-| الميزة | Loop | Stream |
+الـ Streams كيخليونا نلصقو العمليات وحدة مورا وحدة. الحاجة المهمة هنا هي الـ **laziness**: العمليات بحال `filter` مكيخدموش حتى كنوصلو لعملية نهائية (terminal operation) بحال `count()`. هادشي كيخلي JVM تحسن الطريقة باش كيخدم الكود.
+
+```java
+// Illustrative: Stream approach
+public long countThresholdCrossingsStream(List<Double> readings, double threshold) {
+    return readings.stream()
+        .filter(Objects::nonNull)
+        .filter(r -> r >= 0)
+        .filter(r -> r > threshold)
+        .count();
+}
+```
+
+## الـ Method References والـ Readability
+
+في المثال ديال stream، `Objects::nonNull` هي method reference. هي غير اختصار لـ lambda `r -> Objects.nonNull(r)`. هاد الطريقة كتنقص "الصداع" ديال سميات المتغيرات وكتخلينا نركزو على شنو كيدير الكود.
+
+**فاش تستعمل method references:**
+1. فاش كتكون الـ lambda غير كتعيط لشي method موجودة بنفس الـ arguments.
+2. فاش كيكون سميت الـ method واضحة وكتشرح راسها (مثلا `String::toUpperCase` بلاصة `s -> s.toUpperCase()`).
+
+## الـ Side Effects والترتيب (Ordering)
+
+أكبر خطر في الـ Streams هو الـ "side effect". هادشي كيوقع فاش شي عملية وسط الـ stream كتبدل شي variable كاين برا ديالو.
+
+**طريقة غلط (Side Effect في Stream):**
+```java
+List<Double> results = new ArrayList<>();
+readings.stream().forEach(r -> results.add(r)); // بعد من هادشي!
+```
+هاد الكود خطر. حيت إلا بدلتي الـ stream لـ `.parallelStream()`، الـ `ArrayList` (اللي ماشي thread-safe) غادي يوقع فيها مشاكل ديال race conditions، وتقدر تضيع ليك الداتا أو يخرج ليك `ConcurrentModificationException`.
+
+**الترتيب (Ordering):**
+في الـ sequential stream، الترتيب ديال العناصر كيبقى هو هو. ولكن الترتيب ديال *العمليات* مهم بزاف. فاش كدير `filter` في الأول، كتنقص عدد العناصر اللي غادي يدوزو للعمليات اللي موراها، وهادشي كيخلي الكود أحسن.
+
+## ملخص المقارنة
+
+| الميزة | For-Each Loop | Stream API |
 | :--- | :--- | :--- |
-| التحكم | كامل (break/continue) | محدود (terminal ops) |
-| الحالة (State) | ساهل تبدلها | كيشجع على immuability |
-| القراية | طويلة فـ الفلترة | قصيرة وواضحة |
+| **الـ State** | كنتحكمو فيها بيدينا (mutable) | مخبية وسط الـ pipeline |
+| **التنفيذ** | مباشر (Eager) | معطل (Lazy) حتى لآخر عملية |
+| **Side Effects** | عادية ومقبولة | ممنوعة أو خطيرة |
+| **القراية** | أحسن في الـ logic المعقد | أحسن في التحويلات المتسلسلة |
 
-## تمرين تطبيقي
-عندك لستة ديال `PurchaseRequest` وبغيتي تحسب المجموع (sum) ديال كاع الطلبات اللي status ديالهم "APPROVED" باستعمال Stream. كيفاش غادير ليها؟
+## تمرين
 
-**الجواب:** `allRequests.stream().filter(r -> "APPROVED".equals(r.status())).mapToDouble(PurchaseRequest::amount).sum();`
+عندك list ديال `SensorReading` records (فيها `String id` و `double value`). صاوب stream pipeline اللي:
+1. كيحيد القراءات اللي الـ ID ديالهم null.
+2. كيحول القراءات غير للقيم (values) ديالهم.
+3. كيحيد القيم اللي صغر من 100.0.
+4. كيرجع لينا الحساب (count).
 
+**الجواب:**
+```java
+public long countHighReadings(List<SensorReading> readings) {
+    return readings.stream()
+        .filter(r -> r.id() != null)
+        .map(SensorReading::value)
+        .filter(v -> v > 100.0)
+        .count();
+}
+```
+
+الأمثلة كتفترض sensor domain كترفض negatives؛ temperatures سلبية صالحة فـ domains أخرى. Exercise كتفترض SensorReading objects ماشي null؛ زيد Objects::nonNull إلا ممكنين. Encounter order كتعلق بالمصدر وoperations؛ sequential stream ما كتخلقش order لمصدر unordered.
 
 ## باش تزيد تفهم
 

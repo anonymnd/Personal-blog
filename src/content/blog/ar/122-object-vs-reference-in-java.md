@@ -1,40 +1,107 @@
 ---
-title: "الفرق بين Object و Reference في Java"
-description: "فهم الفرق بين الـ Object والـ Reference في جافا باش تفادى المشاكل ديال NullPointerException والأخطاء في المنطق ديال الكود."
-pubDate: 2026-10-11T17:48:00.000Z
+title: "الأوبجيكت، الريفرنس و 'new' في جافا"
+description: "شرح عميق لـ allocation في heap، وكيفاش كيخدم aliasing و pass-by-value في جافا."
+pubDate: 2026-10-07T17:48:00.000Z
 translationKey: 122-object-vs-reference-in-java
+seriesOrder: 26
 locale: ar
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## Allocation وطبيعة الريفرنس (Reference)
 
-تخيل راسك خدام على تطبيق ديال المشتريات (procurement app). صاوبتي Object سميتو `PurchaseRequest` وبغيتي تبدل الحالة (status) ديالو فواحد الـ method، ولكن لاحظتي أن التغيير ما بقاش، أولا طلع ليك `NullPointerException`. هادشي كيوقع حيت بزاف ديال المبرمجين كيخلطو بين الـ Object (اللي هو الداتا فالميموار) والـ Reference (اللي هو غير العنوان فين كاين ديك الداتا).
+في جافا، كاين فرق كبير بين variable de référence والأوبجيكت اللي كيشير ليه. ملي كدير `ShoppingBasket basket;` راك غير كريتي بلاصة في الميموار تقدر تهز ريفرنس (reference) ديال أوبجيكت من نوع `ShoppingBasket`. فهاد اللحظة، مازال ما كاين حتى أوبجيكت في الـ heap.
 
-## Object والقيم اللي كتشير ليه
-Object عندو حالة وهوية؛ reference value كتخلي كود Java يوصل ليه. References ماشي غير فـ local variables: field ديال object ولا عنصر فـ array حتى هو يقدر يحمل reference. JVM عندها memory model وكتقدر تدير optimizations ففين كيتخزن object فعليا. ما خاصكش تعرف عنوان رقمي فالميموار باش تفهم aliasing: جوج ديال المتغيرات يقدرو يشيرو لنفس object.
-## قضية Pass-by-Value
-كاين غلط شائع كيقول بلي جافا كتدوز الـ Objects بـ reference. ولكن الحقيقة هي أن جافا ديما كتدوز بـ value. ملي كتدوز Object لشي method، راك كتدوز نسخة من العنوان (reference value) ماشي الـ Object راسو.
+ملي كتخدم بـ `new` كيوقعو تلاتة ديال الحوايج:
+1. **Allocation Mémoire**: الـ JVM كتحجز بلاصة في الـ heap على حساب شحال ديال fields كاينين في الكلاس.
+2. **Initialisation**: الـ fields كياخدو قيم افتراضية (0، false، أو null)، ومن بعد الـ constructor كيخدم باش يعطي القيم الأولية.
+3. **Reference Assignment**: العملية ديال `new` كترجع لينا الريفرنس ديال الأوبجيكت اللي تكريا، وهاد العنوان هو اللي كيتحط في الـ variable.
 
-شوف هاد المثال:
+واحد الحاجة مهمة: الريفرنس في جافا ماشي هو pointer بحال في C++. ما تقدرش دير عليه عمليات حسابية (pointer arithmetic) وما تقدرش تشوف العنوان الحقيقي ديال الميموار. الريفرنس هو مجرد handle كتحكم فيه الـ JVM.
+
+## Aliasing و Identity
+
+الـ Aliasing كيوقع ملي كيكونوا جوج variables de référence أو أكثر كيشيرو لنفس الأوبجيكت في الـ heap. حيت كيشاركو نفس قيمة الريفرنس، أي تغيير (mutation) درتيه بواحد منهم، كيبان عند لخرين كاملين.
+
+الـ Identity هي ملي كيكونوا جوج ريفرنس كيشيرو لنفس الأوبجيكت في الـ heap. كنتاكدو من هادشي باستعمال `==`. أما `.equals()` فهي مديورة باش تقارن القيمة (logical equality)، ولكن الا ما كانتش redéfinie، كدير نفس الخدمة ديال `==`.
+
+## Pass-by-Value: الفخ ديال الريفرنس
+
+جافا ك تخدم بـ pass-by-value ديما. ملي كتصيفط أوبجيكت لشي method، راك ما كتصيفطش الأوبجيكت راسو، وما كتصيفطش الريفرنس ديال الـ variable. اللي كتصيفط هو **نسخة من قيمة الريفرنس**.
+
+نشوفو هاد السيناريو: جوج variables كيشيرو لنفس السلة (basket). غنصيفطو وحدة لـ method اللي غتغير السلة ومن بعد غتحاول تبدل الريفرنس راسو.
+
+### مثال تطبيقي: Mutation ديال السلة
+
 ```java
-public void processRequest(PurchaseRequest request) {
-    request.setStatus("APPROVED"); // هنا كنبدلو الـ Object اللي فـ Heap
-    request = new PurchaseRequest(); // هنا بدلنا غير النسخة ديال العنوان اللي فـ method
+import java.util.*;
+
+public class BasketDemo {
+    static class ShoppingBasket {
+        List<String> items = new ArrayList<>();
+        
+        void addItem(String item) {
+            items.add(item);
+        }
+    }
+
+    public static void main(String[] args) {
+        ShoppingBasket basketA = new ShoppingBasket();
+        ShoppingBasket basketB = basketA; // Aliasing: بجوجهم كيشيرو لنفس الأوبجيكت
+
+        System.out.println("Initial: basketA == basketB is " + (basketA == basketB));
+
+        processBasket(basketB);
+
+        System.out.println("After method: basketA items: " + basketA.items);
+        System.out.println("After method: basketA == basketB is " + (basketA == basketB));
+    }
+
+    static void processBasket(ShoppingBasket localBasket) {
+        // Mutation: هادي كتاثر على الأوبجيكت اللي في الـ heap
+        localBasket.addItem("Apple");
+
+        // Reassignment: هادي كتبدل غير النسخة المحلية ديال الريفرنس
+        localBasket = new ShoppingBasket();
+        localBasket.addItem("Orange");
+        // 'Orange' تزدات في أوبجيكت جديد اللي غيمسحو الـ Garbage Collector
+    }
 }
 ```
-ف هاد الكود، تبديل الـ status خدام حيت العنوان الأصلي والنسخة بجوج كيشيرو لنفس الـ Object. ولكن ملي درنا `request = new...` بدلنا غير العنوان المحلي، أما الـ variable اللي برا الـ method بقى كيشير للـ Object الأول.
 
-## Null ماشي بحال local variable ما تهيأتش
-Reference تقدر تكون `null`، يعني ما كتشير حتى لـ object. إلا عيطتي على method ديالها، غالبا غتاخد NullPointerException. Field ديال object من نوع reference كيكون null افتراضيا إلا ما تهيأش. ولكن local variable بحال `PurchaseRequest req;` مختلفة: Java ما كيخليكش تستعملها قبل ما تعطيها قيمة، وكيوقع compile error. إلا درتي `PurchaseRequest req = null;` راه عطيتها قيمة، ولكن العيطة لـ `req.setStatus(...)` غتفشل فوقت التشغيل.
-## الهوية وequals اللي كتحددها class
-بالنسبة لـ references، `a == b` كيسول واش بجوج كيشيرو لنفس object، وحتى إلا كانو بجوج null. `a.equals(b)` كيطلق تعريف المساواة اللي دايراه class. Equals الموروثة من Object حتى هي كتعتمد على الهوية؛ خاص class تبدلها باش تقارن القيم. String والـ records عندهم مقارنة بالقيمة مفيدة. `Objects.equals(a, b)` كتتعامل حتى مع null. اختار الهوية ولا مقارنة القيم على حساب الدومين، ماشي تبدل أي == بلا ما تفكر.
-## تمرين تطبيقي
-إلا كان عندك `PurchaseRequest a = new PurchaseRequest("Laptop");` و درتي `PurchaseRequest b = a;` ، شنو غادي يوقع لـ `a` إلا عيطتي لـ `b.setAmount(1000);` ؟
+**تحليل النتيجة:**
+1. `Initial: basketA == basketB is true`: بجوجهم عندهم نفس قيمة الريفرنس.
+2. `After method: basketA items: [Apple]`: التغيير `addItem("Apple")` وقع في الأوبجيكت اللي في الـ heap. وبما أن `basketA` و `basketB` بجوجهم كيشوفوه، `basketA` لقات التغيير.
+3. `After method: basketA == basketB is true`: التبدال ديال `localBasket = new ShoppingBasket()` بدل غير الـ variable المحلية `localBasket` وسط الـ method. ما بدّلش `basketB` اللي كاين في `main`.
 
-**الجواب:** `a` حتى هي غادي يولي فيها 1000، حيت `a` و `b` بجوجهم غير عناوين كيشيرو لنفس الـ Object اللي كاين فـ Heap.
+## Local Variables و Null
 
+الـ fields ديال الكلاس كيتاخدو قيم افتراضية أوتوماتيكيا. ولكن **local variables** (اللي وسط الـ methods) ما كيتاخدوش. الا حاولتي تخدم بـ local variable مازال ما عطيتيهاش قيمة، الـ compiler غيعطيك error.
+
+`null` هي قيمة خاصة ديال الريفرنس كتعني أن الـ variable ما كيشير لحتى أوبجيكت. الا حاولتي تعيط لشي method على ريفرنس `null` غتوقع `NullPointerException` حيت ما كاين حتى أوبجيكت في الـ heap فين تمشي الـ method.
+
+## تمرين
+
+عطاك هاد الكود، شنو غتكون الحالة النهائية ديال `list1` و `list2`؟
+
+```java
+List<Integer> list1 = new ArrayList<>(List.of(1, 2));
+List<Integer> list2 = list1;
+modify(list1, list2);
+
+void modify(List<Integer> a, List<Integer> b) {
+    a.add(3);
+    a = new ArrayList<>();
+    b.add(4);
+}
+```
+
+**الجواب:**
+`list1` و `list2` بجوج غيكون فيهم `[1, 2, 3, 4]`. 
+- `a.add(3)` بدلات الأوبجيكت المشترك.
+- `a = new ArrayList<>()` بدلات غير النسخة المحلية `a`؛ ما أثراتش على `list1`.
+- `b.add(4)` بدلات الأوبجيكت المشترك حيت `b` مازال كيشير لـ list الأصلية.
 
 ## باش تزيد تفهم
 

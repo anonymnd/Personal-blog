@@ -1,43 +1,60 @@
 ---
-title: "شنو كيوقع ملي كانديرو mvn clean؟"
-description: "شرح مبسط على كيفاش Maven Clean plugin كيمسح الدوسي ديال build باش تبدا compilation من الزيرو."
-pubDate: 2026-10-13T23:48:00.000Z
+title: "فهم Maven Lifecycle و Build Artifacts"
+description: "شرح مفصل على مراحل Maven، الدوسي target، والفرق بين تقارير tests unitaires و integration tests."
+pubDate: 2026-10-08T07:48:00.000Z
 translationKey: 176-what-happens-when-you-run-mvn-clean
+seriesOrder: 40
 locale: ar
-tags: ["software-engineering","maven-debugging","learning-series"]
+tags: ["maven-debugging","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## كيفاش خدام Maven Lifecycle
 
-تخيل راسك بدلتي شي حاجة مهمة في الـ configuration ديال application ديال الشرا (procurement app)، ولكن ملي كتخدمها، كتلقى الإعدادات القدام باقيين خدامين. كتحس بلي الكود مابغاش يتحدث وخا درتي save. هادشي كيوقع حيت Maven كيخزن لي كلاص (classes) لي تـcompilاو في واحد الدوسي خاص، وهاد الدوسي ماشي ديما كيتحدث بوحدو.
+mvn package كتدوز default lifecycle حتى package وكتنفذ goals المرتبطين حسب packaging وconfiguration. validate → compile → test → package رسم مبسط ناقص phases بيناتهم. Tests يقدرو ما يكونوش ولا يتـskipـاو ولا configured بطريقة أخرى؛ JAR ما كتثبتش tests نجحو. شوف effective POM وbuild log.
+## الدوسي target وعلاش خاصنا `clean`
 
-## الدور ديال الدوسي Target
-ملي كانديرو build لشي مشروع Java، Maven مكيقيسش الكود لي كاين في `src/main/java`. بلاصتها، كيكريي واحد الدوسي سميتو `target`. هاد الدوسي هو فين كيتحولو ملفات `.java` لملفات `.class`. مع الوقت، هاد الدوسي كيعمر بملفات قديمة (stale artifacts) ديال نسخ سابقة من الكود، لي مابقاوش صالحين ولكن باقيين محطوطين تما.
+كاع داكشي اللي كيخرج من الـ build كيمشي لـ `target/` folder. تما كتلقى `.class` files، و الـ JAR final.
 
-## كيفاش خدام mvn clean
-ملي كتكتب `mvn clean` في terminal، Maven كيخدم واحد الـ plugin سميتو Maven Clean Plugin. الخدمة ديالو ساهلة: كيمسح الدوسي `target` كامل. ملي كيمسح هاد الدوسي، كيضمن لينا بلي حتى شي حاجة قديمة ماغاديش تبرزط النسخة الجديدة ديال الكود. خاصك تعرف بلي `mvn clean` كيمسح غير داكشي لي تـcompila، ومكيقيسش الكود ديالك (source code) ولا الـ `pom.xml` نهائيا.
+`mvn clean` هو lifecycle بوحدو. الخدمة ديالو الوحيدة هي يمسح الدوسي `target/`. هاد الخطوة مهمة بزاف حيت Maven ماشي ديما كيلاحظ كاع التغييرات في الـ dependencies أو الـ resources. إلا كان build قديم فشل وخلا شي حاجات، ودرتي `mvn package` من بعد، يقدر يجمع ليك كود قديم (stale). داكشي علاش `mvn clean package` كتضمن ليك build نقي من الزيرو.
 
-## مثال تطبيقي
-تخيل في application ديال الشرا، كان عندك واحد الـ object سميتو `Request` فيه variable سميتها `requestDate`. بدلتيها ورديتيها `submissionDate`. إلا درتي `mvn compile` بلا ما دير clean، يقدر يبقى الملف القديم `Request.class` في الدوسي `target` وهادشي غادي يعطيك errors بحال `NoSuchFieldError` لي غاتدوخك.
+## الفرق بين Unit Tests و Integration Tests
 
-```bash
-# غلط: compile بوحدها تقدر تخلي كلاصات قدام
-mvn compile
+Surefire غالبا كتخدم unit tests فـ test مع JAR project، بـ patterns بحال Test* و*Test و*Tests و*TestCase. Failsafe كتخدم integration-test وverify غير إلا executions configured؛ patterns بحال IT* و*IT و*ITCase. Defaults قابلين للتغيير.
 
-# صحيح: بدا من الزيرو
-mvn clean compile
-```
-النتيجة: الدوسي `target` كيتمسح، و Maven كيعاود يـcompile كلشي من الأول، وهكا كتأكد بلي `submissionDate` هي لي كاينه.
+Failure ديال Surefire غالبا كتوقف قبل package. Failsafe كتسجل ordinary test failures باش توصل post-integration-test cleanup ومن بعد verify كتعلن failure. خدم mvn verify ماشي integration-test بوحدها. Plugin ولا infrastructure error تقدر توقف بكري، خاص cleanup robust.
+## Plugin Goals مقابل Lifecycle Phases
 
-## غلط شائع: كثرة استعمال Clean
-بزاف ديال المطورين كيديرو `mvn clean install` في كل مرة كيبدلو سطر واحد. وخا هادشي ماشي خطر، ولكن راه كيضيع الوقت في المشاريع الكبيرة حيت Maven كيضطر يعاود يـcompile كلشي. خاصك دير `clean` غير ملي تبدل dependencies، ولا تبدل سمية ديال شي class، ولا ملي يوقع شي bug غريب في الـ build.
+أوامر بحال `mvn spring-boot:run` ماشي lifecycle phases. هادو كيتسماو **plugin goals**. الـ goal هو مهمة محددة كيديرها plugin. بينما `package` هي phase كتعيط لبزاف ديال goals، `spring-boot:run` كيتجاوز الـ lifecycle العادي باش يخدم application نيشان من `target/classes` بلا ما يحتاج يصاوب JAR.
 
-## تمرين صغير
-إلا درتي `mvn clean` واش الملف `src/main/resources/application.properties` غادي يتمسح؟
+## مثال تطبيقي: مشروع Report-Export
 
-**الجواب:** لا. `mvn clean` كيمسح غير الدوسي `target`. الملفات لي في `src` مكيقيسهمش.
+**السيناريو**: خدام على مشروع ديال export reports. درتي `mvn package` والـ build فشل. ملي شفتي `target/` لقيتي JAR موجود. هنا غتلف حيت الـ build فشل ولكن الـ JAR كاين.
 
+**تتبع العملية (Trace)**:
+1. **التنفيذ**: `mvn package` بدات.
+2. **Compile**: دازت بنجاح. `.class` files تصاوبوا في `target/classes`.
+3. **Test**: الـ Surefire plugin خدم، وواحد الـ test فشل. الـ build وقف هنا.
+4. **الـ Artifact**: لقيتي JAR في `target/`. هاد الـ JAR راه **قديم (stale)** من شي build سابق كان ناجح. حيت الـ build الحالي وقف في `test` phase، ما وصلش لـ `package` phase. يعني هاد الـ JAR ما فيهش التغييرات الجديدة ديالك.
+
+**الحل**:
+باش تعرف المشكل وتصلحو، دير:
+`mvn clean test` 
+
+هكا كتمسح الـ JAR القديم وكتعطي التركيز غير للـ failure. ومن بعد كتمشي لـ `target/surefire-reports/TEST-com.project.ReportExportTest.xml` باش تشوف فين كاين المشكل بالضبط.
+
+## Packaging: Plain JAR مقابل Executable JAR
+
+Plain JAR فيها classes وresources وتقدر تكون executable إلا manifest وruntime classpath مناسبين؛ java -jar ما كتحتاجش دائما كاع dependencies داخلها. Spring Boot repackage كتنتج format خاصة مع dependencies وlauncher. Configure هاد goal؛ غير declaration ديال أي plugin ما كتضمنش كل package تنفذها.
+
+spring-boot:run هي goal ولكن تقدر تطلب phases قبل التشغيل. clean كتحدف build directories configured وoutputs قدام؛ بوحدها ما كتضمنش deterministic build حيت dependencies وtools وenvironment كيأثرو.
+## تمرين
+
+**سؤال**: درتي `mvn verify`. الـ build فشل. لقيتي أن tests unitaires دازو، ولكن integration test واحد فشل. فين غتلقى التقرير (report)، وعلاش كاين JAR في الدوسي `target` وخا الـ build فشل؟
+
+**الجواب**:
+1. غتلقى التقرير في `target/failsafe-reports`. حيت tests unitaires دازو، الـ build كمل من `test` phase لـ `integration-test` phase.
+2. الـ JAR كاين حيت `package` phase كتجي *قبل* من `integration-test` و `verify`. يعني Maven جمع الـ JAR بنجاح قبل ما يوصل للـ test اللي فشل.
 
 ## باش تزيد تفهم
 

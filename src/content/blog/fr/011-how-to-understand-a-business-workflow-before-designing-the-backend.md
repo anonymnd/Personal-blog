@@ -1,40 +1,73 @@
 ---
-title: "Comment comprendre un flux métier avant de concevoir le backend"
-description: "Apprenez à cartographier les processus métier et à identifier les acteurs et entités pour éviter des refontes architecturales coûteuses."
-pubDate: 2026-10-07T02:48:00.000Z
+title: "Transformer un Flux Métier en Cas d'Utilisation Explicites"
+description: "Guide pour extraire les flux, gérer les exceptions et documenter la logique via des cas d'utilisation et des tables de décision (scénario de bibliothèque)."
+pubDate: 2026-10-06T17:48:00.000Z
 translationKey: 011-how-to-understand-a-business-workflow-before-designing-the-backend
+seriesOrder: 2
 locale: fr
-tags: ["software-engineering","business-workflows","learning-series"]
+tags: ["business-workflows","learning-series"]
 draft: false
 ---
 
-Imaginez que vous commenciez à coder un système d'achat dès que vous entendez : « les employés doivent pouvoir demander des ordinateurs ». Vous créez une table simple et une API, pour découvrir une semaine plus tard que les demandes nécessitent l'approbation d'un manager, une vérification budgétaire et la confirmation d'un acheteur. Votre schéma de base de données est désormais obsolète car vous avez ignoré les transitions d'état de la logique métier.
+## Du Flux à la Logique
 
-## Distinguer Acteurs et Utilisateurs
-Une erreur courante consiste à traiter chaque personne comme un objet « Utilisateur ». Dans un flux, vous devez distinguer l'**Acteur** (le rôle interagissant avec le système) de l'**Utilisateur** (l'identité du compte). Par exemple, dans une application d'achat, le « Demandeur » et l'« Approbateur » sont des Acteurs. Une seule personne peut cumuler les deux rôles, mais la logique métier s'intéresse au rôle, pas à l'individu.
+L'échec d'un logiciel provient souvent de la traduction directe d'un processus métier vague en code, sans exposer les règles "cachées". Un flux (workflow) est la séquence d'étapes suivies par l'entreprise ; un cas d'utilisation est l'interaction spécifique entre un acteur et le système pour atteindre un objectif. Pour combler l'écart, il faut passer d'une description narrative à un ensemble structuré de règles et d'exceptions.
 
-## Cartographier les Entités du Domaine
-Les entités sont les « objets » que l'entreprise suit. Alors qu'un Utilisateur est une identité, une `DemandeAchat` est une entité de domaine. Elle a un cycle de vie : *Brouillon* → *En attente* → *Commandé* → *Reçu*. Comprendre ces états évite de créer un système rigide incapable de gérer une demande « Rejetée ».
+## Extraction du Flux : Le Scénario de la Bibliothèque
 
-## Capturer les Chemins d'Échec (Unhappy Paths)
-La plupart des développeurs ne conçoivent que le « chemin nominal ». Un backend robuste doit prévoir :
-1. **Échecs d'autorisation** : Que se passe-t-il si un demandeur tente d'approuver sa propre demande ?
-2. **Contraintes métier** : Que faire si le budget est dépassé ?
-3. **Délais** : Que se passe-t-il si un manager n'approuve pas la demande pendant 10 jours ?
+Imaginons un système de bibliothèque. Une description superficielle dirait : "Les utilisateurs empruntent des livres et peuvent les renouveler s'ils ne sont pas en retard." Pour transformer cela en spécification technique, vous devez interroger les parties prenantes pour identifier les chemins bloqués.
 
-## Exemple Concret : Flux d'Achat
-Considérons cette logique simplifiée :
-- **Acteur : Demandeur** → crée une `DemandeAchat` (État : PENDING).
-- **Acteur : Manager** → vérifie le budget ; si OK, passe l'état à APPROVED.
-- **Acteur : Acheteur** → commande chez le fournisseur ; passe l'état à ORDERED.
+**Questions d'entretien pour exposer la logique :**
+* "Que se passe-t-il si un utilisateur tente de renouveler un livre déjà réservé par quelqu'un d'autre ?"
+* "Un utilisateur peut-il renouveler un livre s'il a une amende impayée ?"
+* "Quel est le déclencheur exact qui marque un prêt comme 'en retard' ?"
 
-Si vous vous contentez d'une table `Request` avec une colonne `status`, vous pourriez oublier l'entité `ApprovalLog` nécessaire pour l'audit (qui a approuvé quoi et quand).
+Grâce à ces questions, nous découvrons une règle métier critique : un renouvellement est bloqué si l'article est réservé OU si l'utilisateur a des amendes dépassant 10 $, quel que soit le statut du livre.
 
-## Erreur Courante : Sauter vers les Tables
-**Erreur** : Créer immédiatement une table `Users` et une table `Requests`.
-**Correction** : D'abord, dessinez un schéma du processus. Définissez les transitions. Ensuite seulement, décidez si vous avez besoin d'une table `Role` ou d'un enum `State`.
+## Structurer le Cas d'Utilisation Textuel
 
-## Exercice Pratique
-**Scénario** : Un système de bibliothèque où un membre emprunte un livre, mais cela doit être approuvé par un bibliothécaire si le livre est « Rare ».
-**Question** : Identifiez les Acteurs et l'Entité de Domaine.
-**Réponse** : Acteurs : Membre, Bibliothécaire. Entité de Domaine : DemandeEmprunt (avec des états comme EnAttente, Approuvé, Emprunté).
+Un cas d'utilisation doit se concentrer sur l'interaction, pas sur l'interface utilisateur (UI). Il identifie l'Acteur (le rôle), les Préconditions, le Scénario Nominal (le chemin heureux) et les Extensions (les chemins d'erreur).
+
+**Cas d'Utilisation : Renouveler un Article de Bibliothèque**
+* **Acteur :** Membre de la Bibliothèque
+* **Précondition :** Le membre est authentifié et possède un prêt actif pour l'article.
+* **Scénario Nominal :**
+    1. Le membre demande le renouvellement d'un article spécifique.
+    2. Le système vérifie que l'article n'est pas réservé.
+    3. Le système vérifie que le compte du membre est en règle (amendes ≤ 10 $).
+    4. Le système prolonge la date d'échéance de 14 jours.
+    5. Le système informe le membre de la nouvelle date.
+* **Extensions :**
+    2a. L'article est réservé → Le système informe le membre que le renouvellement est bloqué en raison d'une réservation.
+    3a. Les amendes dépassent 10 $ → Le système informe le membre que le renouvellement est bloqué jusqu'au paiement.
+    3b. L'article est un livre de référence 'Haute Demande' → Le système refuse le renouvellement (certains articles ne sont pas renouvelables).
+
+## Cartographier la Logique Complexe avec des Tables de Décision
+
+Lorsque plusieurs conditions se chevauchent, les descriptions textuelles deviennent ambiguës. Une table de décision rend les combinaisons explicites. Le tableau ci-dessous présente des cas représentatifs ; vérifiez aussi les conditions de blocage simultanées. Une réservation, une amende excessive ou un article non renouvelable suffit à bloquer le renouvellement.
+
+| Condition | Règle 1 | Règle 2 | Règle 3 | Règle 4 |
+| :--- | :---: | :---: | :---: | :---: |
+| Article Réservé ? | Non | Oui | Non | Non |
+| Amendes > 10 $ ? | Non | Non | Oui | Non |
+| Non-renouvelable ? | Non | Non | Non | Oui |
+| **Action : Autoriser Renouvellement** | **Oui** | **Non** | **Non** | **Non** |
+| **Action : Afficher Erreur** | Aucune | "Réservé" | "Amendes" | "Politique" |
+
+## Analyse de l'Artéfact
+
+Cette approche évite l'erreur classique de coder le 'Chemin Heureux' en premier et de découvrir la logique des 'Réservations' ou des 'Amendes' pendant la phase de QA. En définissant la table de décision, le développeur sait exactement quelle logique `if/else` ou `switch` est requise dans la couche service avant d'écrire une seule ligne de Java. Les cas d'échec (Extensions) deviennent des exigences de premier plan, et non des réflexions après coup.
+
+## Exercice Ciblé
+
+**Scénario :** La bibliothèque introduit un 'Délai de Grâce'. Si un livre est rendu avec 1 à 3 jours de retard, aucune amende n'est appliquée. S'il a 4 jours ou plus, une amende journalière est appliquée. Cependant, si l'utilisateur est un 'Membre Premium', le délai de grâce est porté à 7 jours.
+
+**Tâche :** Créez une table de décision pour déterminer si une amende doit être appliquée en fonction de : `Jours de Retard`, `Type de Membre (Standard/Premium)`.
+
+**Réponse :**
+
+| Condition | Règle 1 | Règle 2 | Règle 3 | Règle 4 |
+| :--- | :---: | :---: | :---: | :---: |
+| Jours de Retard | 1-3 | 4-7 | 4-7 | 8+ |
+| Type de Membre | Standard | Standard | Premium | N'importe | 
+| **Appliquer Amende ?** | **Non** | **Oui** | **Non** | **Oui** |

@@ -1,44 +1,81 @@
 ---
-title: "Where Kubernetes Fits Into CI/CD"
-description: "Understand the specific role of Kubernetes as the orchestration target within a Continuous Integration and Continuous Deployment pipeline."
-pubDate: 2026-10-16T21:48:00.000Z
+title: "Place Kubernetes in the Deployment Architecture"
+description: "Distinguishing container packaging from orchestration and implementing a stateless map-tile API deployment with Services."
+pubDate: 2026-10-08T22:48:00.000Z
 translationKey: 246-where-kubernetes-fits-into-ci-cd
+seriesOrder: 55
 locale: en
-tags: ["software-engineering","deployment-devops","learning-series"]
+tags: ["deployment-devops","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## Orchestration vs. Packaging
 
-Many developers mistakenly believe that Kubernetes is a CI/CD tool. They imagine that installing a cluster automatically handles their code testing and deployment. In reality, Kubernetes is the destination, not the vehicle. The confusion usually stems from the fact that Kubernetes manages the lifecycle of an application, but it doesn't know how to compile your Java code or run your unit tests.
+A common point of confusion in modern pipelines is the distinction between Docker and Kubernetes. Docker is a packaging tool; it creates an immutable image containing the application code, runtime, and dependencies. Kubernetes, however, is an orchestrator. It does not build your code or run your tests—that is the role of the CI pipeline. Instead, Kubernetes takes the image produced by the pipeline and manages its lifecycle across a cluster of machines.
 
-## The Pipeline Flow
-In a standard workflow, the process starts with Git. When a developer pushes code, a CI tool (like Jenkins or GitHub Actions) triggers. This tool builds the application and packages it into a Docker image. Once the image is pushed to a registry, the CD part begins. This is where Kubernetes enters the picture. The CD tool tells Kubernetes: "Update the deployment to use version 2.0 of this image." Kubernetes then handles the rollout across the cluster.
+The hand-off occurs when the CI/CD pipeline pushes a declarative configuration (usually YAML) to the Kubernetes API. The pipeline tells Kubernetes: "Ensure this specific version of the image is running with these resource limits." Kubernetes then works to reconcile the current state of the cluster with that desired state.
 
-## Orchestration vs. Automation
-While CI/CD tools automate the movement of code, Kubernetes orchestrates the workload. For example, in a procurement app, the 'Requester' service might be scaled to three replicas. If one pod crashes, the kubelet restarts it based on the restart policy. This is self-healing, but it is not 'CI/CD'—it is operational stability.
+## The Stateless Map-Tile API Scenario
 
-## Worked Example: Procurement App Update
-Imagine updating the 'Approval' service in a procurement system. 
-1. **CI Phase**: Code is pushed → Tests pass → Docker image `procurement-approval:v2` is created.
-2. **CD Phase**: The pipeline updates the Kubernetes manifest:
+The map-tile API aims for three replicas. A Deployment manages rollout through ReplicaSets; the ReplicaSet controller creates replacement Pods, the scheduler places them on eligible nodes, and kubelets run their containers. Desired replicas are a target, not a guarantee of three available instances during failures or insufficient capacity.
+
+A normal ClusterIP Service offers stable discovery and routes through ready endpoints matching its selector. Pods can receive different addresses when replaced; clients should not depend on individual Pod IPs. The Service is internal by default and does not alone expose the application to the public internet. Readiness and rollout settings need separate configuration. Identical baked-in read-only tiles can be local to every image; mutable or nonreplicated local state requires an explicit storage design.
+## Worked Artifact: Declarative Configuration
+
+Below is the configuration for the map-tile API. This YAML is what the pipeline would apply to the cluster.
+
 ```yaml
+# illustrative-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: map-tile-api
 spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: map-tiles
   template:
+    metadata:
+      labels:
+        app: map-tiles
     spec:
       containers:
-      - name: approval-service
-        image: procurement-approval:v2
+      - name: tile-server
+        image: registry.example.com/map-tile-api:v1.2.0
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: map-tile-service
+spec:
+  selector:
+    app: map-tiles
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
 ```
-3. **K8s Action**: Kubernetes performs a rolling update, replacing v1 pods with v2 pods one by one to ensure zero downtime.
 
-## Common Mistake: Confusing Liveness with CI
-A common error is thinking that a Liveness Probe fixes bugs. If your code has a null pointer exception, a Liveness Probe will restart the container, but the bug remains. CI is for catching the bug; Kubernetes is for keeping the app running despite the crash.
+### Analysis of the Outcome
+1. **Desired state:** replicas: 3 requests three replicas; availability depends on successful scheduling, startup and readiness.
+2. **Decoupling**: The Service `map-tile-service` targets any Pod with the label `app: map-tiles`. If the Deployment replaces a Pod during an update, the Service automatically updates its list of endpoints without the client ever knowing the backend IP changed.
+3. **Traffic Flow**: Client → `map-tile-service` (Port 80) → Random Pod (Port 8080).
 
-## Practical Exercise
-If a CI pipeline successfully builds a Docker image but the application fails to start in Kubernetes due to a wrong environment variable, which part of the pipeline failed?
+## Failure Cases and Constraints
 
-**Answer**: The CD/Deployment phase (or the configuration management), because the artifact was built correctly, but the orchestration target was misconfigured.
+- **Image Pull Failure**: If the pipeline pushes a config referencing an image tag that doesn't exist in the registry, the Pods will enter an `ImagePullBackOff` state. The orchestrator cannot fix a missing artifact; it can only restart the attempt.
+- **Resource Exhaustion**: If the cluster lacks sufficient CPU/RAM to host three replicas, some Pods will remain in `Pending` state. The Deployment controller knows it *should* have three, but the scheduler cannot find a place to put them.
+- **State design:** local mutable state is not shared automatically. Identical read-only tiles packaged in every image can be served locally; mutable tiles need explicit synchronization or shared storage.
+
+## Exercise
+
+Change spec.replicas to 5 and the container image reference to the reviewed new version, preferably its digest. Deployment then reconciles the new replica target and rollout. The default RollingUpdate settings do not universally mean replacing exactly one Pod at a time or retaining exactly three ready replicas. Availability depends on maxUnavailable, maxSurge, readiness, capacity and concurrent failures.
+
+Add an application readiness probe and suitable resource requests before relying on traffic handover. Observe rollout status, ready endpoints and error rates. A failed rollout may stall rather than automatically roll back, so keep a deliberate recovery procedure. The YAML is a minimal structural example, not a complete production manifest.
 
 ## Further reading
 

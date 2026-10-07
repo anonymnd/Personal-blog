@@ -1,53 +1,105 @@
 ---
-title: "الفرق بين Checked و Unchecked Exceptions"
-description: "تعلم كيفاش تختار بين checked و unchecked exceptions باش تصاوب تطبيقات Java صحيحة ومكتقطعش."
-pubDate: 2026-10-12T00:48:00.000Z
+title: "Checked and Unchecked Exceptions: كيفاش تحدد عقد التعامل مع الأخطاء"
+description: "شرح مفصل على الفرق بين Exception و RuntimeException في Java باستعمال مثال ديال أداة import ديال البيانات."
+pubDate: 2026-10-07T20:48:00.000Z
 translationKey: 129-checked-vs-unchecked-exceptions
+seriesOrder: 29
 locale: ar
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## التسلسل الهرمي ديال Exceptions كـ "عقد" (Contract)
 
-تخايل راسك خدام على application ديال procurement (المشتريات) فين الموظف كيصيفط طلب شراء. كتبتي واحد la méthode باش تسجل هاد الطلب فشي fichier. فجأة، الـ compiler كيفرض عليك دير try-catch ولا تزيد 'throws'، واخا تكون عارف بلي الملف كاين. هنا فين كاين الفرق بين checked و unchecked exceptions.
+RuntimeException كتورث من Exception. Checked exceptions ما كيدخلوش فيهم RuntimeException ولا subclasses ديالها؛ compiler كيطلب catch ولا throws للـ checked exceptions اللي يقدرو يخرجو من method. RuntimeException وsubclasses ديال Error unchecked.
 
-## شنو كتعني checked بالضبط؟
-Checked exception كتكون من Exception ولكن ماشي من فرع RuntimeException. ملي كتعيط لـ method تقدر ترميها، Java كيفرض عليك تشدها بـ catch ولا تصرح بها فـ throws ديالك. هادشي كيراقب التزام ديال API فوقت compilation، ماشي واش الخطأ غيوقع ولا واش تقدر تصلحو. IOException مثال معروف. Throws غير كيدوز الالتزام للي عيط عليك؛ ما كيعالجش الخطأ وما كيقرر حتى رسالة ديال UI.
-## Unchecked ما كتعنيش مستحيل تعالج الخطأ
-RuntimeException وError والفروع ديالهم unchecked: compiler ما كيفرضش catch ولا throws. NullPointerException غالبا كتدل على bug، ولكن رفض ديال قاعدة métier ولا مشكل مؤقت فـ infrastructure حتى هو يقدر يكون RuntimeException. التطبيق يقدر يعالج هاد الحالات فـ boundary مناسبة. Error غالبا كيعني مشاكل خطيرة فـ runtime وماشي حاجة خاص كود الخدمة يحاول يغطي عليها كلها. واش تقدر تعالج الخطأ وواش هو checked راه جوج اختيارات ماشي نفس المعنى.
-## مثال: اختيار واضح ديال API
-هاد service التوضيحية اختارت checked exception إلا كانت infrastructure ما خداماش، وunchecked exception إلا كان argument ما صالحش. API أخرى تقدر تختار unchecked حتى لمشاكل infrastructure؛ Java ما كيفرضش هاد المعنى ديال الخدمة.
+الفرق كيحدد واجب compilation، ماشي واش نقدر نصلحو المشكل. Business failure تقدر تكون unchecked وchecked failure تقدر ما عندهاش حل محلي. اختار API contract وحدود recovery بوضوح. Error غالبا مشكل كبير، ما تخبيهاش عشوائيا.
+## السيناريو: أداة Import ديال البيانات
+
+تخيل عندنا أداة كدير import لبيانات من واحد الملف. عندنا تلاتة ديال الأنواع ديال الفشل:
+1. **الملف ما كاينش**: الملف ما لقيتوهش في المسار. هادشي مشكل خارجي يقدر المستخدم يصلحو (مثلاً يعطي المسار الصحيح). هادي **Checked Exception**.
+2. **سطور ديال البيانات غالطة (Malformed)**: الملف كاين، ولكن واحد السطر فيه نص في بلاصة رقم. هادا فشل في الـ business validation. هادي **Checked Exception**.
+3. **Null Pointer في الـ Parser**: المبرمج نسا ما دارش initialization لشي object. هادا bug. هادي **Unchecked Exception**.
+
+## تطبيق عملي (Worked Example)
+
+ها كيفاش كنصاوبو هاد العقود باش اللي كيستعمل الكود يعرف بالضبط شنو خاصو يـ handle.
 
 ```java
-class ServiceUnavailableException extends Exception {
-    ServiceUnavailableException(String message) { super(message); }
+import java.io.*;
+import java.util.*;
+
+// Checked: اللي كيستعمل الميثود خاصو يقرر كيفاش يخبر المستخدم بلي الملف ما كاينش
+class ImportFileNotFoundException extends Exception {
+    public ImportFileNotFoundException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
 
-class ApprovalService {
-    void approve(long requestId, boolean available)
-            throws ServiceUnavailableException {
-        if (!available) {
-            throw new ServiceUnavailableException("Service unavailable");
+// Checked: اللي كيستعمل الميثود خاصو يقرر واش يتجاوز السطر الغالط أو يوقف الـ import كامل
+class MalformedRowException extends Exception {
+    private final int rowNumber;
+    public MalformedRowException(String message, int rowNumber) {
+        super(message);
+        this.rowNumber = rowNumber;
+    }
+    public int getRowNumber() { return rowNumber; }
+}
+
+class DataImporter {
+    public void importData(String path) throws ImportFileNotFoundException, MalformedRowException {
+        File file = new File(path);
+        if (!file.exists()) {
+            // كنحافظو على السبب (cause) باش نعرفو أصل المشكل
+            throw new ImportFileNotFoundException("الملف ما كاينش: " + path, null);
         }
-        if (requestId <= 0) {
-            throw new IllegalArgumentException("Invalid request ID");
+
+        // مثال بسيط ديال parsing
+        List<String> rows = List.of("ValidRow", "BadRow", "ValidRow");
+        for (int i = 0; i < rows.size(); i++) {
+            String row = rows.get(i);
+            if ("BadRow".equals(row)) {
+                throw new MalformedRowException("فورما ديال البيانات غلط", i + 1);
+            }
+            // هنا يقدر يوقع RuntimeException إلا كان شي helper null
+            // helper.process(row); 
         }
+    }
+}
+
+public class ImportRunner {
+    public static void main(String[] args) {
+        DataImporter importer = new DataImporter();
+        try {
+            importer.importData("data.csv");
+        } catch (ImportFileNotFoundException e) {
+            System.err.println("عفاك تأكد من المسار ديال الملف: " + e.getMessage());
+        } catch (MalformedRowException e) {
+            System.err.println("خطأ في السطر " + e.getRowNumber() + ": " + e.getMessage());
+        } 
+        // الـ RuntimeExceptions (بحال NullPointerException) ما كنـ catch-وهومش هنا
+        // حيت خاصهم يتصلحو في الكود ديال DataImporter ماشي في الـ runner.
     }
 }
 ```
 
-اللي عيط على method خاصو يشد ServiceUnavailableException ولا يصرح بها. من بعد، controller ولا boundary أخرى تقدر تحول الخطأ لرد مناسب. هاد القرار مختلف على شجرة exceptions.
-## غلط شائع: Catch لكلشي
-بزاف ديال الناس كيديرو `catch (Exception e)` باش يسكتو الأخطاء. هادشي كيغطي على unchecked exceptions بحال `NullPointerException` وكيخلي الـ debugging صعيب بزاف حيت البرنامج كيوقف بلا ما تعرف علاش.
+## تحليل الميكانيزم
 
-**التصحيح:** ديما دير catch لأصغر وأدق Exception ممكنة. بلاصة `catch (Exception e)`، دير مثلاً `catch (IOException e)`.
+### الحفاظ على الأسباب (Preserving Causes)
+في الـ constructor ديال `ImportFileNotFoundException` زدنا `Throwable cause`. هادي مهمة بزاف. إلا كانت `java.io.IOException` هي اللي سببات الـ exception ديالنا، فاش كنصيفطوها لـ `super(message, cause)` كنحافظو على الـ stack trace الأصلي. بلا بيها، غادي يضيع لينا "علاش" وقع المشكل.
 
-## تمرين تطبيقي
-واش خطأ ديال الصلاحيات كنتي متوقعو خاصو ضروري يكون checked exception؟
+### وهم القدرة على الإصلاح (Recovery Fallacy)
+واحد الغلط شائع هو أن الناس كيسحاب ليهم بلي الـ checked exceptions كـ "تضمن" بلي نقدروا نصلحو المشكل. لا، هي فقط كتضمن "الرؤية" (visibility). مثلاً `MalformedRowException` هي checked، ولكن الحل الوحيد يقدر يكون هو غير نسجلو الخطأ ونحبسو البرنامج. الفرق كاين في **عقد الـ API**، ماشي في واش المشكل ممكن يتصلح تقنياً.
 
-**الجواب:** لا. اختار سياسة موحدة ديال exceptions وعالجها فـ boundary المناسبة. إلا كانت authentication ناقصة تقدر ترجع 401؛ وإلا المستخدم معروف ولكن ما عندوش الحق تقدر ترجع 403. هاد status codes ما كيفرضوش واش Java exception تكون checked ولا unchecked.
+### حالات الفشل في التصميم
+- **كثرة الـ Checked Exceptions**: إلا كانت كل ميثود كترمي 5 ديال الـ checked exceptions، الكود كيولي عامر بـ `try-catch` بزاف، وهادشي كيخلي المبرمجين يديرو `catch (Exception e) {}` (كيبلعو الخطأ)، وهادا خطير بزاف.
+- **استعمال Unchecked في الـ Business Logic**: إلا كانت `MalformedRowException` عبارة عن `RuntimeException` ، الـ `ImportRunner` يقدر ينسى يتعامل معاها، وهادشي غادي يخلي التطبيق يـ crash فجأة غير حيت لقى سطر واحد غلط.
 
+## تمرين
+
+إلا DB طافية، تبع contract ديال library: JDBC كتستعمل checked SQLException لبزاف errors، وSpring غالبا كتحول persistence failures لـ unchecked exceptions. Panne مؤقتة تقدر تقبل retry وخا exception RuntimeException. Syntax error تقدر تجي checked SQLException ولكن developer خاصو يصلح code.
+
+قرر retryability حسب failure الحقيقية وواش تكرار operation آمن والسياسة، ماشي حسب checked ولا unchecked. حافظ على cause وحدد retries؛ ما تعاودش syntax error ثابتة بلا نهاية.
 
 ## باش تزيد تفهم
 

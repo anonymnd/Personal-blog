@@ -1,52 +1,99 @@
 ---
-title: "Qu'est-ce qu'une Transaction de Base de Données ?"
-description: "Un guide complet pour comprendre les propriétés ACID et le mécanisme des transactions via un scénario d'achat."
-pubDate: 2026-10-12T20:48:00.000Z
+title: "Transactions de Base de Données et Limites Transactionnelles Spring"
+description: "Analyse approfondie d'ACID, du mécanisme de proxy @Transactional de Spring, de la propagation et des limites du rollback."
+pubDate: 2026-10-08T01:48:00.000Z
 translationKey: 149-what-is-a-database-transaction
+seriesOrder: 34
 locale: fr
-tags: ["software-engineering","persistence","learning-series"]
+tags: ["persistence","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## La Promesse ACID et la Base de Données
 
-Imaginez que vous développez une application d'achats. Un demandeur soumet une requête, et un manager l'approuve. Le système doit alors déduire le coût de l'article du budget du département et créer un enregistrement de commande. Si le budget est mis à jour mais que la création de la commande échoue à cause d'un bug réseau, vos données deviennent incohérentes : l'argent a disparu, mais aucune commande n'existe. C'est là qu'intervient la transaction de base de données.
+Une transaction de base de données est une unité de travail logique qui garantit l'intégrité des données via les propriétés ACID. Dans un environnement PostgreSQL avec Hibernate, la transaction assure que lors d'un transfert de crédits de récompense du Compte A vers le Compte B, on ne se retrouve pas dans un état où les crédits sont déduits de A mais jamais ajoutés à B.
 
-## Le Concept d'Atomicité
-Essentiellement, une transaction est une unité logique de travail contenant une ou plusieurs instructions SQL. La propriété la plus critique est l'Atomicité (le 'A' de ACID). L'atomicité garantit que soit toutes les opérations de la transaction réussissent, soit aucune d'entre elles n'est appliquée. Si une partie échoue, la base de données effectue un rollback, revenant à l'état initial.
+*   **Atomicité** : Toutes les opérations réussissent ou aucune ne le fait.
+*   **Cohérence** : La base de données passe d'un état valide à un autre, respectant toutes les contraintes.
+*   **Isolation** : Les transactions concurrentes ne voient pas les modifications partielles les unes des autres.
+*   **Durabilité** : Une fois validée (commit), la donnée survit aux pannes du système.
 
-## Explication des Propriétés ACID
-Outre l'atomicité, les transactions reposent sur trois autres piliers :
-- **Cohérence (Consistency)** : La base de données passe d'un état valide à un autre, respectant toutes les contraintes.
-- **Isolation** : Les transactions concurrentes ne peuvent pas voir les modifications partielles des autres avant le commit.
-- **Durabilité (Durability)** : Une fois commitée, la transaction est permanente, même en cas de panne serveur.
+## Le Mécanisme @Transactional de Spring
 
-## Exemple Concret : Commande d'Achat
-Voici une logique simplifiée utilisant Jakarta Persistence (@Transactional) :
+Spring implémente la gestion des transactions via des proxys AOP (Programmation Orientée Aspect). Lorsqu'une méthode est annotée `@Transactional`, Spring crée un wrapper proxy autour du bean. Le proxy intercepte l'appel, démarre une transaction via le `PlatformTransactionManager`, exécute la méthode, puis décide de valider (commit) ou d'annuler (rollback) selon le résultat.
+
+### Le Piège de l'Auto-Invocation
+
+Comme Spring utilise des proxys, l'interception ne se produit que lorsque l'appel provient de l' *extérieur* du bean. Si `methodeA()` appelle `methodeB()` au sein de la même classe, l'appel contourne le proxy et accède directement à la méthode locale. Par conséquent, les paramètres `@Transactional` de `methodeB()` sont ignorés.
+
+### Propagation et Jonction
+
+La propagation définit comment les transactions se comportent lorsqu'une méthode transactionnelle en appelle une autre. Le mode par défaut `REQUIRED` signifie : si une transaction existe déjà, joignez-la ; sinon, créez-en une nouvelle. Cela permet à plusieurs appels de service de participer à une seule unité atomique.
+
+## Exemple Concret : Transfert de Crédits
+
+Considérons un scénario où nous transférons des crédits et envoyons un reçu par email.
 
 ```java
-@Transactional
-public void processOrder(Long requestId, double amount) {
-    Budget budget = budgetRepo.findByDept(requestId);
-    budget.setBalance(budget.getBalance() - amount);
-    budgetRepo.save(budget);
-    
-    Order order = new Order(requestId, "PENDING");
-    orderRepo.save(order);
-    // Si une exception survient ici, la soustraction du budget est annulée
+@Service
+public class RewardService {
+
+    private final AccountRepository accountRepository;
+    private final EmailService emailService;
+
+    public RewardService(AccountRepository accountRepository, EmailService emailService) {
+        this.accountRepository = accountRepository;
+        this.emailService = emailService;
+    }
+
+    @Transactional
+    public void transferCredits(Long fromId, Long toId, Integer amount) {
+        Account from = accountRepository.findById(fromId)
+            .orElseThrow(() -> new IllegalArgumentException("Source non trouvée"));
+        Account to = accountRepository.findById(toId)
+            .orElseThrow(() -> new IllegalArgumentException("Cible non trouvée"));
+
+        from.setCredits(from.getCredits() - amount);
+        to.setCredits(to.getCredits() + amount);
+
+        // Cet appel est interne (auto-invocation)
+        this.sendNotification(fromId, toId, amount);
+
+        if (amount > 1000) {
+            throw new RuntimeException("Limite dépassée");
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendNotification(Long from, Long to, Integer amount) {
+        emailService.send("Crédits transférés : " + amount);
+    }
 }
 ```
-Ici, si `orderRepo.save()` lance une `RuntimeException`, le solde du budget est automatiquement restauré dans PostgreSQL.
 
-## Erreur Courante : L'Effet de Bord Externe
-Une erreur fréquente est de croire que les transactions peuvent tout annuler. Par exemple, si vous envoyez un e-mail de confirmation dans une méthode `@Transactional` avant que la commande ne soit sauvegardée, et que la transaction échoue ensuite, l'e-mail ne peut pas être « rappelé ». Déclenchez toujours les effets externes après le commit réussi.
+### Analyse de la Trace d'Exécution
 
-## Exercice Pratique
-**Scénario** : Vous avez une transaction qui met à jour le profil d'un utilisateur et enregistre le changement dans une table d'audit. La mise à jour de la table d'audit échoue à cause d'une violation de contrainte.
+1.  **L'Appel Proxy** : Un contrôleur externe appelle `transferCredits()`. Le proxy démarre une transaction.
+2.  **L'Auto-Invocation** : `transferCredits()` appelle `sendNotification()`. Comme c'est un appel local, l'instruction `REQUIRES_NEW` est **ignorée**. La notification s'exécute dans la transaction existante.
+3.  **L'Effet de Bord** : `emailService.send()` est appelé. Il s'agit d'un appel API externe (SMTP/HTTP).
+4.  **L'Échec** : Une `RuntimeException` est levée car le montant dépasse 1000.
+5.  **Le Rollback** : Spring capture l'exception non vérifiée et demande à PostgreSQL d'annuler. Les soldes de crédits sont restaurés.
+6.  **La Fuite** : L'email a déjà été envoyé. Les transactions de base de données **ne peuvent pas** annuler des effets de bord externes. L'utilisateur reçoit un reçu pour un transfert qui n'a techniquement jamais eu lieu.
 
-**Question** : Qu'arrive-t-il à la mise à jour du profil utilisateur ?
+## Défauts de Rollback
 
-**Réponse** : La mise à jour du profil est annulée (rollback) ; aucun des deux changements n'est persisté.
+Par défaut, Spring effectue un rollback sur les `RuntimeException` et les `Error` (exceptions non vérifiées). Il ne le fait **pas** sur les exceptions vérifiées (ex: `IOException`, `SQLException`), sauf configuration explicite via `@Transactional(rollbackFor = Exception.class)`.
+
+## Exercice
+
+**Scénario** : Vous avez une méthode `processOrder()` marquée `@Transactional`. À l'intérieur, vous appelez `updateInventory()`, également marquée `@Transactional(propagation = Propagation.REQUIRED)`. `updateInventory()` lève une exception vérifiée `InsufficientStockException`.
+
+1. La transaction est-elle annulée par défaut ?
+2. Si `processOrder()` appelle `updateInventory()` via `this.updateInventory()`, le paramètre de propagation a-t-il une importance ?
+
+**Réponse** :
+1. Non. Les exceptions vérifiées ne déclenchent pas de rollback par défaut dans Spring.
+2. Non. L'auto-invocation contourne le proxy ; la méthode est exécutée comme un simple appel Java dans la transaction existante lancée par `processOrder()`.
 
 ## Pour approfondir
 

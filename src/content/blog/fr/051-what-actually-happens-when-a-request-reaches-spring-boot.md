@@ -1,47 +1,99 @@
 ---
-title: "Que se passe-t-il réellement lorsqu'une requête atteint Spring Boot ?"
-description: "Une analyse détaillée du parcours d'une requête HTTP depuis le serveur embarqué jusqu'à votre contrôleur via le DispatcherServlet."
-pubDate: 2026-10-08T18:48:00.000Z
+title: "Tracer une requête navigateur à travers Spring Boot"
+description: "Analyse approfondie du cycle de vie d'une requête HTTP, du fetch du navigateur au DispatcherServlet et à la conversion des messages."
+pubDate: 2026-10-07T02:48:00.000Z
 translationKey: 051-what-actually-happens-when-a-request-reaches-spring-boot
+seriesOrder: 11
 locale: fr
-tags: ["software-engineering","spring-architecture","learning-series"]
+tags: ["spring-architecture","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le voyage du navigateur vers l'octet
 
-Imaginez que vous ayez créé une application d'achats où un demandeur soumet une demande d'achat. Vous cliquez sur 'Envoyer', mais vous ignorez comment ce paquet HTTP brut se transforme en objet Java dans votre `@RestController`. Beaucoup de débutants voient Spring Boot comme une boîte noire, mais c'est en réalité un pipeline orchestré.
+Lorsqu'un utilisateur interagit avec un tableau de bord météo, le navigateur ne se contente pas d'"envoyer des données" ; il initie une séquence complexe d'événements réseau et de couches applicatives. Traçons deux interactions spécifiques : la récupération des relevés d'une station et l'abonnement aux alertes.
 
-## Le point d'entrée : Le conteneur de servlets embarqué
-Lorsqu'une requête arrive, elle atteint d'abord le serveur embarqué (généralement Tomcat). Tomcat ne connaît pas vos beans Spring ; il ne connaît que les Servlets. Il dirige la requête vers le `DispatcherServlet`, qui est le 'Front Controller' de tout le framework Spring MVC. Ce servlet unique agit comme le coordinateur central.
+### 1. L'origine et le réseau
+Quand le tableau de bord exécute `fetch('/stations/42/readings?limit=10')`, le navigateur construit une requête HTTP GET. La requête contient une ligne de départ (`GET /stations/42/readings?limit=10 HTTP/1.1`), des en-têtes (comme `Accept: application/json`) et un corps vide.
 
-## Handler Mapping et le Contrôleur
-Une fois que le `DispatcherServlet` a la requête, il interroge le `HandlerMapping` pour trouver la destination. Il examine l'URL (ex: `/requests/submit`) et la méthode HTTP (POST) pour trouver une méthode de contrôleur annotée avec `@PostMapping`. Une fois le mapping trouvé, le `DispatcherServlet` utilise un `HandlerAdapter` pour invoquer la méthode.
+Il est crucial de comprendre que le code frontend (React/Vue/Angular) s'exécute déjà dans la mémoire du navigateur. C'est une entité logique distincte du serveur Spring Boot, même s'ils sont emballés dans le même JAR. La requête voyage via TCP/IP vers l'IP et le port du serveur (généralement 8080).
 
-## Conversion de messages avec Jackson
-Avant que votre méthode de contrôleur ne s'exécute, Spring doit convertir le corps JSON en objet Java. C'est là qu'interviennent les `HttpMessageConverters`. Par défaut, Spring Boot utilise la bibliothèque Jackson pour lier les champs JSON à un Record Java ou un POJO.
+### 2. Le point d'entrée : DispatcherServlet
+Une fois que les octets atteignent le serveur, le conteneur Tomcat embarqué analyse le texte brut pour créer un objet `HttpServletRequest`. Cet objet est transmis au `DispatcherServlet`, le "Contrôleur Frontal" de Spring MVC.
+
+Le `DispatcherServlet` ne sait pas comment gérer des données météo ; il sait comment trouver quelqu'un qui le peut. Il consulte le `HandlerMapping` pour trouver une méthode de contrôleur qui correspond au schéma d'URL et à la méthode HTTP.
+
+### 3. Liaison des entrées et extraction des paramètres
+Spring doit maintenant mapper la requête HTTP brute vers des types Java. C'est là que la distinction entre Path, Query et Body devient critique.
+
+#### Variables de chemin (`@PathVariable`)
+Dans `/stations/{id}/readings`, le `{id}` fait partie de l'URI elle-même. Il identifie une ressource spécifique. Spring extrait `42` du chemin de l'URI et le convertit vers le type déclaré dans la signature de la méthode (ex: `Long`).
+
+#### Paramètres de requête (`@RequestParam`)
+La partie `?limit=10` est une chaîne de requête (query string). Celles-ci sont généralement utilisées pour le filtrage, le tri ou la pagination. Contrairement aux variables de chemin, les paramètres de requête sont optionnels ou possèdent des valeurs par défaut. Spring cherche la clé `limit` et convertit `10` en `Integer`.
+
+#### Corps de la requête (`@RequestBody`)
+Pour l'appel `POST /subscriptions`, les données ne sont pas dans l'URL. Elles sont dans le corps HTTP sous forme de chaîne JSON : `{"email": "user@example.com", "stationId": 42}`.
+
+Spring utilise des `HttpMessageConverters` (généralement Jackson) pour effectuer la conversion. Le processus est : 
+`Chaîne JSON` → `Jackson ObjectMapper` → `Record/POJO Java`.
+
+## Exemple concret : L'API Météo
+
+Voici comment le contrôleur est structuré pour gérer ces mécanismes. Notez l'utilisation de records Java pour les DTO afin de garantir l'immuabilité.
 
 ```java
-// Extrait illustratif d'un DTO de demande d'achat
-public record PurchaseRequest(String item, int quantity, double price) {}
+// Contrôleur illustratif
+@RestController
+@RequestMapping("/stations")
+public class WeatherController {
 
-@PostMapping("/requests/submit")
-public ResponseEntity<String> submit(@RequestBody PurchaseRequest request) {
-    return ResponseEntity.ok("Demande reçue pour " + request.item());
+    // GET /stations/42/readings?limit=10
+    @GetMapping("/{id}/readings")
+    public List<Reading> getReadings(
+            @PathVariable Long id, 
+            @RequestParam(defaultValue = "20") int limit) {
+        // Logique pour récupérer les relevés de la station 'id' limités à 'limit'
+        return List.of(new Reading(22.5, "Celsius"));
+    }
+
+    // POST /subscriptions
+    @PostMapping("/subscriptions")
+    public SubscriptionResponse subscribe(@RequestBody SubscriptionRequest request) {
+        // Logique pour enregistrer l'abonnement
+        return new SubscriptionResponse("Confirmé");
+    }
 }
+
+// DTOs sous forme de records
+record SubscriptionRequest(String email, Long stationId) {}
+record SubscriptionResponse(String status) {}
+record Reading(double value, String unit) {}
 ```
 
-## Le chemin du retour
-Après l'exécution de votre logique, la valeur de retour est renvoyée au `HandlerAdapter`. Si vous retournez un `ResponseEntity` ou un POJO, l' `HttpMessageConverter` fonctionne à l'envers, transformant l'objet Java en JSON pour le corps de la réponse HTTP.
+### Analyse du tracé
+1. **Requête GET** : Le `DispatcherServlet` correspond à `/stations/{id}/readings`. Il voit `@PathVariable Long id` et extrait `42`. Il voit `@RequestParam int limit` et extrait `10`. Si `limit` était absent, il utiliserait la valeur par défaut `20`.
+2. **Requête POST** : Le `DispatcherServlet` correspond à `/stations/subscriptions`. Il voit `@RequestBody`. Il vérifie l'en-tête `Content-Type: application/json`, invoque le convertisseur Jackson et instancie un record `SubscriptionRequest` avec l'email et l'ID fournis.
 
-## Erreur courante : Confondre Filter et Interceptor
-Une erreur fréquente consiste à placer la logique métier dans un `Filter` alors qu'elle devrait être dans un `HandlerInterceptor`. Les filtres font partie du conteneur de servlets et s'exécutent avant même que la requête n'atteigne le `DispatcherServlet`. Les intercepteurs sont gérés par Spring et ont accès au gestionnaire (contrôleur) spécifique.
+### Cas d'échec
+- **Incohérence de type** : Si le navigateur envoie `/stations/abc/readings`, Spring ne peut pas convertir `abc` en `Long`. Cela génère une `MethodArgumentTypeMismatchException`, ce qui conduit généralement à une erreur 400 Bad Request.
+- **JSON malformé** : Si le corps du POST est `{"email": "user@example.com",`, le JSON est invalide. Jackson lève une `HttpMessageNotReadableException`, entraînant également une erreur 400.
+- **Paramètre requis manquant** : Si `@RequestParam` est utilisé sans `defaultValue` ni `required=false`, et que le paramètre manque dans l'URL, Spring lève une `MissingServletRequestParameterException`.
 
-## Exercice pratique
-Si une requête atteint le serveur mais retourne une erreur 404 avant d'atteindre votre contrôleur, quel composant a probablement échoué à trouver une correspondance ?
+## Exercice
 
-**Réponse :** Le `HandlerMapping` n'a pas trouvé de méthode de contrôleur correspondant à l'URL et à la méthode HTTP.
+**Scénario** : Vous devez ajouter une fonctionnalité pour filtrer les relevés par plage de dates. L'URL doit ressembler à : `GET /stations/{id}/readings?start=2023-01-01&end=2023-01-31`.
+
+1. Quelle annotation utiliser pour `id` ?
+2. Quelle annotation utiliser pour `start` et `end` ?
+3. Si l'utilisateur oublie de fournir la date de fin (`end`), comment s'assurer que l'API ne plante pas et utilise "aujourd'hui" par défaut ?
+
+**Réponse** :
+1. `@PathVariable` car l'ID de la station est un identifiant de ressource dans le chemin.
+2. `@RequestParam` car les dates sont des filtres pour l'ensemble des résultats.
+3. Utiliser `@RequestParam(required = false)` et gérer la valeur null dans la couche service, ou fournir une valeur par défaut dans l'annotation si le type le permet.
 
 ## Pour approfondir
 
 - [Spring Data JPA: Persisting Entities](https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html)
+- [MDN: CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)

@@ -1,40 +1,64 @@
 ---
-title: "Pourquoi avons-nous besoin des migrations de base de données ?"
-description: "Une exploration de la manière dont les migrations de base de données résolvent le chaos des mises à jour manuelles du schéma dans le développement collaboratif."
-pubDate: 2026-10-12T22:48:00.000Z
+title: "Évoluer un Schéma de Production avec Flyway plutôt qu'au Hasard"
+description: "Maîtrisez les migrations versionnées, le pattern expand-contract pour le zéro-downtime et la récupération après l'échec de scripts DDL."
+pubDate: 2026-10-08T02:48:00.000Z
 translationKey: 151-why-do-we-need-database-migrations
+seriesOrder: 35
 locale: fr
-tags: ["software-engineering","schema-migrations","learning-series"]
+tags: ["schema-migrations","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Danger de la Gestion Automatisée du Schéma
 
-Imaginez que vous travaillez sur une application d'achats. Vous ajoutez une colonne `priority` à la table `PurchaseRequest` sur votre machine locale. Tout fonctionne. Vous envoyez le code à votre collègue, mais son application plante car sa base de données locale n'a pas cette colonne. Ce syndrome du « ça marche sur ma machine » est précisément la raison pour laquelle nous avons besoin des migrations.
+En début de développement, `spring.jpa.hibernate.ddl-auto=update` semble magique. Il modifie les tables pour correspondre aux entités Java automatiquement. Cependant, en production, c'est un risque majeur. Le mode `update` d'Hibernate est une tentative d'approximation ; il ne peut pas gérer les renommages complexes, les migrations de données ou les changements précis de contraintes. S'il échoue, il laisse souvent le schéma dans un état indéterminé sans aucune trace d'audit.
 
-## Le problème des mises à jour manuelles
-Lorsque les développeurs exécutent manuellement des scripts SQL, des erreurs surviennent. Quelqu'un oublie un script, ou deux personnes modifient la même table différemment. Compter sur `hibernate.hbm2ddl.auto=update` est risqué en production car cela ne gère pas les changements complexes comme le renommage de colonnes sans risque de perte de données. Cela vérifie seulement la compatibilité du mapping, pas la sécurité de la transition.
+Passer à `ddl-auto=validate` est la première étape vers la stabilité. Dans ce mode, Hibernate ne modifie pas la base de données ; il vérifie simplement que le schéma existant correspond aux mappings des entités. Si une colonne manque ou si un type est incorrect, l'application refuse de démarrer. Cela garantit que l'application ne s'exécute jamais sur une version de base de données incompatible.
 
-## Le versionnage du schéma
-Les migrations traitent le schéma comme du code. Des outils comme Flyway utilisent des scripts versionnés (ex: `V1__Create_Request_Table.sql`, `V2__Add_Priority_To_Request.sql`). Ces scripts sont stockés dans Git. Au démarrage, l'outil vérifie une table de métadonnées dans la base pour voir quelles versions ont été appliquées, puis exécute uniquement les nouveaux scripts dans l'ordre.
+## Comment Flyway Garantit la Cohérence
 
-## Exemple concret : Logique d'approbation
-Supposons que nous devions suivre qui a approuvé une demande d'achat. Au lieu de modifier la base manuellement, on crée un nouveau fichier de migration :
+Flyway remplace les suppositions par un historique versionné via une table (`flyway_schema_history`). Au lieu de laisser un framework deviner l'état, vous fournissez des scripts SQL explicites.
+
+### Le Mécanisme de Versionnage
+Flyway identifie les migrations via une convention de nommage : `V<Version>__<Description>.sql` (ex: `V1__Create_user_table.sql`).
+1. **Exécution** : Flyway scanne le classpath pour trouver les scripts et les compare à la table d'historique.
+2. **Checksums** : Lorsqu'un script est appliqué, Flyway stocke un checksum (un hash du contenu du fichier).
+3. **Immuabilité** : Une fois que `V1` est appliqué en production, il ne doit plus jamais être modifié. Si vous changez un seul caractère dans `V1__Create_user_table.sql` après son exécution, Flyway détectera un écart de checksum au prochain démarrage et bloquera l'application.
+
+## Scénario : Ajout d'un `displayName` Obligatoire
+
+Ajouter une colonne obligatoire à users échoue si les lignes existantes n’ont pas de valeur. Ajoutez display_name nullable, puis déployez le code qui la renseigne pour chaque nouvelle ligne et accepte les anciennes. Les anciens writers peuvent encore insérer null : un backfill unique ne suffit pas.
+
+Retirez ou adaptez tous les anciens writers avant l’invariant final. Remplissez les lignes existantes avec une valeur approuvée, en contrôlant nullabilité et longueur de username, puis vérifiez l’absence de null. Sur une grande table, utilisez des lots surveillés et reprenables. Imposez enfin NOT NULL lorsque les versions encore actives sont compatibles.
 
 ```sql
--- V3__Add_Approver_To_Request.sql
-ALTER TABLE purchase_requests 
-ADD COLUMN approved_by VARCHAR(255);
+ALTER TABLE users ADD COLUMN display_name VARCHAR(255);
+-- Backfill only after writers reliably populate the new field.
+UPDATE users SET display_name = username WHERE display_name IS NULL;
+-- Later, after compatibility and null checks:
+ALTER TABLE users ALTER COLUMN display_name SET NOT NULL;
 ```
 
-Lors du déploiement sur le serveur de staging, Flyway voit que `V1` et `V2` sont déjà faites et n'exécute que `V3`. Le résultat est un schéma cohérent partout sans intervention manuelle.
+Ces instructions appartiennent à des étapes de migration et déploiement séparées explicitement ; les séparer ne garantit pas seul la compatibilité. PostgreSQL peut annuler ensemble DDL transactionnel ordinaire et backfill si une migration échoue : les réunir ne crée pas intrinsèquement un état partiel. Les étapes servent à maîtriser compatibilité et exploitation. Certains moteurs et opérations ont d’autres comportements transactionnels.
+## Récupération d'Échec et DDL Transactionnel
 
-## Erreur courante : Modifier d'anciennes migrations
-Une erreur fréquente consiste à modifier `V1__Create_Table.sql` après son déploiement en production. Les outils de migration utilisent des checksums pour garantir que les scripts n'ont pas changé. Si vous modifiez un ancien fichier, l'outil détectera un écart de checksum et refusera de démarrer l'application.
+Lorsqu'une migration échoue, le comportement dépend du moteur de base de données.
 
-**Correction :** Ne modifiez jamais une migration déjà fusionnée. Créez plutôt une nouvelle version (ex: `V4`) pour appliquer la correction.
+- **PostgreSQL** : La plupart du DDL (Data Definition Language) est transactionnel. Si `V3` échoue à mi-chemin, toute la transaction est annulée et la table d'historique reste à `V2`.
+- **MySQL/Oracle** : Le DDL provoque souvent un commit implicite. Si un script contient trois instructions `ALTER TABLE` et que la troisième échoue, les deux premières restent appliquées.
 
-## Exercice pratique
-Si vous devez renommer une colonne de `req_date` à `request_date` en production sans interruption, devez-vous modifier le script de création original ?
+### La Limite de `repair`
+Quand une migration échoue dans une DB non-transactionnelle, Flyway marque cette version comme `failed`. L'application ne démarrera pas tant que ce n'est pas résolu.
 
-**Réponse :** Non. Vous devez créer un nouveau script de migration versionné pour renommer la colonne afin que tous les environnements restent synchronisés.
+Certains développeurs pensent que `flyway repair` est un bouton "annuler". **`flyway repair` ne revient pas en arrière sur le SQL.** Il nettoie uniquement la table `flyway_schema_history` en supprimant les entrées échouées ou en alignant les checksums. Si votre script a partiellement ajouté une colonne avant d'échouer, vous devez supprimer manuellement cette colonne via SQL avant de lancer `repair` et de redémarrer l'app.
+
+## Exercice
+
+Pour total_amount → grand_total, ajoutez d’abord la colonne nullable. Déployez du code compatible qui synchronise les deux valeurs pendant la coexistence, puis retirez les anciens writers ou fournissez une synchronisation testée. Faites backfill, rapprochement et vérification. Passez les lectures à grand_total et cessez de dépendre de total_amount seulement lorsque tous les writers actifs et versions de rollback sont compatibles. Supprimez l’ancienne colonne dans une migration ultérieure revue.
+
+Un changement de code est une étape de déploiement, pas une migration SQL Update_app. Ne supprimez pas aveuglément une colonne partiellement créée après échec : examinez l’état et choisissez une récupération préservant les données. repair ajuste l’historique, pas la base. ddl-auto=validate ne prouve pas toutes les contraintes, index et règles métier. Gardez les migrations appliquées inchangées et ajoutez une nouvelle migration pour évoluer.
+
+## Pour approfondir
+
+- [Flyway repair](https://documentation.red-gate.com/flyway/reference/commands/repair)
+- [Flyway migration transaction handling](https://documentation.red-gate.com/fd/migration-transaction-handling-273973399.html)

@@ -1,44 +1,94 @@
 ---
-title: "Que fait exactement docker exec -it ?"
-description: "Une analyse détaillée de l'accès au shell d'un conteneur en cours d'exécution pour le débogage."
-pubDate: 2026-10-13T18:48:00.000Z
+title: "Exécuter et Diagnostiquer une Pile Applicative avec Docker Compose"
+description: "Maîtriser l'orchestration d'une API de recettes et PostgreSQL, en se concentrant sur la disponibilité basée sur la santé et les outils de diagnostic."
+pubDate: 2026-10-08T06:48:00.000Z
 translationKey: 171-what-does-docker-exec-it-do
+seriesOrder: 39
 locale: fr
-tags: ["software-engineering","docker","learning-series"]
+tags: ["docker","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Orchestration de la Pile API de Recettes
 
-Imaginez que vous avez une application d'achat fonctionnant dans un conteneur. Le demandeur a soumis une requête, mais l'approbation du manager ne se déclenche pas. Vous consultez les logs, mais ils sont trop vagues. Vous devez entrer « à l'intérieur » du conteneur pour vérifier si un fichier de configuration spécifique existe ou tester une connexion à la base de données depuis la perspective du conteneur. C'est là que `docker exec -it` devient indispensable.
+Lors du déploiement d'un backend avec une base de données, le défi principal n'est pas seulement de démarrer les conteneurs, mais de s'assurer que l'application ne plante pas parce que la base de données est encore en cours d'initialisation. Bien que `depends_on` contrôle l'ordre de démarrage, il ne garantit pas que le logiciel à l'intérieur du conteneur est prêt à accepter des connexions.
 
-## Le mécanisme de exec
-Contrairement à `docker run`, qui crée un tout nouveau conteneur à partir d'une image, `docker exec` vous permet d'exécuter une nouvelle commande à l'intérieur d'un conteneur déjà actif. Il utilise la capacité de l'hôte à entrer dans les espaces de noms (namespaces) isolés du conteneur (processus, réseau et montage).
+## Configuration Pratique
 
-## Explication des drapeaux -it
-Le drapeau `-i` (interactif) maintient l'entrée standard (STDIN) ouverte même si elle n'est pas attachée. Le drapeau `-t` (tty) alloue un pseudo-terminal, ce qui fait que la session se comporte comme une véritable fenêtre de terminal, avec un invite de commande et une sortie colorée. Sans cela, vous pourriez lancer une commande, mais vous ne pourriez pas interagir avec un shell comme Bash ou Sh.
+Dans ce scénario, nous déployons une API de recettes et une instance PostgreSQL. Nous utilisons un fichier `.env` externe pour fournir les identifiants, évitant ainsi de coder les secrets en dur dans le YAML.
 
-## Exemple concret : Débogage de l'app d'achat
-Supposons que votre conteneur d'achat soit nommé `procurement-app`. Vous voulez vérifier les logs internes de l'application situés dans `/var/log/app.log`.
-
-```bash
-# Accéder au conteneur avec un shell bash
-docker exec -it procurement-app /bin/bash
-
-# Maintenant à l'intérieur du conteneur :
-root@a1b2c3d4e5f6:/# cat /var/log/app.log
-# [LOG]: Connection to DB failed at 10.0.0.5
-exit
+**Fichier .env (illustratif)**
+```env
+DB_USER=recipe_admin
+DB_PASSWORD=secure_password_123
+DB_NAME=recipe_db
 ```
-Résultat : Vous êtes entré dans l'environnement, avez identifié une panne réseau et êtes revenu sur votre machine hôte.
 
-## Erreur courante : exec vs run
-Une erreur fréquente consiste à utiliser `docker run -it image /bin/bash` alors que vous voulez déboguer un service actif. `docker run` démarre une *deuxième* instance de l'application, qui n'aura ni l'état actuel ni les logs du conteneur défaillant. Utilisez toujours `exec` pour les conteneurs existants.
+**docker-compose.yml**
+```yaml
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"
 
-## Exercice pratique
-Comment exécuteriez-vous la commande `ls -la` dans un conteneur nommé `buyer-service` sans entrer dans une session shell interactive ?
+  api:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+```
 
-**Réponse :** `docker exec buyer-service ls -la`. (Le `-it` n'est pas nécessaire pour une commande unique non interactive).
+## Mécanisme : Disponibilité vs Démarrage
+
+Si nous utilisions un simple `depends_on: [db]`, Docker démarrerait le conteneur PostgreSQL puis immédiatement l'API. Cependant, PostgreSQL prend plusieurs secondes pour initialiser son répertoire de données et lancer l'écouteur. L'API tenterait de se connecter, échouerait, et s'arrêterait probablement avec une exception `ConnectionRefused`.
+
+En ajoutant le `healthcheck` au service `db`, nous utilisons l'utilitaire `pg_isready`, conçu spécifiquement pour vérifier l'état de connexion d'un serveur PostgreSQL sans nécessiter une authentification complète. Le service `api` utilise désormais `condition: service_healthy`, ce qui signifie qu'il reste en attente jusqu'à ce que le healthcheck de `db` retourne un code de sortie réussi (0).
+
+## Diagnostiquer la Pile
+
+Même avec des healthchecks, des erreurs surviennent (ex: mauvais identifiants). Le diagnostic nécessite de passer de la perspective de l'hôte à celle du namespace du conteneur.
+
+#### 1. Analyse des Logs
+Pour comprendre pourquoi l'API ne démarre pas, on suit les logs :
+`docker compose logs -f api` 
+
+Si les logs indiquent `FATAL: password authentication failed for user "recipe_admin"`, nous savons que les variables d'environnement de l'API ne correspondent pas à celles de la DB.
+
+#### 2. Inspection Interactive
+Quand les logs ne suffisent pas, on utilise `docker exec -it`. Cette commande alloue un pseudo-TTY et garde l'entrée standard (STDIN) ouverte, nous permettant d'exécuter des commandes dans le conteneur en cours d'exécution.
+
+Pour vérifier si la base de données est joignable depuis le réseau de l'API :
+`docker compose exec api ping db` 
+
+Pour tester la connexion manuellement depuis le conteneur DB :
+`docker compose exec db pg_isready -U recipe_admin -d recipe_db` 
+
+Si `pg_isready` confirme que les connexions sont acceptées dans le conteneur DB mais que l'API échoue toujours, le problème vient probablement de l'URL de connexion ou du bridge réseau, et non du processus de base de données.
+
+## Cas d'Échec et Conséquences
+
+*   **`start_period` incorrect** : Si elle est trop courte et que la DB est lente, le healthcheck peut épuiser ses `retries` avant que la DB ne soit prête, empêchant l'API de démarrer.
+*   **Mauvais Port dans l'URL** : Utiliser `localhost:5432` dans `SPRING_DATASOURCE_URL` échouera. Dans le réseau Docker, `localhost` désigne le conteneur API lui-même. Il faut utiliser le nom du service `db:5432`.
+*   **Conteneurs Zombies** : Si l'API crash en boucle, `docker compose up` peut tenter de la redémarrer sans cesse. Utilisez `docker compose stop` pour figer l'état et diagnostiquer.
+
+## Exercice
+
+Pour tester le port TCP local sans supposer netstat ou ss installés, lancez docker compose exec db pg_isready -h 127.0.0.1 -p 5432 -U recipe_admin -d recipe_db. Un succès indique que 127.0.0.1:5432 accepte les connexions avec code 0. Cela prouve cette interface locale, pas l’authentification de l’API ni l’accès réseau interconteneurs. Testez séparément la connexion datasource avec un outil présent ou un conteneur diagnostic sur le même réseau.
 
 ## Pour approfondir
 

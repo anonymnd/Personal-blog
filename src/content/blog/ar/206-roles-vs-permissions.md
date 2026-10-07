@@ -1,51 +1,116 @@
 ---
-title: "الفرق بين Roles و Permissions"
-description: "تعلم كيفاش تفرق بين الهوية ديال المستخدم والأفعال اللي مسموح ليه يديرها باش تصاوب سيستيم ديال authorization ساهل في التطوير."
-pubDate: 2026-10-15T05:48:00.000Z
+title: "كيفاش تـموديلي Roles و Permissions بلا ما تضيع Ownership ديال الـ Resources"
+description: "كيفاش تخدم بـ RBAC و ABAC مجموعين باش تحكم فـ شكون عندو الحق يدخل لـ resources معينة فـ متحف."
+pubDate: 2026-10-08T11:48:00.000Z
 translationKey: 206-roles-vs-permissions
+seriesOrder: 44
 locale: ar
-tags: ["software-engineering","security","learning-series"]
+tags: ["security","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## الفرق بين الـ Role و الـ Ownership
 
-تخيل راسك خدام على تطبيق ديال المشتريات (procurement app). في الأول، صاوبتي rôle سميتو 'Manager' وعطيتيه الحق يدخل لصفحة الموافقة (approval page). من بعد، لقيتي بلي حتى 'Senior Buyer' خاصو يوافق على الطلبات، ولكن ما خاصوش يشوف التقارير ديال الصالير ديال المانجر. إلا بقيتي خدام غير بـ Roles، غادي تولي تصاوب بزاف ديال الأدوار مخلطة بحال 'ManagerWithBuyerRights'، وهادشي غادي يولي كابوس في الماينتنانس.
+الـ RBAC (Role-Based Access Control) مزيان باش تقسم الناس لمجموعات كبار. مثلاً فـ متحف، إلا عطيتي لشي واحد Role ديال `CURATOR` (قيم)، غادي يقدر يدخل لـ dashboard ديال التقييم. ولكن الـ RBAC بوحدو ما كافيش إلا بغيتي تقول بلي "القيم A" عندو الحق يبدل فـ معرض "حجر رشيد"، ولكن "القيم B" ما عندوش. إلا بقيتي غير كتشوف واش `hasRole('CURATOR')` راك عطيتي الحق لأي قيم يبدل أي حاجة، وهذا كيخالف مبدأ الـ least privilege (أقل صلاحيات ممكنة).
 
-## الفرق بيناتهم
-الـ Roles هما ببساطة مجموعة ديال permissions. الـ Role كيجاوب على سؤال 'شكون أنت في الشركة؟' (مثلا: Admin, Requester)، بينما الـ Permission كتجاوب على 'شنو مسموح ليك دير؟' (مثلا: `request:create`, `request:approve`). ملي كتربط permissions بـ roles، و roles بـ users، كتصاوب واحد الطبقة اللي كتخلي السيستيم ديالك مرن.
+باش نحلوا هاد المشكل، كنجمعوا بين RBAC (شنو هو الـ role ديالك) و ABAC أو Ownership checks (شنو هي الـ resource اللي تابعة ليك). هكذا كنمنعوا الـ "privilege creep" فين مثلاً شي واحد فـ الـ `FINANCE` يقدر يلقى راسو كيقدر يبدل فـ المعارض غير حيت عندو role إداري عالي.
 
-## كيفاش تطبق هادشي
-في تطبيق Spring باستعمال Jakarta EE، ما خاصكش تقلب على الـ role نيشان في الـ business logic. من الأحسن تقلب على الـ permission اللي محتاجها داك الفعل.
+## كيفاش نصاوبو الـ Schema ديال الـ Permissions
+
+بلا ما نكتبوا الـ roles وسط الـ business logic، كنفرقوهم باستعمال الـ permissions. الـ Role كيولي بحال شي صاك جامع مجموعة ديال الـ permissions، والـ resource assignment هي اللي كتقرر فـ اللخر واش عندك الحق فـ ديك الـ resource بالضبط.
+
+### الـ Data Model
+
+كنخدمو بـ many-to-many بين الـ users و الـ roles، وكنزيدو table خاصة بالـ assignments ديال الـ resources.
 
 ```java
-// بلاش من هادي: if (user.hasRole("MANAGER")) { ... }
+// Modèle illustratif
+public record User(Long id, String username, Set<Role> roles) {}
 
-// دير هادي: قلب على permission محددة
-if (user.hasPermission("request:approve")) {
-    approvalService.process(requestId);
+public record Role(Long id, String name, Set<Permission> permissions) {}
+
+public record Permission(Long id, String code) {}
+
+// هادي هي اللي كتحكم فـ شكون مول الـ resource
+public record ResourceAssignment(
+    Long userId, 
+    Long resourceId, 
+    String resourceType, 
+    String accessLevel // مثلاً: "EDITOR", "VIEWER"
+) {}
+```
+
+## مثال تطبيقي: الوصول لمعارض المتحف
+
+**السيناريو:**
+- **Volunteer (متطوع):** يقدر يشوف المعارض فقط.
+- **Curator (قيم):** يقدر يبدل فـ المعارض، ولكن غير اللي مـassignyين ليه.
+- **Finance (مالية):** يقدر يشوف التقارير المالية ديال المعارض، ولكن ما يقدرش يبدل فـ المحتوى ديال المعرض.
+
+### كيفاش كنطبقو الـ Security
+
+ملي كتجي request باش تبدل شي معرض، السيستيم خاصو يدوز من جوج ديال الـ checks: الـ **Functional Check** (واش الـ role ديالك أصلاً كيسمح بالتعديل؟) والـ **Ownership Check** (واش أنت بالضبط مـassigny لهاد المعرض بالضبط؟).
+
+```java
+public class ExhibitSecurityService {
+    private final ResourceAssignmentRepository assignmentRepo;
+
+    public ExhibitSecurityService(ResourceAssignmentRepository repo) {
+        this.assignmentRepo = repo;
+    }
+
+    public boolean canEditExhibit(User user, Long exhibitId) {
+        // 1. Functional Check: واش الـ user عندو permission 'EXHIBIT_EDIT' فـ شي role من الـ roles ديالو؟
+        boolean hasPermission = user.roles().stream()
+            .flatMap(role -> role.permissions().stream())
+            .anyMatch(p -> p.code().equals("EXHIBIT_EDIT"));
+
+        if (!hasPermission) return false;
+
+        // 2. Ownership Check: واش الـ user مـassigny كـ EDITOR لهاد المعرض؟
+        return assignmentRepo.findForResource(user.id(), "EXHIBIT", exhibitId)
+            .map(assignment -> "EDITOR".equals(assignment.accessLevel()))
+            .orElse(false);
+    }
 }
 ```
 
-## مثال تطبيقي: سير العمل في المشتريات
-نشوفو هاد التقسيم:
-- **Role: Requester** → Permissions: `request:create`, `request:view_own`.
-- **Role: Manager** → Permissions: `request:approve`, `request:view_all`.
-- **Role: Buyer** → Permissions: `order:place`, `request:view_all`.
+### تحليل النتائج (Trace)
 
-إلا كان المستخدم 'Manager'، يقدر يوافق على الطلب حيت `request:approve` مرتبطة بالـ role ديالو. وإلا قررات الشركة بلي حتى الـ Buyers يقدروا يوافقوا على طلبات صغيرة، غادي تزيد `request:approve` للـ role ديال Buyer بلا ما تقيس حتى سطر في الكود ديال Java.
+1. **متطوع** بغا يبدل معرض 101 → الـ Functional Check فشل (ما عندوش `EXHIBIT_EDIT`) → **ممنوع**.
+2. **Finance** بغا يبدل معرض 101 → الـ Functional Check فشل (عندو `REPORT_VIEW` ماشي `EXHIBIT_EDIT`) → **ممنوع**.
+3. **القيم A** (مـassigny لمعرض 101) بغا يبدل معرض 101 → الـ Functional Check داز → الـ Ownership Check داز → **مسموح**.
+4. **القيم A** بغا يبدل معرض 202 (ما مـassigny ليه) → الـ Functional Check داز → الـ Ownership Check فشل → **ممنوع**.
 
-## غلط شائع: كثرة الـ Roles
-بزاف ديال الناس كيغلطوا ملي كيصاوبوا role جديد لكل حالة خاصة. مثلا، تصاوب `RegionalManager` و `GlobalManager` غير حيت الداتا اللي كيشوفوا مختلفة.
+## حالات الفشل و الـ Edge Cases
 
-**التصحيح:** خلي الـ role هو `Manager` واستعمل attribute ديال 'Scope' أو 'Tenant' باش تحدد الداتا اللي يقدر يشوفها، وخلي الـ permissions (`request:approve`) هي نفسها.
+هاد model كتجمع role permissions ومن بعد كتراقب assignment ديال exhibit. دخل resource type فالـ lookup باش assignment ديال report بنفس id ما تسمحش بتعديل exhibit. findForResource custom repository method، ماشي standard findById.
 
-## تمرين تطبيقي
-**الحالة:** بغيتي تزيد 'Compliance Auditor' اللي يقدر يشوف كاع الطلبات والكوموندات، ولكن ما يقدر يصاوب ولا يوافق على حتى حاجة. شنو هي أحسن طريقة؟
-1. تصاوب role سميتو 'Auditor' وتعطيه permissions ديال `request:view_all` و `order:view_all`.
-2. تصاوب role سميتو 'Auditor' وتعطيه الـ role ديال 'Manager'.
+User identity خاصها تجي من authenticated principal، ما تقبلش roles ولا userId من body بلا ثقة. راقب كل operation وحالات race بين تبديل assignment والتعديل. Permission ديال reassignment تقدر تصلح exhibit بلا owner بلا global edit للجميع.
 
-**الجواب:** الاختيار 1. حيت إلا عطيتيه role ديال Manager، غادي يولي عندو الحق يدير `request:approve` وهذا غلط.
+Direct grants يقدرو يتـauditـاو إلا modeled بوضوح؛ هنا اخترنا roles للتبسيط، ماشي الآخرين مستحيلين. Super-curator bypass صلاحية قوية خاصها assignment محدودة وaudit. خاصها تبقى كتحتارم tenant ولا museum boundary.
+## تمرين
+
+**المطلوب:** بدل الـ logic باش تخلي Role ديال `SUPER_CURATOR` يقدر يبدل *أي* معرض بلا ما نشوفو الـ table ديال `ResourceAssignment`، ولكن الـ `CURATOR` العادي يبقى محبوس غير فـ المعارض ديالو.
+
+**الجواب:**
+كنزيدو check ديال الـ `SUPER_CURATOR` قبل ما نوصلو لـ ownership check:
+```java
+public boolean canEditExhibit(User user, Long exhibitId) {
+    boolean isSuper = user.roles().stream().anyMatch(r -> r.name().equals("SUPER_CURATOR"));
+    if (isSuper) return true; // كيدوز نيشان بلا ما يشوف الـ ownership
+
+    boolean hasPermission = user.roles().stream()
+        .flatMap(role -> role.permissions().stream())
+        .anyMatch(p -> p.code().equals("EXHIBIT_EDIT"));
+
+    if (!hasPermission) return false;
+
+    return assignmentRepo.findForResource(user.id(), "EXHIBIT", exhibitId)
+        .map(assignment -> "EDITOR".equals(assignment.accessLevel()))
+        .orElse(false);
+}
+```
 
 ## باش تزيد تفهم
 

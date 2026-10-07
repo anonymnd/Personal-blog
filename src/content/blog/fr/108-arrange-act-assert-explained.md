@@ -1,63 +1,158 @@
 ---
-title: "Arrange, Act, Assert Explained"
-description: "Un guide sur la structuration des tests unitaires via le modèle AAA pour améliorer la lisibilité et la maintenance."
-pubDate: 2026-10-11T03:48:00.000Z
+title: "Tester les opérations CUD comme comportements observables"
+description: "Analyse approfondie du schéma Arrange-Act-Assert pour les opérations de création, mise à jour et suppression via un service de liste de lecture."
+pubDate: 2026-10-07T14:48:00.000Z
 translationKey: 108-arrange-act-assert-explained
+seriesOrder: 23
 locale: fr
-tags: ["software-engineering","backend-testing","learning-series"]
+tags: ["backend-testing","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## L'approche comportementale des tests CUD
 
-Beaucoup de développeurs commencent à écrire des tests en mélangeant la logique de configuration et les assertions, ce qui crée des 'tests spaghetti' où l'on ne sait plus exactement ce qui est vérifié. Lorsqu'un test échoue, on passe plus de temps à déchiffrer le code du test qu'à corriger le bug. Le modèle Arrange, Act, Assert (AAA) résout ce problème en imposant une structure linéaire claire.
+Le test des opérations de Création, Mise à jour et Suppression (CUD) tombe souvent dans le piège du « test miroir » : appeler une méthode et vérifier simplement que le mock a été sollicité. Pour apporter une valeur réelle, les tests doivent traiter ces opérations comme des comportements observables : étant donné un état spécifique, le système produit-il le résultat attendu ou empêche-t-il une action invalide ?
 
-## Les trois piliers du AAA
+Dans ce scénario, nous avons un `ReadingListService` qui gère des listes de livres. Il impose trois règles métier :
+1. Les livres doivent être uniques au sein d'une liste.
+2. Les listes archivées ne peuvent pas être modifiées.
+3. La suppression d'un livre inexistant doit être traitée explicitement.
 
-**Arrange** (Organiser) est la première phase. Ici, vous préparez les objets, les mocks et les données nécessaires. Cela inclut l'instanciation de la classe à tester et la configuration des réponses simulées avec `when()` de Mockito.
+## Le modèle Arrange-Act-Assert (AAA)
 
-**Act** (Agir) est la phase d'exécution. Vous appelez la méthode spécifique que vous souhaitez tester. Cette section doit idéalement tenir sur une seule ligne de code pour garder un focus précis.
+Chaque test doit suivre la structure AAA pour garantir la clarté et la maintenabilité :
+- **Arrange (Préparer)** : Configuration des objets, des réponses des mocks et de l'état initial.
+- **Act (Agir)** : Exécution de la méthode spécifique testée.
+- **Assert (Vérifier)** : Validation du résultat, du changement d'état ou de l'exception levée.
 
-**Assert** (Vérifier) est la phase de validation. Vous vérifiez si le résultat obtenu correspond au résultat attendu via les assertions JUnit ou `verify()` de Mockito pour confirmer qu'une interaction a bien eu lieu.
+## Exemple concret : ReadingListService
 
-## Exemple concret : Approbation d'achat
-
-Imaginons une application de procurement où un manager approuve une demande. Nous voulons tester que le statut passe à 'APPROVED'.
+Voici une suite de tests complète. Nous supposons que `ReadingListRepository` est mocké avec Mockito. Notez que `@InjectMocks` gère l'instanciation du service, mais ne démarre pas de contexte Spring.
 
 ```java
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.Optional;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
-class ProcurementServiceTest {
+class ReadingListServiceTest {
+
     @Mock
-    private RequestRepository repository;
+    private ReadingListRepository repository;
+
     @InjectMocks
-    private ProcurementService service;
+    private ReadingListService service;
+
+    // --- COMPORTEMENT DE CRÉATION ---
 
     @Test
-    void testApproveRequest() {
+    void createList_ShouldReturnSavedList_WhenValid() {
         // Arrange
-        Request request = new Request(1L, "Laptop", "PENDING");
-        when(repository.findById(1L)).thenReturn(Optional.of(request));
+        ReadingList input = new ReadingList("Java Mastery", false);
+        ReadingList saved = new ReadingList(1L, "Java Mastery", false);
+        when(repository.save(any(ReadingList.class))).thenReturn(saved);
 
         // Act
-        service.approve(1L);
+        ReadingList result = service.createList(input);
 
         // Assert
-        assertEquals("APPROVED", request.getStatus());
-        verify(repository).save(request);
+        assertNotNull(result.id());
+        assertEquals("Java Mastery", result.name());
+        verify(repository).save(input);
+    }
+
+    @Test
+    void createList_ShouldThrowException_WhenBookAlreadyExists() {
+        // Arrange
+        ReadingList list = new ReadingList(1L, "Java Mastery", false);
+        when(repository.findById(1L)).thenReturn(Optional.of(list));
+        // Simulation : le livre est déjà présent dans la liste
+        when(repository.containsBook(1L, "Effective Java")).thenReturn(true);
+
+        // Act & Assert
+        assertThrows(DuplicateBookException.class, () -> {
+            service.addBookToList(1L, "Effective Java");
+        });
+    }
+
+    // --- COMPORTEMENT DE MISE À JOUR ---
+
+    @Test
+    void updateList_ShouldUpdateName_WhenNotArchived() {
+        // Arrange
+        ReadingList existing = new ReadingList(1L, "Old Name", false);
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        // Act
+        ReadingList updated = service.updateListName(1L, "New Name");
+
+        // Assert
+        assertEquals("New Name", updated.name());
+    }
+
+    @Test
+    void updateList_ShouldThrowException_WhenArchived() {
+        // Arrange
+        ReadingList archived = new ReadingList(1L, "Old Name", true);
+        when(repository.findById(1L)).thenReturn(Optional.of(archived));
+
+        // Act & Assert
+        assertThrows(ArchivedListException.class, () -> {
+            service.updateListName(1L, "New Name");
+        });
+        verify(repository, never()).save(any());
+    }
+
+    // --- COMPORTEMENT DE SUPPRESSION ---
+
+    @Test
+    void deleteList_ShouldCallRepository_WhenPresent() {
+        // Arrange
+        when(repository.existsById(1L)).thenReturn(true);
+
+        // Act
+        service.deleteList(1L);
+
+        // Assert
+        verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void deleteList_ShouldThrowException_WhenAbsent() {
+        // Arrange
+        when(repository.existsById(1L)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> {
+            service.deleteList(1L);
+        });
+        verify(repository, never()).deleteById(anyLong());
     }
 }
 ```
 
-## Erreur courante : La boucle mixte
+## Analyse des résultats des tests
 
-Une erreur fréquente consiste à alterner 'Act' et 'Assert' plusieurs fois dans un seul test. Par exemple, appeler une méthode, vérifier, puis appeler une autre méthode sur le même objet et vérifier à nouveau. Cela rend l'isolation des pannes difficile. La correction consiste à diviser ces étapes en plusieurs méthodes de test distinctes.
+Le test de création avec mock prouve que le service renvoie l’identifiant et le nom fournis par le stub repository ; il ne démontre pas une persistance réelle. Le test de liste archivée prouve que cette branche lève une exception avant save ; il ne vérifie ni dirty checking ni tous les chemins de persistance.
 
-## Exercice pratique
+Ajoutez des tests qui créent, rechargent, modifient et suppriment avec une base réelle lorsque ce comportement présente un risque. Retirer un livre absent et supprimer une liste absente sont deux opérations distinctes. Un test avec mocks doit annoncer précisément la valeur, règle ou interaction qu’il observe.
+## Exercice
 
-**Scénario :** Écrivez un test pour une méthode `reject()` qui doit changer le statut en 'REJECTED'.
+**Scénario** : Ajoutez une fonctionnalité où une liste de lecture ne peut pas être supprimée si elle contient plus de 100 livres (pour éviter la suppression accidentelle de listes curatées).
 
-**Vérification :** Avez-vous placé l'appel `when()` dans Arrange, l'appel `service.reject()` dans Act, et le `assertEquals` dans Assert ? Si oui, votre structure est correcte.
+**Tâche** : Écrivez les étapes Arrange, Act et Assert pour un test qui garantit qu'une `MassDeletionException` est levée lorsqu'une liste de 101 livres est supprimée.
 
+**Réponse** :
+- **Arrange** : Moquer `repository.findById(id)` pour retourner une `ReadingList` contenant 101 livres. Moquer `repository.existsById(id)` pour retourner `true`.
+- **Act** : Appeler `service.deleteList(id)` à l'intérieur d'un bloc `assertThrows(MassDeletionException.class, ...)`.
+- **Assert** : Vérifier que `repository.deleteById(id)` n'a `never()` été appelé.
 
 ## Pour approfondir
 

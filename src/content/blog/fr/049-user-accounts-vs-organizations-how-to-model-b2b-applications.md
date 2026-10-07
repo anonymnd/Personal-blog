@@ -1,56 +1,72 @@
 ---
-title: "Comptes Utilisateurs vs Organisations : Modéliser des Applications B2B"
-description: "Apprenez à découpler les identités utilisateurs des entités professionnelles pour gérer le multi-tenancy dans les logiciels B2B."
-pubDate: 2026-10-08T16:48:00.000Z
+title: "Modélisation des Utilisateurs, Organisations et Adhésions"
+description: "Analyse approfondie du multi-tenant B2B où les utilisateurs appartiennent à plusieurs organisations avec une unicité scoped au tenant."
+pubDate: 2026-10-07T00:48:00.000Z
 translationKey: 049-user-accounts-vs-organizations-how-to-model-b2b-applications
+seriesOrder: 9
 locale: fr
-tags: ["software-engineering","database-design","learning-series"]
+tags: ["database-design","learning-series"]
 draft: false
 ---
 
-Ces exemples illustrent le concept ; la configuration de l’application et les définitions auxiliaires peuvent être omises.
+## Le Défi de l'Adhésion Multi-Tenant
 
-Imaginez que vous développez une application d'achats. Au début, vous pensez qu'un utilisateur *est* l'entreprise. Mais soudain, un besoin apparaît : un manager doit superviser trois filiales différentes avec une seule adresse e-mail. Si votre table `User` contient le `nom_entreprise`, vous êtes bloqué. C'est le problème classique de la modélisation B2B où l'identité (qui se connecte) diffère de l'organisation (qui possède les données).
+Dans les logiciels B2B, une erreur courante consiste à traiter l'Utilisateur comme un simple enfant d'une Organisation. Cela échoue lorsqu'un consultant travaille pour plusieurs entreprises simultanément. Pour supporter cela, nous devons découpler l'identité (Utilisateur) du contexte organisationnel (Organisation) via une entité d'adhésion explicite.
 
-## La Séparation Conceptuelle
-Dans un modèle B2B, il faut séparer le **Compte Utilisateur** de l'**Organisation**. Le compte utilisateur gère l'authentification (email, mot de passe), tandis que l'organisation gère la logique métier (numéro SIRET, adresse de facturation, budgets). Le lien entre les deux est une relation d'appartenance.
+Imaginons un consultant qui appartient à deux cabinets différents. Chaque cabinet a ses propres contacts de facturation et listes de projets. Le consultant doit basculer entre ces contextes, et son identité (email/mot de passe) reste globale, mais ses accès et détails de profil peuvent varier selon le tenant.
 
-## Conception de la Relation
-Pour implémenter cela, vous avez besoin d'une entité de jointure, souvent appelée `Membership` ou `OrganizationUser`. Cette table ne se contente pas de lier des IDs ; elle stocke le contexte de la relation, comme le rôle de l'utilisateur au sein de cette entreprise spécifique.
+## Le Modèle Logique
 
-| Entité | Responsabilité |
+Pour implémenter cela, nous utilisons une relation Plusieurs-à-Plusieurs résolue par une entité de jointure. Cela nous permet de stocker des métadonnées sur la relation elle-même, comme la date d'adhésion ou le statut spécifique au tenant.
+
+### Définition des Entités
+- **User** : Identité globale (ex: `userId`, `email`, `passwordHash`).
+- **Organization** : L'entité tenant (ex: `orgId`, `companyName`, `billingAddress`).
+- **Membership** : Le lien entre les deux (ex: `membershipId`, `userId`, `orgId`, `joinedAt`).
+
+### Unicité Scopée au Tenant
+Une exigence critique est de s'assurer que certains attributs sont uniques *uniquement au sein d'un tenant*. Par exemple, un utilisateur peut avoir un "Nom d'utilisateur" ou un "ID Employé" spécifique au sein de l'Entreprise A, qui pourrait chevaucher un ID dans l'Entreprise B. Cet attribut doit se trouver dans l'entité `Membership`, et non dans l'entité `User`.
+
+## Exemple Concret : Le Scénario du Consultant
+
+Traçons les données pour une consultante, Sarah, qui travaille pour "TechCorp" et "DesignStudio".
+
+### Trace des Données
+
+**Table Users**
+| userId | email |
 | :--- | :--- |
-| Utilisateur | Authentification & Profil |
-| Organisation | Identité Métier & Paramètres |
-| Appartenance | Rôle & Permissions par Org |
+| U1 | sarah@email.com |
 
-## Exemple Concret : Flux d'Achats
-Prenons un demandeur qui soumet une commande. Le système doit savoir non seulement qui est l'utilisateur, mais pour quelle organisation il agit.
+**Table Organizations**
+| orgId | companyName |
+| :--- | :--- |
+| O1 | TechCorp |
+| O2 | DesignStudio |
 
-```java
-// Extrait illustratif du modèle de domaine
-public class User {
-    private Long id;
-    private String email;
-}
+**Table Memberships**
+| membershipId | userId | orgId | tenantUsername |
+| :--- | :--- | :--- | :--- |
+| M1 | U1 | O1 | sarah_tech |
+| M2 | U1 | O2 | sarah_design |
 
-public class Organization {
-    private Long id;
-    private String companyName;
-}
+### Vérification des Ressources du Tenant
+Lorsque Sarah demande un projet, le système ne doit pas simplement vérifier si elle est une utilisatrice. Il doit vérifier le lien d'adhésion.
 
-public class Membership {
-    private Long userId;
-    private Long organizationId;
-    private String role; // ex: "MANAGER", "BUYER"
-}
-```
-Lorsqu'une demande est créée, l'entité `PurchaseRequest` doit référencer l' `OrganizationId` et non seulement l' `UserId`. Ainsi, si un utilisateur quitte l'entreprise, les archives d'achats restent liées à l'organisation.
+**Flux Logique :**
+1. Requête reçue : `GET /projects/{projectId}`
+2. Le système identifie l' `orgId` associé au `{projectId}`.
+3. Le système interroge : `SELECT 1 FROM memberships WHERE userId = :currentUserId AND orgId = :projectOrgId`.
+4. Si aucun enregistrement n'existe, l'accès est refusé, même si Sarah est une utilisatrice valide du système.
 
-## Erreur Courante : L'ID d'Organisation Figé
-Une erreur fréquente consiste à ajouter un `organization_id` directement dans la table `User`. Cela crée une relation 1:N, limitant l'utilisateur à une seule entreprise. La correction consiste à déplacer cette clé étrangère vers une table `Membership` pour permettre une relation M:N (Plusieurs-à-Plusieurs).
+## Cas d'Échec
 
-## Exercice Pratique
-Si un utilisateur est 'Manager' dans l'Org A et 'Demandeur' dans l'Org B, où doit être placée la colonne `role` : dans la table `User`, `Organization` ou `Membership` ?
+- **La Fuite Globale** : Stocker l' `orgId` directement sur l'entité `Project` mais oublier de vérifier la table `Membership` lors de la requête. Cela permet à n'importe quel utilisateur authentifié d'accéder à n'importe quel projet s'il devine l'ID.
+- **La Collision d'Identité** : Placer le `tenantUsername` dans la table `User`. Cela empêche Sarah d'avoir des alias différents selon ses deux entreprises.
+- **L'Adhésion Orpheline** : Supprimer une Organisation sans supprimer en cascade les adhésions, laissant des utilisateurs liés à des tenants inexistants.
 
-**Réponse :** Dans la table `Membership`, car le rôle dépend de la relation spécifique entre l'utilisateur et l'organisation.
+## Exercice
+
+**Scénario** : Vous devez ajouter une "Date d'adhésion" et un "Statut d'adhésion" (Actif/En attente) au modèle. Où ces attributs doivent-ils se trouver, et pourquoi ?
+
+**Réponse** : Les deux appartiennent à l'entité `Membership`. La "Date d'adhésion" est spécifique au moment où l'utilisateur a rejoint une organisation *particulière*, et non au moment de la création du compte utilisateur. Le "Statut" est spécifique au tenant ; un utilisateur peut être "Actif" dans l'Entreprise A mais "En attente" dans l'Entreprise B.

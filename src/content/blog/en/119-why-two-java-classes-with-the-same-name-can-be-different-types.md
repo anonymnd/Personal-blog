@@ -1,56 +1,96 @@
 ---
-title: "Why Two Java Classes With the Same Name Can Be Different Types"
-description: "Understand how packages and class loaders prevent naming collisions and create distinct types in the JVM."
-pubDate: 2026-10-11T14:48:00.000Z
+title: "Java Type Identity Depends on Packages and Class Loaders"
+description: "Explaining why classes with identical names are distinct types and how to handle boundary-safe mapping."
+pubDate: 2026-10-07T15:48:00.000Z
 translationKey: 119-why-two-java-classes-with-the-same-name-can-be-different-types
+seriesOrder: 24
 locale: en
-tags: ["software-engineering","java-fundamentals","learning-series"]
+tags: ["java-fundamentals","learning-series"]
 draft: false
 ---
 
-These examples illustrate the concept; surrounding application setup and supporting definitions may be omitted.
+## The Definition of a Type in Java
 
-Imagine you are building a procurement app. You have a `Request` class in the `com.app.requester` package and another `Request` class in the `com.app.manager` package. You try to pass a requester's request to a manager's method, but the compiler throws a type mismatch error. Even though both are named `Request`, Java treats them as completely different entities.
+In Java, a class is not identified by its simple name (e.g., `Money`), but by its Fully Qualified Name (FQN). The FQN consists of the package name and the class name. If two classes share the same simple name but reside in different packages, the JVM treats them as entirely unrelated types. 
 
-## The Role of Fully Qualified Names
-In Java, the name of a class is not just the identifier you see in the file. The true identity is the Fully Qualified Name (FQN), which combines the package path and the class name. `com.app.requester.Request` and `com.app.manager.Request` are as different as `String` and `Integer`. The package acts as a namespace, allowing different modules to use common terms without clashing.
+Type identity is further tied to the ClassLoader. A class is uniquely identified by the combination of its FQN and the ClassLoader that defined it. If the same `.class` file is loaded by two different ClassLoaders, the resulting `Class` objects are distinct, and attempting to cast one to the other will trigger a `ClassCastException`.
 
-## Class Loaders and Runtime Identity
-Beyond packages, the JVM uses Class Loaders to load bytecode. A class is uniquely identified by the combination of its FQN and the Class Loader that defined it. If two different class loaders load the same `.class` file from different locations, the JVM sees them as two distinct types. This is common in plugin architectures or application servers where different versions of the same library are loaded in isolated environments.
+## Scenario: The Legacy SDK Conflict
 
-## Worked Example: The Procurement Conflict
-Consider this scenario where we handle a purchase request:
+Consider a scenario where your application defines a `Money` record for internal domain logic, but you must integrate a legacy SDK that also provides its own `Money` class. Because these are different types, you cannot use a cast to convert between them, even if their fields are identical.
+
+### Illustrative Implementation
 
 ```java
-package com.app.requester;
-public class Request { public String item = "Laptop"; }
+// Application Domain Type
+package com.app.domain;
 
-package com.app.manager;
-public class Request { public boolean approved = false; }
+public record Money(java.math.BigDecimal amount, String currency) {}
 
-public class ProcurementService {
-    public void process(com.app.manager.Request mgrReq) {
-        System.out.println("Processing...");
+// Legacy SDK Type
+package com.legacy.sdk;
+
+public class Money {
+    private final java.math.BigDecimal value;
+    private final String isoCode;
+
+    public Money(java.math.BigDecimal value, String isoCode) {
+        this.value = value;
+        this.isoCode = isoCode;
     }
 
-    public void run() {
-        com.app.requester.Request req = new com.app.requester.Request();
-        // process(req); // This would cause a compile-time error
+    public java.math.BigDecimal getValue() { return value; }
+    public String getIsoCode() { return isoCode; }
+}
+```
+
+## Boundary-Safe Mapping
+
+When moving data across the boundary between the SDK and your application, you must implement an explicit mapping mechanism. A cast fails because the JVM checks the type identity (FQN + ClassLoader) at runtime.
+
+### Worked Mapping Example
+
+```java
+package com.app.service;
+
+import java.util.Optional;
+import com.app.domain.Money; // Application type
+
+
+public class CurrencyConverter {
+    
+    public com.app.domain.Money mapToDomain(com.legacy.sdk.Money sdkMoney) {
+        if (sdkMoney == null) return null;
+        
+        // Explicit conversion: Extracting values to build a new instance
+        return new com.app.domain.Money(
+            sdkMoney.getValue(), 
+            sdkMoney.getIsoCode()
+        );
+    }
+
+    public void processPayment(com.legacy.sdk.Money sdkMoney) {
+        // This would throw ClassCastException:
+        // com.app.domain.Money domainMoney = (com.app.domain.Money) sdkMoney;
+        
+        com.app.domain.Money domainMoney = mapToDomain(sdkMoney);
+        System.out.println("Processed: " + domainMoney.amount());
     }
 }
 ```
-Outcome: The `process` method expects a `manager.Request`. Passing a `requester.Request` fails because their FQNs differ, ensuring that the manager's logic doesn't accidentally operate on the requester's data structure.
 
-## Common Mistake: Import Ambiguity
-Developers often use `import com.app.requester.*;` and `import com.app.manager.*;` in the same file. If both packages contain a class named `Request`, using the word `Request` in the code causes an ambiguity error. 
+### Analysis of the Mechanism
+1. **FQN Resolution**: The compiler uses the imports to distinguish between `com.app.domain.Money` and `com.legacy.sdk.Money`. Within a single file, if both are needed, one or both must be referenced by their full path.
+2. **Memory Allocation**: `mapToDomain` creates a new object on the heap. It does not change the identity of the SDK object; it projects its state into a type the application understands.
+3. **Failure Case**: If a developer attempts to use a generic `Object` reference from the SDK and casts it to the domain `Money`, the JVM will see that the class was loaded from the `com.legacy.sdk` package and reject the cast, regardless of the field names.
 
-**Correction:** Use the FQN directly in the code (e.g., `com.app.requester.Request req = new ...`) or import only one and use the FQN for the other.
+## Exercise
 
-## Practical Exercise
-If you have `package a.User` and `package b.User`, can you cast an instance of `a.User` to `b.User` using `(b.User) myUser`?
+**Question**: You have a class `com.util.Config` and `com.internal.Config`. You receive an object of type `Object` that you know is a `com.util.Config`. What happens if you execute `(com.internal.Config) receivedObject`? How do you safely move the data from the utility config to the internal config?
 
-**Answer:** No. This will throw a `ClassCastException` at runtime because they are distinct types despite having the same simple name.
+**Answer**: A `ClassCastException` is thrown because the FQNs differ. To move the data, you must use an explicit mapper: instantiate `com.internal.Config` and manually pass the values retrieved from the `com.util.Config` instance via its getter methods.
 
+Use separate source files for the package declarations shown. Java has no import alias syntax. A direct cast between these unrelated final types may be rejected at compilation; a cast through Object can compile and then fail at runtime. The ClassLoader distinction concerns the defining loader: two initiating loaders can delegate to the same definition and receive the same type.
 
 ## Further reading
 

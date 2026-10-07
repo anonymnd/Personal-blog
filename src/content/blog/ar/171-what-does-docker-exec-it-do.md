@@ -1,44 +1,94 @@
 ---
-title: "شنو كيدير docker exec -it ؟"
-description: "شرح مبسط كيفاش تدخل لوسط container خدام باش تقلب المشاكل وتصلحهم."
-pubDate: 2026-10-13T18:48:00.000Z
+title: "كيفاش تخدم وتصلح Application Stack بـ Docker Compose"
+description: "تعلم كيفاش تنسق بين Recipe API و PostgreSQL، مع التركيز على الـ healthcheck والـ diagnostic tools."
+pubDate: 2026-10-08T06:48:00.000Z
 translationKey: 171-what-does-docker-exec-it-do
+seriesOrder: 39
 locale: ar
-tags: ["software-engineering","docker","learning-series"]
+tags: ["docker","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## تنسيق الـ Recipe API Stack
 
-تخيل عندك application ديال procurement (شراء) خدامة فـ container. واحد الموظف صيفط طلب، ولكن manager مابغاش يـ-valider. شفتي logs ولكن مالقيتي والو واضح. هنا خاصك تدخل « لداخل » ديال container اللي خدام دابا باش تشوف واش شي fichier de configuration ناقص ولا تجرب واش connection مع database خدامة من وسط container نيت. هنا فين كنحتاجو `docker exec -it`.
+ملي كتكون خدام بـ backend ومعاه database، المشكل الكبير ماشي هو كيفاش تطلق الـ containers، ولكن كيفاش تضمن أن الـ application ما تطيحش حيت الـ database مزال ما واجداش. واخا `depends_on` كتحكم في الترتيب ديال الشعلة، ولكن ما كتعطيكش ضمانة أن السوفتوير اللي لداخل ديال الـ container واجد باش يستقبل connections.
 
-## كيفاش خدامة exec
-كاين فرق كبير بين `docker run` و `docker exec`. الـ `run` كيكريي container جديد من image، ولكن `exec` كتخليك تزيد command وسط container ديجا خدام. هي كتستغل القدرة ديال host باش يدخل لـ namespaces (ديال process و network) اللي معزولين فـ container.
+## مثال تطبيقي (Worked Configuration)
 
-## شنو كيعنيو -it
-الـ `-i` (interactive) كتخلي الـ STDIN محلول باش تقدر تكتب. والـ `-t` (tty) كتعطيك pseudo-terminal، يعني كتولي تشوف prompt (بحال root@container:/#) والألوان، وكتحس براسك خدام فـ terminal حقيقي. بلا بيهم، تقدر تلونصي command ولكن ماتقدرش تهضر مع shell بحال Bash.
+فهاد السيناريو، غادي نخدمو بـ Recipe API و PostgreSQL. غادي نستعملو ملف `.env` خارجي باش ندوزو الـ credentials، باش ما نكتبوش secrets وسط الـ YAML.
 
-## مثال تطبيقي: تقليب المشكل فـ App ديال الشراء
-نفترضو الـ container سميتو `procurement-app` وبغيتي تشوف واحد الـ log كاين فـ `/var/log/app.log`.
-
-```bash
-# ندخلو لـ container باستعمال bash
-docker exec -it procurement-app /bin/bash
-
-# دابا حنا لداخل ديال container:
-root@a1b2c3d4e5f6:/# cat /var/log/app.log
-# [LOG]: Connection to DB failed at 10.0.0.5
-exit
+**ملف .env (مثال)**
+```env
+DB_USER=recipe_admin
+DB_PASSWORD=secure_password_123
+DB_NAME=recipe_db
 ```
-النتيجة: دخلتي لوسط البيئة، عرفتي بلي كاين مشكل فـ network، وخرجتي لـ machine ديالك.
 
-## غلط شائع: exec مقابل run
-بزاف ديال الناس كيغلطو وكيديرو `docker run -it image /bin/bash` باش يـ-debug-يو service خدام. `docker run` كيشعل container *جديد*، يعني ماغاديش تلقى فيه نفس الـ state ولا نفس الـ logs ديال container اللي فيه المشكل. ديما استعمل `exec` يلا كان container ديجا خدام.
+**docker-compose.yml**
+```yaml
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"
 
-## تمرين تطبيقي
-كيفاش تقدر تلونصي command ديال `ls -la` وسط container سميتو `buyer-service` بلا ما تدخل لـ shell interactive ؟
+  api:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+```
 
-**الجواب:** `docker exec buyer-service ls -la`. (هنا ماحتاجينش `-it` حيت غير command وحدة وغاتسالي).
+## الميكانيزم: الفرق بين Startup و Readiness
+
+كون درنا غير `depends_on: [db]`، Docker غادي يشعل الـ container ديال PostgreSQL ومن بعدو مباشرة يشعل الـ API. ولكن PostgreSQL كياخد شي ثواني باش يـ initialize الـ data directory ديالو ويبدا يسمع (listen) للطلبات. الـ API غادي يحاول يتكونيكتا، غادي يفشل، وغالبا غادي يطفا بـ `ConnectionRefused`.
+
+ملي زدنا `healthcheck` للـ service `db` استعملنا `pg_isready`—هادي tool مديورة خصيصاً باش تشوف واش PostgreSQL واجد بلا ما تحتاج دير authentication كاملة. دابا الـ `api` service كيستعمل `condition: service_healthy` ، يعني كيبقى يتسنى حتى يرجع الـ healthcheck ديال `db` بـ exit code ناجح (0).
+
+## كيفاش تـ diagnose الـ Stack
+
+وخا كاين الـ healthchecks، كيبقاو يوقعو مشاكل (مثلا credentials غلط). باش تعرف فين كاين المشكل، خاصك تخرج من وجهة نظر الـ host وتدخل لـ namespace ديال الـ container.
+
+#### 1. تحليل الـ Logs
+باش تعرف علاش الـ API ما بغاش يشعل، كنتبعو الـ logs:
+`docker compose logs -f api` 
+
+إلا لقيتي `FATAL: password authentication failed for user "recipe_admin"` ، عرف بلي الـ environment variables اللي عطيتي للـ API ماشي هما اللي عطيتي للـ DB.
+
+#### 2. الـ Inspection التفاعلي
+ملي الـ logs ما كيكونوش كافيين، كنستعملو `docker exec -it`. هاد command كتحل terminal وسط الـ container اللي خدام دابا.
+
+باش تأكد واش الـ database واصلة من جيهة الـ API:
+`docker compose exec api ping db` 
+
+باش تيستي الـ connection يدوياً من وسط الـ DB container:
+`docker compose exec db pg_isready -U recipe_admin -d recipe_db` 
+
+إلا رجعات `pg_isready` بلي الـ connections مقبولين وسط الـ DB container ولكن الـ API مزال كيـ fail، المشكل غالباً كيكون في الـ connection string (URL) أو الـ network bridge، ماشي في الـ database process.
+
+## حالات الفشل والنتائج
+
+*   **`start_period` غلط**: إلا كانت قصيرة بزاف والـ DB تقيل في الشعلة، الـ healthcheck يقدر يسالي الـ `retries` ديالو قبل ما توجد الـ DB، وهادشي كيخلي الـ API ما يشعلش كاع.
+*   **Port غلط في الـ URL**: إلا استعملتي `localhost:5432` في `SPRING_DATASOURCE_URL` غادي يفشل. وسط الـ container network، `localhost` كيعني الـ API container راسو. خاصك تستعمل سمية الـ service `db:5432`.
+*   **Zombie Containers**: إلا كانت الـ API كطيح وتعاود تشعل بزاف، `docker compose up` يقدر يبقى يعاودها. استعمل `docker compose stop` باش تحبس كلشي وتـ diagnose على خاطرك.
+
+## تمرين
+
+باش تجرب local TCP port بلا ما تفترض netstat ولا ss موجودين، خدم docker compose exec db pg_isready -h 127.0.0.1 -p 5432 -U recipe_admin -d recipe_db. Success كتقول 127.0.0.1:5432 accepting connections مع exit0. كتثبت readiness فهاد interface المحلية، ماشي authentication ديال API ولا network reachability. جرب datasource connection بوحدها بـ tool موجودة ولا diagnostic container فنفس network.
 
 ## باش تزيد تفهم
 

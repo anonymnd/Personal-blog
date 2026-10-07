@@ -1,53 +1,106 @@
 ---
-title: "شنو هي Dependency Injection؟"
-description: "دليل للمبتدئين باش يفهمو كيفاش الـ Dependency Injection كتفرق بين المكونات في تطبيقات Spring Boot."
-pubDate: 2026-10-08T22:48:00.000Z
+title: "Dependency Injection, Inversion of Control و Interface Contracts"
+description: "شرح عميق ديال كيفاش كيتصاوبو components، الـ constructor injection، والحقيقة ديال semantic coupling ملي كنخدمو بـ interfaces."
+pubDate: 2026-10-07T04:48:00.000Z
 translationKey: 055-what-is-dependency-injection
+seriesOrder: 13
 locale: ar
-tags: ["software-engineering","spring-architecture","learning-series"]
+tags: ["spring-architecture","learning-series"]
 draft: false
 ---
 
-هاد الأمثلة غير باش نفهمو الفكرة؛ الإعدادات ديال التطبيق وبعض التعريفات المساعدة ممكن ما يكونوش مكتوبين.
+## تبديل التحكم (The Shift in Control)
 
-تخايل راسك خدام على تطبيق ديال الشراء (procurement app). عندك واحد الـ `PurchaseOrderService` اللي محتاج `NotificationService` باش يصيفط إيميلات. إلا كتبتي `NotificationService service = new EmailNotificationService();` وسط الكلاس، راك ربطتيهم بطريقة صلبة (hard-coded). إلا بغيتي من بعد تبدل الإيميل بـ SMS، خاصك تمشي تبدل الكود في كاع لي سيرفيس اللي كيخدمو به. هادشي كيتسمى tight coupling، وهو اللي كيصعب التيست والميانة ديال الكود.
+فالبرمجة العادية، الـ class هي اللي كتكون مسؤولة باش تصاوب الـ dependencies ديالها. مثلاً، إلا كان `TaxCalculator` محتاج `RateSource` باش يجيب نسبة الضريبة، غادي يدير `new RemoteRateSource()` وسط الـ constructor ديالو. هادشي كيخلي الـ calculator مرتبط بزاف بـ implementation وحدة، وما تقدرش تدير ليه test بلا ما تكون كونيكطي مع السيرفر.
 
-## كيفاش كتخدم
-الـ Dependency Injection (DI) هي واحد الطريقة فين الكلاس مكاتصاوبش الاعتمادات (dependencies) ديالها براسها. بلاصتها، واحد الجهة خارجية (اللي هي Spring IoC Container) هي اللي "كتدفع" (inject) هاد الكائنات فاش كيكون البرنامج خدام. هكذا، المسؤولية ديال إنشاء الكائنات كتولي عند الـ framework ماشي عند الكلاس، وهادشي كيخليك تبدل النوع ديال الخدمة بلا ما تقيس الكود ديال الكلاس اللي خدامة بها.
+هنا فين كتجي Inversion of Control (IoC). بلاصت ما الـ `TaxCalculator` هو اللي يتحكم فصناعة الـ `RateSource` ، كنعطيو هاد التحكم لشي حاجة خارجية (بحال Spring container أو شي class ديال bootstrap). الـ calculator كيقول غير شنو محتاج، والبيئة اللي خدام فيها هي اللي كتعطيه. الـ Dependency Injection (DI) هي الطريقة باش كنطبقو IoC، وأحسن طريقة هي الـ constructor injection.
 
-## مثال ديال Constructor Injection
-في Spring Boot دابا، أحسن طريقة هي تخدم بالـ constructor injection. هاد الطريقة كتضمن أن الكلاس بدات بجميع الحوايج اللي محتاجة، وكتخليك تخدم بـ `final fields` باش يكون الكود ديالك stable.
+## الـ Constructor Injection والكونترا (Contract)
 
+ملي كنخدمو بـ constructor injection، كنضمنو أن الـ component ما عمره يكون فـ حالة ناقصة (invalid state). حيت الـ compiler كيفرض علينا نعطيو الـ dependencies فاش كنصاوبو الـ object، إذن `TaxCalculator` ضروري يكون عنده `RateSource` قبل ما نعيطو لأي method.
+
+باش نخليو هادشي flexible، كنخدمو بـ interface. الـ interface هي بمثابة "كونترا" (contract) — كتحدد شنو هما الـ methods اللي خاص يكونو، ولكن ما كتقولش *كيفاش* كيخدمو. هادشي كيخلينا نبدلو implementation ديال production بـ وحدة ديال test بلا ما نقيسو حتى سطر فـ الـ calculator.
+
+## مثال تطبيقي: نظام حساب الضريبة
+
+تخيل عندنا سيستيم كيجيب نسبة الضريبة من API فـ production، ولكن فـ tests بغيناها تكون قيمة ثابتة باش النتائج تكون ديما هي هي.
+
+### الكونترا (The Contract)
 ```java
-@Service
-public class PurchaseOrderService {
-    private final NotificationService notificationService;
+public interface RateSource {
+    double getRate(String regionCode);
+}
+```
 
-    // Spring هنا كيدير الـ injection
-    public PurchaseOrderService(NotificationService notificationService) {
-        this.notificationService = notificationService;
+### الـ Implementations
+```java
+// ديال Production: كيمشي لـ API بعيدة
+public class RemoteRateSource implements RateSource {
+    @Override
+    public double getRate(String regionCode) {
+        // مثال: هنا غادي يكون كاين RestClient
+        System.out.println("Fetching from remote API...");
+        return 0.20; 
     }
+}
 
-    public void completeOrder(Order order) {
-        // منطق إكمال الطلب
-        notificationService.send("Order " + order.getId() + " is ready!");
+// ديال Test: كيرجع قيمة ثابتة
+public class FixedRateSource implements RateSource {
+    @Override
+    public double getRate(String regionCode) {
+        return 0.15;
     }
 }
 ```
 
-## النتيجة والمزايا
-حيت خدمنا بـ `NotificationService` كـ interface ماشي كـ class محددة، الـ `PurchaseOrderService` مابقاش مسوق كيفاش كيتصيفط الميساج. النتيجة هي سيستيم مرن، تقدر تزيد `MockNotificationService` فاش تكون كدير التيست باش ماتصيفطش إيميلات حقيقية وتضيع الوقت.
+### الـ Component
+```java
+public class TaxCalculator {
+    private final RateSource rateSource;
 
-## غلط شائع: Field Injection
-بزاف ديال المبتدئين كيستعملو `@Autowired` نيشان فوق الـ private fields. واخا كتبان ساهلة، ولكن كتخلي الكلاس صعيبة في التيست حيت ماتقدرش تصاوب منها object بلا ما تخدم بـ reflection أو تطلع الـ Spring context كامل.
+    // Constructor Injection
+    public TaxCalculator(RateSource rateSource) {
+        this.rateSource = rateSource;
+    }
 
-**التصحيح:** ديما خدم بالـ constructor injection. هادشي كيخلي الاعتمادات واضحة وكيضمن أن الكلاس ديما واجدة للخدمة.
+    public double calculateTax(double amount, String region) {
+        return amount * rateSource.getRate(region);
+    }
+}
+```
 
-## تمرين تطبيقي
-صاوب `BuyerService` اللي كيعتمد على `VendorRepository`. كيفاش خاصك تعرف الـ field والـ constructor باش تحترم قواعد DI؟
+### كيفاش كيدوز الـ Execution
 
-**الجواب:** خاصك تعرف `VendorRepository` كـ `private final` field، وتصاوب constructor public كياخد هاد الـ repository كـ parameter وكيعمر بيه الـ field.
+**الحالة A: Production Bootstrap**
+1. `RemoteRateSource remote = new RemoteRateSource();`
+2. `TaxCalculator prodCalc = new TaxCalculator(remote);`
+3. `prodCalc.calculateTax(100, "US")` → كيعيط لـ `RemoteRateSource.getRate` → كيرجع `20.0`.
+
+**الحالة B: Test Bootstrap**
+1. `FixedRateSource fixed = new FixedRateSource();`
+2. `TaxCalculator testCalc = new TaxCalculator(fixed);`
+3. `testCalc.calculateTax(100, "US")` → كيعيط لـ `FixedRateSource.getRate` → كيرجع `15.0`.
+
+## كذبة الـ Decoupling الكامل
+
+بزاف كيصحاب ليهم أن الـ interfaces كيحيدو كاع الـ coupling. هي بصح كتحيد الـ *implementation coupling* (الـ calculator ما عارفش `RemoteRateSource`) ولكن ما كتحيدش الـ *semantic coupling*.
+
+الـ semantic coupling كيوقع ملي الـ caller كيتوقع أن الـ implementation غادي تصرف بطريقة معينة اللي ما مكتوباش فـ الـ signature ديال الـ method. مثلاً، إلا كان `TaxCalculator` كيسحاب ليه أن `getRate` عمرها ترجع رقم سالب، أو أنها ديما كتجاوب فـ أقل من 100ms، راه باقي مرتبط بـ *السلوك* (behavior) ديال الـ implementation. إلا زدنا `DatabaseRateSource` اللي كيرمي `SQLException` (مغلفة فـ RuntimeException)، الـ calculator يقدر يـ crash وخا الـ interface contract محترم تقنياً. الـ interfaces كيحددو *شنو* (what)، ولكن *كيفاش* (how) — بحال الـ performance والـ errors — كيبقاو مأثرين على الـ caller.
+
+## تمرين
+
+**المطلوب:** عندك `NotificationService` كيعتمد على interface سميتها `MessageSender`. عندك جوج ديال الـ implementations: `SmsSender` و `EmailSender`. بغيتي تصاوب `BulkNotifier` اللي يقدر يبدل بين هاد الـ senders على حساب configuration فـ بداية التشغيل.
+
+1. كيفاش خاص `BulkNotifier` يتوصل بـ `MessageSender` ؟
+2. إلا كان `SmsSender` محتاج API key و `EmailSender` محتاج SMTP server، فين خاص هاد المعلومات يتحطو ؟
+3. إلا كان `SmsSender` كيسكت ملي كيوقع غلط (fails silently) ولكن `EmailSender` كيرمي exception، واش `BulkNotifier` فعلاً decoupled من الـ implementation ؟
+
+**الجواب:**
+1. عن طريق constructor injection: `public BulkNotifier(MessageSender sender) { ... }`.
+2. هاد المعلومات خاص يكونو وسط الـ implementation classes (أو يتعطاو ليهم فـ الـ constructor ديالهم فـ الـ bootstrap)، ماشي وسط `BulkNotifier`.
+3. لا. هادشي كيتسمى semantic coupling. حيت الـ logic ديال التعامل مع الأخطاء فـ `BulkNotifier` غادي يتبدل على حساب شكون الـ implementation اللي دخلات، وهذا كيبين أن الـ interface بوحدها ما كتحيدش الارتباط بالسلوك.
 
 ## باش تزيد تفهم
 
 - [Spring Data JPA: Persisting Entities](https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html)
+- [Java records](https://dev.java/learn/records/)
