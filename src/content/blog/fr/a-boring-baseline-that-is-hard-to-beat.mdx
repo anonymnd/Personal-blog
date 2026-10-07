@@ -1,0 +1,68 @@
+---
+title: "Une base de référence ennuyeuse et difficile à battre (CSP + LDA)"
+description: "Le pipeline standard de l'imagerie motrice, sur un sujet, avec le chiffre honnête — faible, bruité, et quand même utile comme point de référence pour tout ce qui est construit dessus."
+pubDate: 2026-08-17T10:00:00.000Z
+translationKey: a-boring-baseline-that-is-hard-to-beat
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - signal-processing
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: "La référence pour CSP, LDA, et pourquoi cette combinaison particulière est la première chose standard à essayer pour l'EEG d'imagerie motrice avant de passer à quelque chose de plus complexe.",
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+];
+
+Le signal <a href={withBase('/fr/blog/cleaning-a-brain-signal-what-filtering-changes-and-what-it-hides/')}>filtré</a>, la prochaine étape est la plus évidente et la moins glamour : construire le pipeline standard, sur un sujet, et voir quel chiffre il produit. Pas pour impressionner — pour avoir un point de référence honnête avant de demander quelque chose de plus difficile aux données.
+
+<Callout type="key-insight" label="Pourquoi une base ennuyeuse compte">
+Avant de demander « est-ce que mon modèle se généralise entre les personnes », je dois savoir s'il peut faire la tâche de base, pour une personne, avec une méthode bien comprise. Si ce chiffre est faible, c'est une information utile — pas un échec à cacher.
+</Callout>
+
+## Le pipeline
+
+Mouvement de poing gauche vs droit imaginé, un sujet, trois runs concaténés (45 essais au total — 23 gauche, 22 droite). Filtré comme dans l'article précédent, puis découpé en époques autour du marqueur d'événement de chaque essai.
+
+La méthode d'extraction de caractéristiques est **CSP** — Common Spatial Patterns, le filtre spatial standard pour l'EEG d'imagerie motrice. CSP trouve des combinaisons linéaires de canaux qui maximisent la différence de variance entre deux classes ; en pratique, pour l'imagerie main gauche/droite, elle a tendance à trouver des filtres qui accentuent les zones du cortex moteur où les deux mouvements imaginés produisent le contraste le plus net. Au-dessus de ça : **LDA**, un classificateur linéaire simple. <SourceLink authors="Lotte et al." year="2018" title="A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update" href="https://pubmed.ncbi.nlm.nih.gov/29932424/" />
+
+Évaluation : validation croisée à 5 plis, CSP ajusté à neuf dans chaque pli d'entraînement — jamais sur les 45 essais complets avant la division. C'est un petit détail, mais ajuster CSP sur tout d'abord laisserait l'information sur les essais de test fuiter dans le filtre spatial lui-même, avant même que le classificateur ne voie les étiquettes.
+
+## Le résultat
+
+<CodeBlock language="text" filename="output">
+Epochs: 45 (left=23, right=22)
+Balanced accuracy: 0.535 +/- 0.145
+Fold scores: [0.475, 0.300, 0.525, 0.700, 0.675]
+</CodeBlock>
+
+0,535 de précision équilibrée, à peine au-dessus de la ligne de chance à 0,5, avec un écart-type (0,145) presque aussi grand que le signal lui-même. Un pli a obtenu 0,300 — pire que de deviner — et un autre 0,700.
+
+<Callout type="warning" label="Résister à l'envie d'expliquer ça">
+Mon premier instinct était de chercher un bug : mauvais canaux, mauvaise fenêtre d'époque, événements mal étiquetés. J'ai vérifié les trois par rapport au mapping d'événements et au travail de filtrage des deux derniers articles, et je n'ai rien trouvé de faux. L'explication la plus honnête est aussi la moins satisfaisante : 45 essais, ce n'est pas beaucoup de données, l'imagerie motrice sur un seul sujet est un signal réellement bruité, et un score faible à haute variance est un résultat crédible ici — pas nécessairement une erreur.
+</Callout>
+
+## Pourquoi je n'essaie pas de corriger ça maintenant
+
+Il serait facile d'essayer un classificateur différent, plus de composantes CSP, une bande de fréquences différente, et de continuer à ajuster jusqu'à ce que le chiffre ait l'air meilleur. Je fais délibérément le choix de ne pas faire ça ici. Cette base existe pour être un point de référence fixe pour la comparaison, pas une cible à optimiser — et les prochains articles de ce fil ont besoin exactement de ce chiffre, aussi faible soit-il, pour montrer ce qui se passe quand le même pipeline est évalué à travers plusieurs personnes au lieu d'une seule.
+
+<Callout type="further-reading" label="Suite">
+Le prochain article réutilise exactement ce pipeline sur dix sujets regroupés ensemble — et la première version de cette expérience n'a pas juste obtenu un score plus bas que cette base, elle a obtenu un score de hasard. Voici ce qui s'est mal passé, et pourquoi.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

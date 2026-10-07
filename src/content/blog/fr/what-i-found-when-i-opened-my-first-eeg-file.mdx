@@ -1,0 +1,72 @@
+---
+title: "Ce que j'ai trouvé en ouvrant mon premier fichier EEG"
+description: "Avant tout modèle, avant toute question de précision — ce qu'il y a vraiment dans un enregistrement EEG réel, et ce que j'ai mal lu la première fois."
+pubDate: 2026-07-20T10:00:00.000Z
+translationKey: what-i-found-when-i-opened-my-first-eeg-file
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - data-science
+  - signal-processing
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+
+export const papers = [
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: "Décrit le système d'acquisition derrière le jeu de données PhysioNet EEG Motor Movement/Imagery ouvert dans cet article.",
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+];
+
+Je commence un petit fil de recherche sur ce blog, à côté des articles d'ingénierie habituels : de vraies données EEG et de capteurs portables, de vraies expériences, rapportées honnêtement — y compris les parties que j'ai mal faites avant de les corriger. Ce premier article est l'étape la moins impressionnante et la plus importante : ouvrir un seul fichier et le regarder avant de demander quoi que ce soit à un modèle.
+
+<Callout type="key-insight" label="Pourquoi commencer ici">
+Avant « est-ce que ça classifie bien », il y a « qu'est-ce qu'il y a vraiment dans cet enregistrement, à quel taux, avec quel bruit ». Sauter cette étape, c'est comme ça que les fuites, les erreurs d'unité et les bugs silencieux s'installent.
+</Callout>
+
+## Le fichier
+
+Un sujet, un run, tiré du jeu de données PhysioNet EEG Motor Movement/Imagery — un jeu de données de recherche public et consenti de 109 personnes effectuant des mouvements réels et imaginés des mains et des pieds en portant un casque EEG à 64 canaux. <SourceLink authors="Schalk et al." year="2004" title="BCI2000: A General-Purpose Brain-Computer Interface (BCI) System" href="https://physionet.org/content/eegmmidb/1.0.0/" /> J'ai ouvert le run où le sujet imagine bouger son poing gauche ou droit, avec MNE-Python, et j'ai affiché les bases avant de tracer quoi que ce soit.
+
+<CodeBlock language="text" filename="output">
+Channels:       64 ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5'] ...
+Sampling rate:  160.0 Hz
+Duration:       125.0 s
+Annotations:    ['T0', 'T1', 'T2']
+</CodeBlock>
+
+64 canaux, 160 échantillons par seconde, un peu plus de deux minutes. Les annotations sont la partie qui compte pour la suite : `T0`, `T1`, `T2` sont des codes génériques, et ce qu'ils *signifient* dépend du run qu'on regarde. Pour ce run (mouvement de poing imaginé), `T0` est le repos, `T1` est le mouvement imaginé du poing gauche, `T2` est le mouvement imaginé du poing droit. Se tromper dans ce mapping, et chaque étiquette du jeu de données devient fausse d'une manière qui ne déclenche aucune erreur — ça entraîne juste silencieusement un modèle sur des classes inversées.
+
+## À quoi ressemble vraiment le tracé brut
+
+Huit des soixante-quatre canaux, dix secondes, colorés selon les fenêtres T0/T1/T2 : oscillation bruitée, aucun canal plat, aucune électrode visiblement morte, amplitudes autour de 100–130 µV crête-à-crête. Rien ne ressemble à l'« onde cérébrale » propre et lente que j'imaginais avant de commencer. Ça ressemble à du bruit avec de la structure enfouie dedans, ce qui est plus proche de la vérité.
+
+## Le spectre, et l'erreur en le lisant
+
+Le spectre de puissance (0–60 Hz) montrait la forme attendue en général — la puissance chutant fortement avec la fréquence — mais je ne trouvais pas de pic évident à 50 ou 60 Hz, la fréquence du bruit secteur AC, que les enregistrements EEG captent presque toujours à un degré ou un autre. Ma première note à ce sujet était incertaine : peut-être que cet enregistrement était exceptionnellement propre, ou peut-être que le style du graphique (échelle en décibels, huit canaux superposés) le cachait.
+
+<Callout type="warning" label="Vérifier, ne pas supposer">
+J'ai zoomé le même spectre sur juste 45–65 Hz au lieu de 0–60 Hz. Et il était là : un pic net et évident exactement à 60 Hz — invisible à l'échelle large, indéniable à l'échelle étroite. L'enregistrement n'a jamais été propre ; je n'avais simplement pas assez regardé pour voir le bruit qui était déjà là.
+</Callout>
+
+Cette distinction — « je ne le vois pas » contre « ce n'est pas là » — s'est avérée importante immédiatement. Un article plus tard dans ce fil avait besoin d'un filtre coupe-bande à 60 Hz précisément parce que ce bruit est réel, et le confirmer ici avec un graphique zoomé est ce qui a rendu cette décision défendable plutôt qu'une supposition.
+
+## Ce que j'emporte vers la prochaine étape
+
+Deux choses concrètes survivent à ce premier regard : le mapping des codes d'événements (`T0`/`T1`/`T2` signifient des choses différentes selon le run — je dois vérifier ça à chaque run, pas le supposer une fois pour toutes) et la présence de bruit secteur à 60 Hz (confirmée, pas supposée, en zoomant réellement). Ni l'un ni l'autre n'est excitant en soi. Les deux sont le genre de détail qui casse silencieusement une expérience trois étapes plus tard si on le saute maintenant.
+
+<Callout type="further-reading" label="Suite">
+Prochainement dans ce fil : ce qui change, concrètement, quand ce bruit secteur et le reste du spectre sont filtrés — une vraie comparaison avant/après, pas une affirmation.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

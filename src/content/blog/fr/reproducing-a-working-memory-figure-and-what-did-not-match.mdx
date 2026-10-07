@@ -1,0 +1,83 @@
+---
+title: "Reproduire une figure de mémoire de travail — et ce qui n'a pas correspondu"
+description: "J'ai essayé de reproduire un résultat EEG publié sur des données publiques. Ma version est revenue dans la direction opposée. Voici la tentative, le résultat honnête, et pourquoi je ne l'appelle pas une réfutation."
+pubDate: 2026-10-12T10:00:00.000Z
+translationKey: reproducing-a-working-memory-figure-and-what-did-not-match
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Pavlov et al.',
+		year: '2022',
+		title: 'Pupillometry and electroencephalography in the digit span task',
+		why: "Le jeu de données et l'affirmation que cet article essaie de reproduire : le thêta frontal médian augmentant dans la condition mémoire vs un contrôle d'écoute seule, rapporté dans leur Fig. 3d.",
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9206021/',
+	},
+];
+
+Chaque article de ce fil jusqu'ici a été ma propre expérience, selon mes propres termes. Celui-ci est différent exprès : prendre une affirmation spécifique et concrète d'un article publié, essayer de la reproduire sur les mêmes données publiques, et rapporter ce qui s'est réellement passé — y compris si ça ne correspond pas.
+
+<Callout type="key-insight" label="La question à laquelle ça répond">
+Si je prends un résultat EEG publié et que je ré-exécute moi-même une version de l'analyse, sur le jeu de données que les auteurs ont publié, mon chiffre pointe-t-il dans la même direction que le leur ?
+</Callout>
+
+## L'affirmation
+
+<SourceLink authors="Pavlov et al." year="2022" title="Pupillometry and electroencephalography in the digit span task" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9206021/" /> a collecté de l'EEG de 86 personnes faisant une tâche de séquence de chiffres : écouter une séquence parlée de 5, 9, ou 13 chiffres, puis soit les rappeler à voix haute (condition mémoire) soit ne rien faire (contrôle d'écoute seule). Ils rapportent, dans leur Fig. 3d, que le thêta frontal médian — la puissance EEG autour de 6 Hz à l'électrode Fz — augmente dans la condition mémoire comparée à la condition contrôle. Aucun chiffre n'est donné dans le texte de l'article pour ça, seulement la figure et l'affirmation qualitative.
+
+C'est la cible : une électrode spécifique, une bande de fréquence spécifique, une direction d'effet spécifique.
+
+## Ce que j'ai fait
+
+J'ai téléchargé l'EEG de trois sujets du jeu de données (OpenNeuro ds003838, disponible publiquement) — les trois premiers sujets marqués comme ayant un EEG utilisable dans la propre table de participants du jeu de données. Pour chaque essai, j'ai trouvé le dernier chiffre présenté, pris la fenêtre de 3 secondes juste après (l'intervalle de rétention avant le rappel, selon la description du timing de la tâche elle-même), et calculé la puissance logarithmique dans la bande thêta 4–8 Hz au canal Fz.
+
+<Callout type="formula" label="Une vérification de bon sens avant de faire confiance à quoi que ce soit d'autre">
+Avant de regarder le résultat, j'ai vérifié que ma logique de comptage d'essais trouvait le bon nombre d'essais : 54 contrôle et 108 mémoire par sujet, à chaque fois. Ça correspond exactement au design déclaré de l'article (54 essais d'écoute passive, 108 essais mémoire, par participant). Je prends ça comme preuve que l'analyse des événements elle-même est correcte, même si — comme il s'avère — le résultat qu'elle alimente ne correspond pas à l'affirmation de l'article.
+</Callout>
+
+## Le résultat
+
+<DataTable caption="Puissance logarithmique thêta frontale (Fz), 3 sujets">
+<thead><tr><th>Sujet</th><th>Contrôle</th><th>Mémoire</th><th>Mémoire − Contrôle</th></tr></thead>
+<tbody>
+<tr><td>sub-032</td><td>-1,513</td><td>-1,624</td><td>-0,111</td></tr>
+<tr><td>sub-033</td><td>0,063</td><td>-0,008</td><td>-0,071</td></tr>
+<tr><td>sub-034</td><td>0,211</td><td>0,243</td><td>+0,031</td></tr>
+</tbody>
+</DataTable>
+
+Deux sujets sur trois sont allés dans la direction opposée à l'affirmation de l'article. Le troisième est allé dans la bonne direction, à peine. En moyenne sur les trois : une différence moyenne de −0,050 (mémoire plus bas que contrôle, pas plus haut), avec un test t apparié de t = −1,190, p = 0,356 — loin d'être significatif, ce qui avec n=3 n'allait de toute façon pas en dire beaucoup dans un sens ou l'autre.
+
+<Callout type="warning" label="Ce que je n'affirme pas">
+Ceci n'est pas une réfutation du résultat de Pavlov et al. Trois sujets contre leurs quatre-vingt-six, une fenêtre de 3 secondes que j'ai estimée à partir de la description de la tâche plutôt que copiée de leurs méthodes exactes, aucune correction de ligne de base (comparer la puissance à une période de repos pré-essai, ce que les articles EEG spectraux font normalement et que je n'ai pas fait ici), et leur enregistrement utilisait FCz comme référence en ligne — un détail qui peut décaler ce qu'on voit à un canal frontal proche comme Fz si on ne re-référence pas pour correspondre à leur analyse. N'importe lequel de ces éléments pourrait expliquer le décalage sans que l'effet original soit faux.
+</Callout>
+
+## Pourquoi je publie une non-réplication quand même
+
+La version honnête de cet article est « ma version petite et rapide de cette analyse n'a pas montré l'effet que l'article rapporte », pas « j'ai réfuté un résultat publié » et pas « je ne publie pas discrètement ça parce que ça n'a pas marché ». <a href={withBase('/fr/blog/what-id-check-before-believing-any-brain-decoding-result/')}>La checklist de l'article précédent</a> s'applique à mes propres résultats autant qu'à n'importe qui d'autre : petit échantillon, un seul jeu de données, un ensemble de choix méthodologiques que j'ai faits sans correspondre exactement au pipeline original de l'article. Un résultat qui ne se réplique pas dans ces conditions est informatif sur les limites d'une tentative de reproduction rapide — ce n'est pas une preuve solide ni pour ni contre l'affirmation originale.
+
+<Callout type="definition" label="Ce qui ferait de ceci un vrai test">
+Correspondre exactement à leur méthode de découpage en époques et de correction de ligne de base, utiliser un échantillon plus proche du leur au lieu de trois sujets, et idéalement avoir leurs vrais chiffres (pas juste une figure) pour comparer plutôt qu'une simple direction. Rien de tout ça n'était dans le périmètre ici — c'était un premier passage, rapporté exactement comme tel.
+</Callout>
+
+## Le code
+
+Chaque script de ce fil — les expériences de fuite, la courbe de calibration, la comparaison poignet-vs-poitrine, et cette tentative de reproduction — est public : <a href="https://github.com/anonymnd/EEG" target="_blank" rel="noopener noreferrer">github.com/anonymnd/EEG</a>. L'historique des commits suit le même ordre que les articles, y compris l'échec de regroupement CSP et le bug de métrique de déséquilibre de classe, laissés tels quels plutôt que nettoyés après coup.
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

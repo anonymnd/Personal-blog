@@ -1,0 +1,98 @@
+---
+title: "La seule expérience où la division n'a pas fait de différence"
+description: "Chaque expérience EEG et capteur portable de ce fil a montré un écart de fuite. Puis j'ai essayé la même question sur des données éducatives, et l'écart a presque disparu — ce qui s'est avéré être la partie intéressante."
+pubDate: 2026-10-12T16:00:00.000Z
+translationKey: the-one-experiment-where-the-split-didnt-matter
+locale: fr
+interactive: true
+tags:
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Pashler et al.',
+		year: '2008',
+		title: 'Learning Styles: Concepts and Evidence',
+		why: "La revue classique derrière la discussion sur les « styles d'apprentissage » dans cet article — argumente que la recherche soutenant l'enseignement adapté au style manquait des designs randomisés nécessaires pour lui faire confiance.",
+		href: 'https://journals.sagepub.com/doi/10.1111/j.1539-6053.2009.01038.x',
+	},
+	{
+		authors: 'Clinton-Lisell & Litzinger',
+		year: '2024',
+		title: 'A meta-analysis of learning styles',
+		why: "Un regard plus récent et plus sympathisant sur la même question — a trouvé un petit effet positif de l'adaptation de l'enseignement au style, mais le décrit comme trop petit et trop rare pour justifier d'adopter la théorie.",
+		href: 'https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1407518/full',
+	},
+	{
+		authors: 'McDaniel, Marsh & Gouravajhala',
+		year: '2022',
+		title: 'Individual Differences in Learning From Educational Materials: The Case of Structure Building',
+		why: "Une affirmation de différence individuelle plus défendable que les styles d'apprentissage : la capacité de « construction de structure » (former des modèles mentaux cohérents d'un texte) prédit la compréhension de façon cohérente à travers les études.",
+		href: 'https://journals.sagepub.com/doi/10.1177/17456916221108124',
+	},
+	{
+		authors: 'Corbett & Anderson',
+		year: '1994',
+		title: 'Knowledge tracing: Modeling the acquisition of procedural knowledge',
+		why: "L'article fondateur derrière le knowledge tracing, la technique que les systèmes de tutorat adaptatif utilisent pour estimer ce qu'un étudiant sait actuellement à partir de son historique de réponses.",
+		href: 'https://link.springer.com/article/10.1007/BF01099821',
+	},
+];
+
+Lire sur l'apprentissage adaptatif pour ce fil a mené quelque part que je n'attendais pas : pas un autre jeu de données EEG, mais une question sur si toute l'histoire de fuite que je raconte se généralise même au-delà des neurosciences.
+
+<Callout type="key-insight" label="La question à laquelle ça répond">
+Chaque écart de fuite de ce fil jusqu'ici venait de l'EEG ou de capteurs portables. L'écart est-il une propriété d'évaluer n'importe quel modèle sur des personnes, ou spécifiquement une propriété des signaux physiologiques ?
+</Callout>
+
+## Pourquoi pas de l'EEG cette fois
+
+L'idée originale — enregistrer le timing des questions, les tentatives, et l'usage d'indices de mes propres sessions d'étude — a besoin d'un outil de journalisation qui n'existe pas encore. Plutôt que de fabriquer des données pour garder le fil en mouvement, j'ai cherché un vrai jeu de données public avec la même forme de signal, et j'en ai trouvé un : ASSISTments, une plateforme de tutorat dont les journaux d'interaction de 2009-2010 (523 534 tentatives de questions, 4 213 étudiants) sont une référence standard en fouille de données éducatives. <SourceLink authors="Corbett & Anderson" year="1994" title="Knowledge tracing: Modeling the acquisition of procedural knowledge" href="https://link.springer.com/article/10.1007/BF01099821" /> Chaque ligne enregistre si une réponse était correcte, combien de temps la première réponse a pris, combien de tentatives et d'indices ont été utilisés, et combien de fois cet étudiant avait pratiqué cette compétence spécifique avant.
+
+<Callout type="warning" label="Un détour par les styles d'apprentissage d'abord">
+Avant de toucher aux données, j'ai lu autour de l'idée des « styles d'apprentissage » — l'affirmation qu'adapter l'enseignement à un style visuel/auditif/kinesthésique améliore l'apprentissage. Le résumé honnête : un soutien faible à inexistant. <SourceLink authors="Pashler et al." year="2008" title="Learning Styles: Concepts and Evidence" href="https://journals.sagepub.com/doi/10.1111/j.1539-6053.2009.01038.x" /> a trouvé que la recherche à l'appui manquait des designs randomisés nécessaires pour lui faire confiance, et une méta-analyse plus récente de <SourceLink authors="Clinton-Lisell & Litzinger" year="2024" title="A meta-analysis of learning styles" href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1407518/full" /> a trouvé seulement un petit effet, décrit comme trop petit pour justifier d'adopter la théorie. Une affirmation de différence individuelle mieux soutenue est la capacité de « construction de structure » — <SourceLink authors="McDaniel, Marsh & Gouravajhala" year="2022" title="Individual Differences in Learning From Educational Materials: The Case of Structure Building" href="https://journals.sagepub.com/doi/10.1177/17456916221108124" /> a trouvé qu'elle prédit la compréhension de façon cohérente, en laboratoire et en classe. Rien de tout ça n'a nourri directement l'expérience ci-dessous, mais ça a façonné ce que j'étais prêt à supposer au départ : pas grand-chose.
+</Callout>
+
+## L'expérience
+
+Même structure que chaque expérience de fuite de ce fil : prédire un résultat binaire (ici, correct vs incorrect) à partir d'un petit ensemble de caractéristiques, en utilisant la régression logistique, comparée entre une division aléatoire à 5 plis et une division par étudiant (`GroupKFold` par ID d'étudiant), plus un modèle nul à étiquettes mélangées.
+
+Les caractéristiques sont délibérément génériques — rien sur *quelle* compétence ou question, seulement sur l'interaction elle-même : temps de réponse logarithmique, nombre de tentatives, nombre d'indices, total d'indices disponibles, log(opportunité — combien de fois cet étudiant a vu cette compétence avant), et si un indice complet a été utilisé.
+
+## Le résultat
+
+<DataTable caption="ASSISTments : prédire la justesse, division aléatoire vs par étudiant">
+<thead><tr><th>Division</th><th>Précision équilibrée</th></tr></thead>
+<tbody>
+<tr><td>Aléatoire (fuite)</td><td>0,866 ± 0,002</td></tr>
+<tr><td>Par étudiant</td><td>0,865 ± 0,006</td></tr>
+<tr><td>Nul (mélangé)</td><td>0,500 ± 0,000</td></tr>
+</tbody>
+</DataTable>
+
+L'écart est de 0,001. Pour comparaison, le plus petit écart ailleurs dans ce fil était 0,027 (imagerie motrice), et le plus grand était 0,182 (EEGMAT). Celui-ci est effectivement nul, sur le plus grand échantillon de toute la série — 4 213 étudiants, contre 10-36 dans les expériences EEG et capteurs portables.
+
+<Callout type="formula" label="Pourquoi ce n'est pas une contradiction">
+Les caractéristiques ici — temps de réponse, usage d'indices, nombre de tentatives — décrivent à quel point une question est difficile pour qui que ce soit qui y répond, pas qui est cette personne. Une réponse lente et trois indices prédisent une mauvaise réponse presque de la même façon pour n'importe quel étudiant. Les caractéristiques EEG et de capteurs portables portent par nature beaucoup plus d'information d'identité de la personne (géométrie du crâne, ligne de base de conductance de la peau, signatures spectrales individuelles), ce qui est exactement ce qu'une division aléatoire laisse un modèle exploiter gratuitement. Retirer cette information d'identité des caractéristiques, et l'avantage de la division aléatoire disparaît en grande partie avec elle.
+</Callout>
+
+## Ce que ça ajoute à la checklist
+
+<a href={withBase('/fr/blog/what-id-check-before-believing-any-brain-decoding-result/')}>La checklist d'un article précédent de ce fil</a> disait que la taille de l'écart de fuite dépend de la tâche et du jeu de données. Ce résultat précise ça : ça dépend spécifiquement de combien d'information d'identité de la personne est intégrée dans les *caractéristiques*, pas le type de signal brut ou la difficulté de la tâche. Un écart proche de zéro n'est pas une preuve que la discipline d'évaluation n'a pas d'importance ici — la vérification par étudiant reste la seule façon de le savoir — mais c'est une preuve que cet ensemble particulier de caractéristiques n'encode pas silencieusement « quel est cet étudiant » comme le font les motifs spatiaux de l'EEG.
+
+<Callout type="definition" label="Ce que je voudrais encore vérifier">
+Si un ensemble de caractéristiques plus riche ici — incluant quelque chose comme la précision de base par étudiant ou la vitesse de frappe — réintroduit un écart en réintroduisant l'identité en contrebande. C'est la même leçon que l'échec de CSP plus tôt dans ce fil, juste dans la direction opposée : ajouter plus de signal spécifique à la personne aux caractéristiques est un choix avec des conséquences sur ce qu'une division aléatoire va cacher.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

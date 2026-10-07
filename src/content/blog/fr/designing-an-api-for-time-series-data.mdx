@@ -1,0 +1,40 @@
+---
+title: "Concevoir une API pour des données de séries temporelles"
+description: "Requêtes par plage, sous-échantillonnage, et pourquoi un endpoint de séries temporelles casse les règles habituelles de pagination REST — une petite note en marge de la construction d'un outil de monitoring."
+pubDate: 2026-08-24T10:00:00.000Z
+translationKey: designing-an-api-for-time-series-data
+locale: fr
+interactive: true
+tags:
+  - api
+  - data
+  - system-design
+---
+
+La plupart des API REST retournent une liste de choses : utilisateurs, commandes, produits. Un endpoint de séries temporelles retourne une liste de *mesures d'une seule chose dans le temps* — usage CPU toutes les 10 secondes, lecture de capteur toutes les minutes, prix d'une action à chaque tick — et cette différence casse plusieurs défauts qui fonctionnent bien partout ailleurs.
+
+## La requête n'est pas « donne-moi tout »
+
+Un endpoint de liste normal demande une page : `GET /orders?page=2&limit=50`. Un endpoint de séries temporelles demande presque toujours une *plage* : `GET /metrics/cpu?from=2026-08-20T00:00:00Z&to=2026-08-24T00:00:00Z`. La pagination basée sur un offset ne correspond pas proprement à ça — « page 2 » ne veut rien dire pour un appelant qui veut « les dernières 24 heures ». La plage elle-même est le curseur naturel, et la plupart des API de séries temporelles (Prometheus, InfluxDB, CloudWatch) utilisent `from`/`to` ou `start`/`end` au lieu de `page`/`limit` exactement pour cette raison.
+
+## La résolution est un paramètre, pas une constante
+
+Si un capteur rapporte toutes les 10 secondes et que quelqu'un demande un mois de données, ça fait environ 260 000 points — trop pour être envoyés, trop pour être affichés dans un graphique, et surtout redondants pour une vue mensuelle de toute façon. L'endpoint a besoin d'un moyen de dire « donne-moi cette plage, mais sous-échantillonnée » — un paramètre explicite `interval` ou `step` qui contrôle combien de points reviennent, indépendamment de la fréquence à laquelle les données sous-jacentes ont réellement été enregistrées.
+
+```text
+GET /metrics/cpu?from=2026-08-01T00:00:00Z&to=2026-09-01T00:00:00Z&step=1h
+```
+
+Ce seul paramètre fait deux travaux à la fois : c'est un contrôle de performance (moins de points, payload plus petit, rendu plus rapide) et un contrôle sémantique (une moyenne horaire signifie quelque chose de différent d'un maximum horaire ou d'une dernière valeur horaire, et l'API doit en choisir un ou laisser l'appelant choisir).
+
+## L'agrégation doit être explicite
+
+Sous-échantillonner des lectures de 10 secondes en points horaires nécessite une fonction d'agrégation — moyenne, min, max, somme, ou dernière valeur — et différents appelants en veulent différentes pour les mêmes données sous-jacentes. Un tableau de bord montrant la « charge typique » veut une moyenne. Un système d'alerte surveillant les pics veut un maximum. Intégrer un seul défaut répond silencieusement à une question que l'appelant n'a pas posée, donc un endpoint de séries temporelles bien conçu expose l'agrégation comme son propre paramètre plutôt que de la coder en dur.
+
+## Les écritures sont en ajout seul et à haut volume, les lectures sont limitées par plage et en rafale
+
+Le chemin d'écriture pour les données de séries temporelles ne ressemble en rien à une écriture CRUD typique : pas de mises à jour, presque jamais de suppression, juste un flux constant de nouveaux points étiquetés avec un horodatage. Ce motif d'accès est pourquoi des bases de données de séries temporelles conçues spécifiquement (InfluxDB, TimescaleDB, le stockage propre de Prometheus) existent au lieu de simplement utiliser une table relationnelle générique — elles sont construites autour de l'ajout et du balayage par plage de temps, pas autour des mises à jour au niveau des lignes. Une API posée au-dessus de l'une d'entre elles devrait refléter cette asymétrie : l'endpoint d'écriture est étroit et à haut débit (souvent par lots — plusieurs points par requête, pas un seul), et l'endpoint de lecture est celui qui porte toute la complexité de requête ci-dessus.
+
+## La petite leçon
+
+Rien de tout ça n'est exotique — c'est la même idée derrière [transformer un workflow en endpoints REST](/Personal-blog/fr/blog/071-how-to-turn-a-business-workflow-into-rest-endpoints/) en premier lieu : faire correspondre la forme de l'API au motif d'accès réel au lieu de forcer chaque ressource à travers le même modèle de liste de choses. Les données de séries temporelles ont une forme (ordonnée, dense, interrogée par plage, souvent sous-échantillonnée) assez différente d'une liste de ressources normale pour que copier les conventions CRUD habituelles dessus produise une API qui fonctionne techniquement mais se bat avec son propre appelant à chaque requête.

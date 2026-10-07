@@ -1,0 +1,97 @@
+---
+title: "De combien de données d'une nouvelle personne un modèle a-t-il besoin ?"
+description: "En partant d'un modèle qui ne vous a jamais vu, combien de vos propres essais faut-il pour commencer à fermer l'écart ? Une petite expérience de courbe de calibration sur de vraies données EEG d'imagerie motrice."
+pubDate: 2026-09-14T10:00:00.000Z
+translationKey: how-much-data-from-one-new-person-does-a-model-need
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: "La calibration par sujet est un sujet établi dans la littérature BCI, rien de nouveau ici — cette revue est où j'ai appris le vocabulaire et les compromis habituels.",
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: "Le système d'acquisition derrière le jeu de données PhysioNet EEG Motor Movement/Imagery utilisé pour cette expérience.",
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+	{
+		authors: 'Jayaram & Barachant',
+		year: '2018',
+		title: 'MOABB: trustworthy algorithm benchmarking for BCIs',
+		why: "Montre le même pipeline se comportant très différemment selon les jeux de données d'imagerie motrice — un rappel de ne pas trop généraliser une courbe de calibration à partir d'un seul jeu de données.",
+		href: 'https://iopscience.iop.org/article/10.1088/1741-2552/aadea0',
+	},
+];
+
+<a href={withBase('/fr/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>Le dernier article</a> s'est terminé par un écart inter-sujets faible mais réel : un modèle entraîné sur neuf personnes et testé sur une dixième qu'il n'avait jamais vue a obtenu un score nettement inférieur à un modèle entraîné et testé sur tout le monde regroupé.
+
+Ça laisse une question suivante évidente. Le modèle n'a jamais vu cette dixième personne. Et s'il en voyait *un peu* d'abord ?
+
+<Callout type="key-insight" label="La question à laquelle ça répond">
+En partant de zéro, combien des propres essais d'une nouvelle personne faut-il avant que le score du modèle sur elle commence à récupérer ?
+</Callout>
+
+## Le dispositif
+
+Mêmes données que la dernière fois : 10 sujets, jeu de données PhysioNet d'imagerie motrice, poing gauche vs droit imaginé, caractéristiques de puissance de bande (puissance logarithmique sur quatre bandes de fréquences, 32 canaux), régression logistique.
+
+Pour chacun des 10 sujets à tour de rôle, je l'ai exclu complètement : entraîné seulement sur les 9 autres. Puis, avant le test, j'ai laissé le modèle voir un petit nombre des propres essais *de ce sujet exclu* aussi — ajoutés à l'ensemble d'entraînement, pas substitués — et retesté. J'ai utilisé des tailles de calibration de 0, 2, 5, 10 et 20 essais.
+
+Pour garder la comparaison juste, j'ai fixé 20 essais de chaque sujet comme ensemble d'évaluation qui n'est *jamais* utilisé pour la calibration, peu importe combien d'essais de calibration ont été ajoutés. Les essais de calibration sont tirés du reste du lot. C'est la même discipline par sujet de l'article précédent, juste avec une fuite contrôlée de quelques essais réintroduite exprès — ce qui est tout le but de la calibration.
+
+<Callout type="definition" label="Pourquoi ce n'est pas juste réentraîner sur tout le monde">
+La calibration est délibérément petite et asymétrique : la nouvelle personne contribue une poignée d'essais, le modèle a déjà les données des neuf autres personnes. C'est plus proche de « un système BCI apprenant un peu sur vous dans les premières minutes » que de « collecter un nouveau jeu de données complet ».
+</Callout>
+
+## Le résultat
+
+<DataTable caption="Courbe de calibration : précision équilibrée moyenne sur 10 sujets exclus">
+<thead><tr><th>Essais de calibration</th><th>Précision équilibrée moyenne</th><th>Écart-type</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0,559</td><td>±0,106</td></tr>
+<tr><td>2</td><td>0,554</td><td>±0,121</td></tr>
+<tr><td>5</td><td>0,577</td><td>±0,122</td></tr>
+<tr><td>10</td><td>0,597</td><td>±0,127</td></tr>
+<tr><td>20</td><td>0,634</td><td>±0,069</td></tr>
+</tbody>
+</DataTable>
+
+Deux essais de calibration n'ont rien fait — si quoi que ce soit, la moyenne a légèrement baissé, ce que je lis comme du bruit étant donné l'étalement de ±0,121, pas un effet réel. À partir de 5 essais, la tendance s'inverse vers le haut et continue de monter : à 20 essais, la précision équilibrée moyenne est de 0,634, environ 7,5 points au-dessus de la base sans calibration.
+
+L'écart-type rétrécit aussi à mesure que les essais de calibration augmentent — de 0,106 sans calibration à 0,069 à 20. C'est un deuxième effet qui mérite d'être nommé séparément de la moyenne qui monte : la calibration n'augmente pas juste la moyenne, elle rend la performance du modèle plus *cohérente* d'une personne à l'autre. Une partie de ce qu'un modèle à sujet exclu se trompe est réellement spécifique à la personne, et une poignée des propres essais de cette personne corrige exactement la partie que l'entraînement regroupé ne pouvait pas.
+
+<Callout type="warning" label="Ce que ça ne montre pas">
+Dix sujets et cinq tailles de calibration, c'est assez pour voir une tendance, pas assez pour donner un chiffre précis d'essais dont on aurait besoin en pratique. J'ai aussi seulement testé des tailles de calibration jusqu'à 20 — je ne sais pas encore si la courbe continue de monter, s'aplatit, ou a besoin d'un modèle complètement différent au-delà. Et c'est un jeu de données, une tâche (poing gauche vs droit), et un ensemble de caractéristiques ; <SourceLink authors="Jayaram & Barachant" year="2018" title="MOABB: trustworthy algorithm benchmarking for BCIs" href="https://iopscience.iop.org/article/10.1088/1741-2552/aadea0" /> est un bon rappel que le même pipeline peut se comporter très différemment sur un autre jeu de données d'imagerie motrice.
+</Callout>
+
+## Où ça laisse le fil
+
+Deux articles, une vraie boucle : regroupez tout le monde et vous gonflez votre score avec de la reconnaissance de personne ; excluez une personne entièrement et le score chute vers quelque chose de plus proche de la vérité ; laissez le modèle voir *un peu* de cette personne et une partie, mais pas toute, de la chute récupère. C'est le cycle « sentir, interpréter, s'adapter, re-mesurer » auquel tout ce projet revient sans cesse, exécuté une fois, honnêtement, sur de vraies données EEG.
+
+<Callout type="further-reading" label="Suite">
+La prochaine question ouverte sur ce fil est de savoir si le même motif — regrouper nuit, un peu de calibration aide — apparaît sur un type de signal complètement différent. Les capteurs portables (poignet et poitrine, pas l'EEG du cuir chevelu) sont prochains.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

@@ -1,0 +1,51 @@
+---
+title: "Tester du code qui traite des signaux : ce qu'un test unitaire peut et ne peut pas prouver"
+description: "assertAlmostEqual n'est pas optionnel dès que les flottants entrent en jeu, et une suite de tests qui passe ne peut toujours pas vous dire que la fréquence de coupure du filtre était la bonne."
+pubDate: 2026-09-21T10:00:00.000Z
+translationKey: testing-code-that-processes-signals
+locale: fr
+interactive: true
+tags:
+  - testing
+  - data
+  - engineering
+---
+
+Un test unitaire pour une fonction de formatage de chaîne ou une règle de validation a une forme propre : étant donné cette entrée, attendre exactement cette sortie. Le code de traitement de signal — filtres, transformées de Fourier, rééchantillonnage, extraction de caractéristiques — casse cette forme de quelques façons spécifiques, et ces cassures méritent d'être nommées avant d'écrire les tests, pas après avoir débogué pourquoi une suite qui passe a quand même livré quelque chose de faux.
+
+## L'égalité exacte est la mauvaise assertion
+
+`assertEqual(result, expected)` fonctionne quand la sortie est déterministe jusqu'au bit — un compte entier, un drapeau booléen, une chaîne. La sortie d'un filtre passe-bande est une séquence de nombres à virgule flottante produite par des multiplications et sommations répétées, et deux implémentations mathématiquement équivalentes (bibliothèque FFT différente, plateforme différente, même un drapeau de compilateur différent) peuvent légitimement différer à la quinzième décimale. Tester du code de traitement de signal signifie affirmer la *proximité*, pas l'égalité — `assertAlmostEqual`, `numpy.allclose`, ou une tolérance explicite — et choisir cette tolérance est elle-même une décision qui a besoin d'une raison, pas un défaut copié d'un autre fichier de test.
+
+```python
+# Faux : va échouer de façon aléatoire sur du bruit flottant qui ne veut rien dire
+assert filtered_signal[100] == 0.42315
+
+# Correct : énonce la tolérance que le test se soucie vraiment
+assert abs(filtered_signal[100] - 0.42315) < 1e-6
+```
+
+## Un test peut prouver la cohérence, pas la justesse
+
+Un test qui envoie une onde sinusoïdale connue dans un filtre passe-bande et vérifie que l'amplitude de sortie a chuté en dehors de la bande passante prouve que le filtre *se comporte comme un filtre* — il ne prouve pas que 1-40 Hz était la bonne bande passante pour la tâche. C'est une décision du domaine, prise en lisant sur quelle plage de fréquences vit le signal d'intérêt, pas quelque chose qu'une suite de tests peut vérifier à partir de premiers principes. Les tests utiles ici vérifient que le *mécanisme* fait ce qu'il prétend (un filtre coupe-bande à 60 Hz supprime vraiment 60 Hz, un rééchantillonnage de 1000 Hz à 250 Hz produit vraiment un quart du nombre d'échantillons) — pas que le mécanisme était pointé sur la bonne cible.
+
+## Les tests basés sur des propriétés attrapent ce que les tests basés sur des exemples manquent
+
+Une poignée d'entrées d'exemple choisies à la main teste les cas auxquels on a pensé. Les bugs de traitement de signal ont tendance à vivre dans les cas auxquels on n'a pas pensé : une entrée de longueur zéro, un signal plus court que la fenêtre du filtre, des données entièrement NaN d'une perte de capteur, un taux d'échantillonnage qui ne divise pas également la longueur de la fenêtre. Un test basé sur des propriétés — générer beaucoup d'entrées aléatoires (et de cas limites), affirmer un invariant qui devrait tenir pour toutes — couvre plus de cet espace que les exemples seuls :
+
+```python
+@given(arrays(dtype=np.float64, shape=st.integers(0, 1000)))
+def test_filter_never_changes_signal_length(signal):
+    result = bandpass_filter(signal, low=1, high=40, fs=160)
+    assert len(result) == len(signal)
+```
+
+Ça ne remplace pas les tests basés sur des exemples — un test affirmant « cette entrée connue filtre vers cette sortie connue » reste la vérification de régression la plus claire quand l'implémentation change — mais ça attrape les bugs de forme et de cas limite que des exemples fixes ne peuvent structurellement pas attraper.
+
+## Les tests de fichier de référence, utilisés délibérément
+
+Pour quelque chose d'assez complexe pour que calculer la sortie attendue à la main ne soit pas pratique — un pipeline de prétraitement complet, un extracteur de caractéristiques à plusieurs étapes — un test de fichier de référence (sauvegarder une sortie connue comme bonne une fois, comparer les exécutions futures à celle-ci) est souvent la seule option pratique. Le risque est de l'utiliser comme substitut à la compréhension : un fichier de référence généré par la version buguée du code va joyeusement certifier le bug comme correct pour toujours après. Un fichier de référence ne mérite sa place que si la sortie à partir de laquelle il a été généré a été vérifiée indépendamment au moins une fois — par un expert du domaine, une valeur de référence publiée, ou une méthode plus simple calculant la même chose d'une façon différente.
+
+## La limite honnête
+
+Rien de tout ça ne ferme le vrai écart entre « le code fait ce que j'ai écrit » et « le code fait ce dont le signal a réellement besoin ». Cet écart est exactement pourquoi, dans [le fil de recherche EEG de ce blog](/Personal-blog/fr/blog/what-id-check-before-believing-any-brain-decoding-result/), un pipeline qui passe les tests et un résultat qui a l'air sensé ont quand même été vérifiés contre un modèle nul, une mise en garde sur la taille d'échantillon, et un honnête « ça pourrait ne pas se généraliser » — une suite de tests est nécessaire pour attraper les bugs mécaniques, et elle n'allait jamais être suffisante pour attraper une mauvaise hypothèse scientifique.

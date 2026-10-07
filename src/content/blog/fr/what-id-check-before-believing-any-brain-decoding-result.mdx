@@ -1,0 +1,73 @@
+---
+title: "Ce que je vérifierais avant de croire n'importe quel résultat de décodage cérébral"
+description: "Six petites expériences plus tard, voici la checklist que j'applique maintenant à toute affirmation de précision EEG ou de capteur portable — y compris la mienne."
+pubDate: 2026-10-05T10:00:00.000Z
+translationKey: what-id-check-before-believing-any-brain-decoding-result
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: "L'article le plus utile derrière toute cette checklist — a passé en revue 63 études publiées et trouvé que la plupart avaient le problème de fuite décrit ici.",
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Jayaram & Barachant',
+		year: '2018',
+		title: 'MOABB: trustworthy algorithm benchmarking for BCIs',
+		why: "Utilisé pour le point sur un pipeline se comportant différemment selon les jeux de données — une raison de ne pas trop faire confiance au chiffre d'un seul jeu de données.",
+		href: 'https://iopscience.iop.org/article/10.1088/1741-2552/aadea0',
+	},
+];
+
+Six petites expériences à travers deux types de signaux — EEG du cuir chevelu et capteurs portables poignet/poitrine — ont produit la même poignée de modes de défaillance, habillés différemment, à chaque fois. C'est un article de réflexion, pas une nouvelle expérience : la checklist que j'applique maintenant réellement, silencieusement, chaque fois que je vois un chiffre de précision impressionnant dans un article de décodage cérébral ou de capteur portable.
+
+<Callout type="key-insight" label="Pourquoi écrire ça">
+Chaque élément ci-dessous m'a coûté quelque chose — un mauvais chiffre, un après-midi perdu, ou un résultat auquel j'ai presque fait confiance et qui mesurait en fait la mauvaise chose. Écrire la checklist coûte moins cher que réapprendre chaque élément.
+</Callout>
+
+## 1. Comment les données ont-elles été divisées ?
+
+<a href={withBase('/fr/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>Le résultat principal de ce fil</a> : le même modèle, les mêmes données, noté de deux façons, a différé jusqu'à 18 points de précision équilibrée selon uniquement si des segments d'une personne étaient autorisés à apparaître des deux côtés de la division. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" /> a passé en revue 63 études EEG publiées en deep learning et trouvé que seulement 17 évitaient clairement ça. Si un article ne dit pas explicitement comment la division a été faite, je suppose maintenant la version avec fuite jusqu'à preuve du contraire.
+
+## 2. Le modèle nul est-il vraiment au hasard ?
+
+J'ai mal fait celui-ci avant de bien le faire. Ma première expérience de fuite rapportait un modèle nul (étiquettes mélangées) notant 0,654 — confortablement au-dessus de ce à quoi je m'attendais pour le hasard — et la raison était le déséquilibre de classe plus la précision brute comme métrique : un classificateur trivial « devine toujours la classe majoritaire » obtenait un score proche de ça sans rien apprendre. Passer à la précision équilibrée a corrigé ça ; le modèle nul est tombé à 0,496, là où il devait être. Un modèle nul qui n'est pas au hasard signifie que quelque chose dans le pipeline fuit de l'information d'étiquette, peu importe à quel point la division a l'air propre.
+
+## 3. La méthode d'extraction de caractéristiques survit-elle au regroupement ?
+
+Ma première tentative d'un classificateur d'imagerie motrice inter-sujets utilisait CSP — le filtre spatial standard pour cette tâche — ajusté sur dix sujets regroupés ensemble. Il a obtenu un score de hasard. Pas un bug : CSP se règle sur la géométrie spatiale d'un ensemble de cerveaux, et regrouper les sujets avant de l'ajuster fait un compromis entre dix géométries différentes au lieu d'en décrire une. Passer à des caractéristiques de puissance de bande (sans ajustement spatial par sujet nécessaire) a corrigé ça immédiatement. La leçon se généralise au-delà de CSP : toute étape d'extraction de caractéristiques implicitement réglée sur la population d'entraînement doit être vérifiée avant qu'on lui fasse confiance pour généraliser au-delà de cette population.
+
+## 4. La taille de l'effet est-elle plausible étant donné l'échantillon ?
+
+Dix sujets, quarante-cinq essais chacun, des courbes de calibration construites à partir de cinq tailles d'essais discrètes — c'est assez pour voir une tendance, pas assez pour affirmer un chiffre précis. J'essaie maintenant d'indiquer les tailles d'échantillon à côté de chaque chiffre que je rapporte, spécifiquement pour qu'un lecteur (y compris moi-même plus tard) puisse juger du poids que mérite le chiffre à vue, sans fouiller dans une section de méthodes.
+
+## 5. Ce résultat survivrait-il à un jeu de données, une tâche, ou un dispositif différent ?
+
+La comparaison poignet-vs-poitrine des capteurs portables et l'expérience de fuite sur l'imagerie motrice ont produit des écarts de fuite de taille similaire et petite (~0,03), alors que l'expérience EEG repos-vs-arithmétique en a produit un bien plus grand (0,182) — même méthode d'évaluation, tâches différentes et même types de capteurs différents, effets de tailles différentes. <SourceLink authors="Jayaram & Barachant" year="2018" title="MOABB: trustworthy algorithm benchmarking for BCIs" href="https://iopscience.iop.org/article/10.1088/1741-2552/aadea0" /> a trouvé que le même pipeline peut se comporter très différemment selon différents jeux de données d'imagerie motrice seuls. Le chiffre d'un jeu de données est une donnée, pas une loi.
+
+<Callout type="definition" label="La checklist, version courte">
+Diviser par sujet, pas par segment. Vérifier que le modèle nul est au hasard. Vérifier que la méthode de caractéristiques ne suppose pas implicitement une seule personne. Indiquer la taille d'échantillon à côté du chiffre. Ne pas généraliser au-delà du seul jeu de données dont le chiffre vient.
+</Callout>
+
+## Ce que ça ne veut pas dire
+
+Rien de tout ça n'est un argument que le décodage EEG ou portable ne fonctionne pas — trois des six expériences de ce fil ont trouvé un vrai signal au-dessus du hasard, confirmé par un modèle nul réellement au hasard. C'est plus étroit que ça : la *taille* d'un chiffre de précision, en soi, vous dit très peu sans savoir comment il a été évalué. Un chiffre plus petit, honnêtement évalué, est plus utile qu'un plus grand, avec fuite, parce que seul le premier vous dit quelque chose de vrai sur ce qui se passe avec une nouvelle personne.
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

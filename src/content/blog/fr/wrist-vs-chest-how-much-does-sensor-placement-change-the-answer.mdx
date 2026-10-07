@@ -1,0 +1,73 @@
+---
+title: "Poignet vs poitrine — Combien l'emplacement du capteur change-t-il la réponse ?"
+description: "Mêmes personnes, même tâche, même discipline d'évaluation — juste un bracelet confortable au lieu d'un dispositif clinique sur la poitrine. Qu'est-ce que ça coûte vraiment, en chiffres ?"
+pubDate: 2026-09-28T10:00:00.000Z
+translationKey: wrist-vs-chest-how-much-does-sensor-placement-change-the-answer
+locale: fr
+interactive: true
+tags:
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Schmidt et al.',
+		year: '2018',
+		title: 'Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection',
+		why: "Le jeu de données utilisé dans cet article : 15 sujets, capteurs physiologiques de poitrine (RespiBAN) et de poignet (Empatica E4) enregistrés simultanément pendant un protocole de stress en laboratoire.",
+		href: 'https://dl.acm.org/doi/10.1145/3242969.3242985',
+	},
+];
+
+Chaque expérience sur ce blog jusqu'ici a utilisé l'EEG du cuir chevelu. Celle-ci est un changement délibéré de signal, pour voir si le motif que je continue de trouver — regrouper les gens gonfle un score, évaluer correctement le fait redescendre — apparaît quelque part qui n'est pas du tout de l'EEG.
+
+<Callout type="key-insight" label="La question à laquelle ça répond">
+Si je passe d'un dispositif de capteurs de poitrine de qualité clinique au genre de bracelet que quelqu'un porterait vraiment, combien de précision ça coûte-t-il — sur exactement les mêmes personnes, exactement la même tâche ?
+</Callout>
+
+## Les données
+
+<SourceLink authors="Schmidt et al." year="2018" title="Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection" href="https://dl.acm.org/doi/10.1145/3242969.3242985" /> a enregistré 15 personnes portant deux dispositifs en même temps pendant un protocole de laboratoire avec une tâche induisant du stress et une base de repos : une unité de poitrine RespiBAN (ECG, EDA, EMG, respiration, température, accéléromètre 3 axes, tous à 700 Hz) et un bracelet Empatica E4 (pouls de volume sanguin à 64 Hz, EDA et température à 4 Hz, accéléromètre à 32 Hz). Même personne, mêmes quinze minutes, deux emplacements de capteur différents.
+
+J'ai découpé les deux signaux en fenêtres de 30 secondes, gardé seulement les fenêtres étiquetées entièrement « repos » ou entièrement « stress », et calculé la moyenne et l'écart-type de chaque canal par fenêtre — 12 caractéristiques pour la poitrine, 8 pour le poignet. Même régression logistique, même évaluation à 5 plis par sujet (`GroupKFold` par sujet) que les expériences EEG.
+
+## Le résultat
+
+<DataTable caption="WESAD repos vs stress, précision équilibrée par sujet">
+<thead><tr><th>Dispositif</th><th>Caractéristiques</th><th>Précision équilibrée</th><th>Nul (mélangé)</th></tr></thead>
+<tbody>
+<tr><td>Poitrine (RespiBAN)</td><td>12</td><td>0,807 ± 0,066</td><td>0,500 ± 0,021</td></tr>
+<tr><td>Poignet (Empatica E4)</td><td>8</td><td>0,694 ± 0,060</td><td>0,494 ± 0,010</td></tr>
+</tbody>
+</DataTable>
+
+Les deux dispositifs se séparent clairement du hasard — ce n'est pas un cas où un capteur fonctionne et l'autre pas du tout. Mais l'écart entre eux est réel : 0,114 de précision équilibrée, plus de 11 points, perdus en passant du dispositif de poitrine au bracelet, sur la même évaluation par sujet que les deux derniers articles ont utilisée.
+
+<Callout type="formula" label="Pourquoi l'écart est crédible">
+L'unité de poitrine mesure l'ECG et l'EMG directement contre la peau près du cœur et du diaphragme — des signaux étroitement liés à la réponse physiologique au stress. Le bracelet infère beaucoup de ça indirectement, via le pouls de volume sanguin et la conductance de la peau à un endroit bien plus bruité. Perdre de la qualité de signal en éloignant le capteur de la source est exactement ce à quoi on s'attendrait ; la seule question était combien.
+</Callout>
+
+## Pourquoi c'est important pour la boucle « sentir, interpréter, s'adapter »
+
+Ça se connecte aux deux articles précédents, pas juste en réutilisant la même méthode d'évaluation. Un dispositif porté au poignet est le format réaliste pour tout ce qui doit fonctionner en dehors d'un laboratoire — ce qui veut dire que tout vrai système adaptatif construit sur ce genre de signal choisit de payer ce coût de 11 points pour le confort et la praticité. Si ce compromis en vaut la peine dépend entièrement de ce sur quoi le système doit avoir raison, et c'est une question de conception, pas de modélisation.
+
+<Callout type="warning" label="Ce que ça ne montre pas">
+Quinze sujets, c'est un petit échantillon pour une estimation de coût comme celle-ci, et l'étiquette de stress ici vient d'un protocole de laboratoire (une tâche chronométrée de prise de parole en public et d'arithmétique) pas du vrai stress quotidien de quelqu'un — donc « 11 points » est spécifique à cette tâche, cette population, et ces deux dispositifs. C'est un chiffre d'une expérience, pas une constante générale poignet-vs-poitrine.
+</Callout>
+
+<Callout type="further-reading" label="Où ce fil va ensuite">
+Trois vrais résultats jusqu'ici, sur deux signaux différents : un écart de fuite (<a href={withBase('/fr/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>division aléatoire vs par sujet</a>), une <a href={withBase('/fr/blog/how-much-data-from-one-new-person-does-a-model-need/')}>courbe de calibration</a>, et maintenant un coût d'emplacement de capteur. La prochaine pièce de ce fil essaie de reproduire un résultat d'un article publié sur un jeu de données différent, et de rapporter honnêtement où le mien correspond et où il ne correspond pas.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

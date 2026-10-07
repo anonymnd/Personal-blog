@@ -1,0 +1,74 @@
+---
+title: "Nettoyer un signal cérébral : ce que le filtrage change, et ce qu'il cache"
+description: "Un filtre passe-bande et un filtre coupe-bande, appliqués à un vrai enregistrement EEG, avec le spectre avant/après pour montrer exactement ce qu'ils ont retiré."
+pubDate: 2026-08-03T10:00:00.000Z
+translationKey: cleaning-a-brain-signal-what-filtering-changes-and-what-it-hides
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - signal-processing
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Widmann et al.',
+		year: '2015',
+		title: 'Digital filter design for electrophysiological data — a practical approach',
+		why: "Contexte sur pourquoi le choix du filtre (fréquences de coupure, ordre du filtre, zéro-phase vs causal) est une vraie décision méthodologique dans le traitement EEG, pas un défaut à accepter aveuglément.",
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4506252/',
+	},
+];
+
+<a href={withBase('/fr/blog/what-i-found-when-i-opened-my-first-eeg-file/')}>Le dernier article</a> s'est terminé par un pic confirmé à 60 Hz dans le spectre de puissance — invisible à l'échelle large, évident une fois zoomé. Cet article est la suite : ce qui arrive vraiment au signal une fois que ce bruit, et tout ce qui est en dehors de la plage de fréquences qui m'intéresse, est filtré.
+
+<Callout type="key-insight" label="La question à laquelle ça répond">
+Un filtre passe-bande et un filtre coupe-bande sont deux lignes de code. Qu'est-ce qu'ils retirent réellement, et comment saurais-je si j'avais choisi les mauvaises fréquences de coupure ?
+</Callout>
+
+## Le filtre
+
+Deux choses appliquées ensemble, sur le même sujet/run que l'article précédent :
+
+- **Passe-bande, 1–40 Hz.** Garde la plage de fréquences où vivent les signaux qui m'intéressent — le travail sur l'imagerie motrice regarde typiquement les bandes mu (8–13 Hz) et bêta (13–30 Hz), donc 1–40 Hz garde ça avec de la marge des deux côtés, tout en éliminant la dérive très lente en dessous de 1 Hz et le bruit musculaire/électronique haute fréquence au-dessus de 40 Hz.
+- **Coupe-bande, 60 Hz.** Cible spécifiquement les interférences du secteur confirmées dans l'article précédent, sans toucher aussi fort les fréquences juste à côté qu'une large coupure passe-bande le ferait.
+
+<CodeBlock language="text" filename="output">
+Peak power at 60 Hz:
+  before = 1.395e-11
+  after  = 1.428e-16
+  ratio  = 97,686x reduction
+</CodeBlock>
+
+Une réduction de 97 686 fois la puissance exactement à 60 Hz, et nulle part ailleurs dans le spectre — c'est exactement ce qu'un filtre coupe-bande est censé faire : un retrait chirurgical d'une fréquence, pas un nettoyage général.
+
+## Ce que montre le spectre avant/après
+
+Tracés côte à côte, 0–80 Hz : le spectre « avant » a la pente descendante attendue en 1/f plus le pic à 60 Hz posé dessus. Le spectre « après » garde la même forme générale à travers la bande passante, puis chute fortement à partir d'environ 40 Hz — la coupure passe-bande — jusqu'à une puissance proche de zéro au-dessus, avec le pic à 60 Hz entièrement disparu.
+
+<Callout type="formula" label="Ce que le filtre N'A PAS fait">
+Il n'a pas aplati tout le spectre ni retiré tout le contenu haute fréquence de façon égale — il a coupé net à la fréquence choisie (40 Hz) et chirurgicalement à l'encoche choisie (60 Hz), en laissant tout ce qui est dans la bande passante avec la même forme qu'avant. C'est la différence entre « les données ont été filtrées » et « je comprends ce que le filtre a fait aux données ».
+</Callout>
+
+## La partie facile à mal faire
+
+Les fréquences de coupure d'un filtre sont une décision, pas un défaut. 1–40 Hz n'a pas été tiré de nulle part — c'est assez large pour garder la plage mu/bêta dont j'ai réellement besoin avec de la marge, et assez étroit pour éliminer le pire de la dérive lente et du bruit haute fréquence. Une tâche différente — disons, quelque chose qui s'intéresse à l'activité en bande gamma au-dessus de 40 Hz — aurait besoin d'une coupure entièrement différente, et choisir le défaut du manuel EEG sans vérifier ce qu'il garde ou élimine pour *cette* tâche est exactement le genre d'erreur silencieuse qui ne déclenche aucune erreur. <SourceLink authors="Widmann et al." year="2015" title="Digital filter design for electrophysiological data — a practical approach" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4506252/" />
+
+## Ce que j'emporte vers la prochaine étape
+
+Ce filtre — passe-bande 1–40 Hz, coupe-bande 60 Hz — devient l'étape de prétraitement fixe pour chaque expérience après celle-ci, appliquée de façon identique à chaque sujet, ajustée avant qu'une division ne se produise plutôt que par repli (il n'y a rien de dépendant des données à fuiter ici ; les fréquences de coupure sont choisies une fois, à partir de connaissances du domaine, pas apprises des données). Avoir les chiffres avant/après ici signifie que ce choix est documenté, pas supposé.
+
+<Callout type="further-reading" label="Suite">
+Le signal nettoyé, le prochain article construit le premier vrai classificateur — une base de référence ennuyeuse et honnête sur un sujet, avant que toute question sur la généralisation inter-sujets n'arrive.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />

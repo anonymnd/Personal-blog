@@ -1,0 +1,136 @@
+---
+title: "Le même modèle, noté deux fois — Division aléatoire vs. division par sujet"
+description: "J'ai entraîné le même classificateur sur les mêmes données EEG et je l'ai noté de deux façons différentes. Un des scores était un mensonge. Voici l'expérience, les chiffres, et où j'ai mal fait la première version."
+pubDate: 2026-09-07T10:00:00.000Z
+translationKey: the-same-model-scored-twice-random-split-vs-subject-wise-split
+locale: fr
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import LeakageDiagram from '../../../components/eeg/LeakageDiagram.astro';
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+
+export const papers = [
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: "La source principale de cet article. A passé en revue 63 études EEG publiées en deep learning et trouvé que seulement 17 évitaient clairement la fuite au niveau du sujet ; sur une ré-exécution, la précision sur un participant exclu est tombée de quasi-parfaite à quasi-hasard.",
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Zyma et al.',
+		year: '2019',
+		title: 'Electroencephalograms during Mental Arithmetic Task Performance (EEGMAT dataset)',
+		why: "Le jeu de données utilisé pour la première expérience — 36 sujets, EEG au repos vs arithmétique mentale, 23 canaux, courts segments sans artefacts.",
+		href: 'https://physionet.org/content/eegmat/1.0.0/',
+	},
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: "Décrit le système d'acquisition derrière le jeu de données PhysioNet EEG Motor Movement/Imagery utilisé pour la deuxième expérience.",
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: "Contexte sur CSP et pourquoi c'est un filtre spatial ajusté à un ensemble d'enregistrements plutôt qu'un extracteur de caractéristiques universel — pertinent pour pourquoi regrouper les sujets avant d'ajuster CSP a échoué ici.",
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+];
+
+J'ai entraîné un classificateur sur des données EEG, je l'ai noté, et j'ai obtenu 0,871 de précision équilibrée.
+
+Puis j'ai noté exactement le même modèle entraîné d'une manière différente, sur exactement les mêmes données, et j'ai obtenu 0,690.
+
+Rien n'a changé dans le modèle. Rien n'a changé dans les données. Une seule chose a changé : quels essais étaient autorisés à se retrouver ensemble dans l'ensemble d'entraînement.
+
+<Callout type="key-insight" label="La question à laquelle ça répond">
+Si un modèle est entraîné et testé sur les mêmes personnes — juste sur des moments différents de leurs enregistrements — quelle part de son score est « je comprends le signal » contre « je reconnais ce cerveau en particulier » ?
+</Callout>
+
+## Deux façons de couper le même jeu de cartes
+
+Disons que j'ai de l'EEG de 36 personnes, et pour chaque personne j'ai plusieurs courts segments : certains enregistrés au repos, certains en faisant de l'arithmétique mentale. Je veux classifier repos vs arithmétique.
+
+La façon ordinaire d'évaluer un classificateur est la validation croisée à k plis : mélanger tous les segments ensemble, diviser en 5 plis, entraîner sur 4, tester sur 1, répéter. C'est une **division aléatoire**.
+
+L'autre façon est de ne jamais laisser les segments d'une personne traverser entre entraînement et test. Choisir quelles *personnes* vont dans le pli de test, pas quels *segments*. C'est une **division par sujet** — dans scikit-learn, `GroupKFold` avec l'ID du sujet comme groupe.
+
+<LeakageDiagram />
+
+La division aléatoire fuit parce que les segments de la même personne se ressemblent plus que les segments de personnes différentes — même forme de crâne, même impédance d'électrode ce jour-là, même rythme cérébral de base. Un modèle peut partiellement résoudre « repos vs arithmétique » en résolvant « qui est cette personne », et une division aléatoire lui permet de faire ça gratuitement, des deux côtés de la division. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" />
+
+## Expérience 1 : repos vs arithmétique mentale (EEGMAT)
+
+J'ai utilisé le jeu de données PhysioNet EEGMAT — 36 personnes, chacune avec un enregistrement au repos et un enregistrement d'arithmétique mentale, 21 canaux à 500 Hz. J'ai découpé chaque enregistrement en fenêtres de 10 secondes sans chevauchement, et pour chaque fenêtre j'ai calculé la puissance logarithmique par bande (delta/thêta/alpha/bêta/gamma) sur chaque canal — 100 caractéristiques par fenêtre, 850 fenêtres au total.
+
+En plus de ça : régression logistique, avec le scaler de caractéristiques ajusté uniquement à l'intérieur de chaque pli d'entraînement — jamais sur le jeu de données complet d'abord. Ajuster un scaler avant la division est lui-même une petite fuite, et c'est une erreur facile à manquer.
+
+<DataTable caption="EEGMAT : repos vs arithmétique, précision équilibrée, 5 plis">
+<thead><tr><th>Division</th><th>Moyenne</th><th>Écart-type</th><th>Ce que ça signifie</th></tr></thead>
+<tbody>
+<tr><td>Aléatoire (fuite)</td><td>0,871</td><td>±0,025</td><td>segments mélangés entre personnes</td></tr>
+<tr><td>Par sujet</td><td>0,690</td><td>±0,048</td><td>personnes entières exclues</td></tr>
+<tr><td>Nul (étiquettes mélangées)</td><td>0,496</td><td>±0,015</td><td>étiquettes randomisées, division par sujet — devrait être au hasard</td></tr>
+</tbody>
+</DataTable>
+
+L'écart est de 0,182 — environ 18 points de précision équilibrée, dans la direction que l'histoire de la fuite prédit. Le modèle nul atterrissant presque exactement sur 0,5 est ce qui me dit que le 0,690 par sujet est un vrai signal et pas un artefact de la façon dont j'ai construit le pipeline : si le modèle nul avait aussi obtenu un score bien au-dessus du hasard, quelque chose dans mon code aurait fuité l'information d'étiquette indépendamment de la division.
+
+<Callout type="warning" label="Une erreur que j'ai faite en premier">
+Ma première exécution de ceci a noté le modèle nul à 0,654 — bien au-dessus du hasard. J'avais utilisé la précision brute, et les deux classes étaient déséquilibrées (75% des fenêtres étaient « repos », parce que les enregistrements au repos durent environ trois fois plus longtemps que ceux d'arithmétique). Un classificateur qui devine juste « repos » à chaque fois obtient 0,75 en précision brute sans rien apprendre. Passer à la précision équilibrée a ramené le modèle nul à 0,496, là où il devrait être. Je laisse ça parce que l'attraper fait partie du résultat, pas une note de bas de page à cacher.
+</Callout>
+
+## Expérience 2 : poing gauche vs droit imaginé (imagerie motrice)
+
+Même question, signal plus difficile. J'ai utilisé 10 sujets du jeu de données PhysioNet EEG Motor Movement/Imagery, mouvement de poing gauche vs droit imaginé, 64 canaux à 160 Hz, passe-bande 1–40 Hz plus un filtre coupe-bande à 60 Hz (il y a un vrai bruit secteur à 60 Hz dans ce matériel d'enregistrement — j'ai vérifié avec un spectre de puissance zoomé avant de supposer quoi que ce soit).
+
+Ma première tentative a utilisé CSP (Common Spatial Patterns), le filtre spatial standard pour le décodage de l'imagerie motrice, suivi de LDA. Ajusté correctement à l'intérieur de chaque pli de validation croisée, sans fuite. Résultat : tout a obtenu un score de hasard.
+
+<DataTable caption="Imagerie motrice, CSP+LDA regroupé sur 10 sujets (première tentative)">
+<thead><tr><th>Division</th><th>Moyenne</th><th>Écart-type</th></tr></thead>
+<tbody>
+<tr><td>Aléatoire</td><td>0,452</td><td>±0,022</td></tr>
+<tr><td>Par sujet</td><td>0,504</td><td>±0,023</td></tr>
+<tr><td>Nul (mélangé)</td><td>0,490</td><td>±0,025</td></tr>
+</tbody>
+</DataTable>
+
+Les trois chiffres se trouvent dans le bruit les uns des autres. Il n'y a pas d'écart de fuite à trouver ici parce qu'il n'y a pas de signal au départ — pas un bug, un décalage de modélisation. CSP ajuste un filtre spatial par ensemble d'entraînement, et ce filtre est réglé sur la géométrie des cerveaux qui s'y trouvent. Regrouper les essais de dix personnes différentes avant d'ajuster CSP, et le filtre finit par faire un compromis entre dix dispositions spatiales différentes au lieu d'en décrire une seule correctement. C'est, à petite échelle, exactement le problème de généralisation dont parle le reste de ce projet — il est apparu dès la première base de référence.
+
+Remplacer CSP par les mêmes caractéristiques de puissance de bande utilisées dans l'expérience 1 (puissance logarithmique sur quatre bandes, 32 canaux) l'a corrigé :
+
+<DataTable caption="Imagerie motrice, caractéristiques de puissance de bande, mêmes 10 sujets (corrigé)">
+<thead><tr><th>Division</th><th>Moyenne</th><th>Écart-type</th></tr></thead>
+<tbody>
+<tr><td>Aléatoire (fuite)</td><td>0,599</td><td>±0,041</td></tr>
+<tr><td>Par sujet</td><td>0,573</td><td>±0,043</td></tr>
+<tr><td>Nul (mélangé)</td><td>0,456</td><td>±0,044</td></tr>
+</tbody>
+</DataTable>
+
+Maintenant le modèle nul est clairement en dessous des deux vrais scores, donc il y a un signal appris. L'écart est petit — 0,027 — bien plus petit que les 0,182 d'EEGMAT. Je lis ça comme la tâche étant réellement plus difficile, pas comme un problème de pipeline : une base de référence sur un seul sujet que j'ai exécutée plus tôt sur la même tâche gauche/droite, avec seulement 45 essais, a aussi obtenu un score faible de 0,535 ± 0,145. Repos-vs-arithmétique a une signature grande, lente, tout-cerveau. L'imagerie motrice gauche-vs-droite en a une plus subtile, plus localisée, et dix sujets et 450 essais, ce n'est pas beaucoup pour la trouver.
+
+## Ce que j'en retiens
+
+Le résultat honnête n'est pas « diviser par sujet baisse votre score, attention ». C'est plus étroit et plus utile que ça : **la taille de l'écart entre une division aléatoire et une division par sujet vous dit combien de la compétence apparente de votre modèle était de la reconnaissance de personne déguisée**, et ce chiffre est différent pour chaque tâche et chaque ensemble de caractéristiques. Pour repos-vs-arithmétique avec la puissance de bande, une grande partie du score en division aléatoire était ça. Pour l'imagerie motrice, une fois le pipeline corrigé, ce n'était pas grand-chose — l'écart restant est proche de ce qu'on attendrait de deux échantillons à 5 plis légèrement différents de taille similaire.
+
+<Callout type="further-reading" label="Suite">
+La question naturelle suivante est : étant donné un modèle par sujet qui n'a jamais vu une nouvelle personne, combien des propres données de cette personne faut-il pour fermer une partie de l'écart ? C'est l'expérience de la courbe de calibration — prochain article.
+</Callout>
+
+## Sources & articles utilisés pour apprendre cela
+
+<Sources papers={papers} />
