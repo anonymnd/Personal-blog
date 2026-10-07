@@ -48,7 +48,7 @@ class AudioEngine {
     }
 
     private void notifyObservers() {
-        // Create a snapshot to avoid ConcurrentModificationException 
+        // Create a snapshot to avoid ConcurrentModificationException
         // if an observer unsubscribes during the notification loop
         List<PlaybackObserver> snapshot = new ArrayList<>(observers);
         for (PlaybackObserver observer : snapshot) {
@@ -92,7 +92,7 @@ As shown in the `notifyObservers` method, wrapping the callback in a `try-catch`
 
 ## Local Callbacks vs. Durable Event Architecture
 
-It is vital to distinguish this in-process pattern from a Message Broker (like RabbitMQ or Kafka). 
+It is vital to distinguish this in-process pattern from a Message Broker (like RabbitMQ or Kafka).
 - **Observer Pattern:** Synchronous, happens in the same JVM memory space, and is transient. If the app crashes, the subscription list is gone. It is used for immediate UI synchronization.
 - **Event Architecture:** Asynchronous, often distributed across different services, and durable. Events are persisted to a disk/log. It is used for business workflows (e.g., "UserPurchasedSong").
 

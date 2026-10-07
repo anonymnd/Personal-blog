@@ -36,7 +36,7 @@ Below is the structural plan for the `Jenkinsfile`. This is stored in the reposi
 ```groovy
 pipeline {
     agent any
-    
+
     environment {
         REGISTRY = "my-company-registry.io"
         IMAGE_NAME = "billing-report-service"

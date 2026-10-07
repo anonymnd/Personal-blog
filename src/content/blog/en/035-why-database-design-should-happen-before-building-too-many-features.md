@@ -18,7 +18,7 @@ Database design often fails when developers jump straight to tables without anal
 4. Each line item records the agreed price at the time of rental and the return status.
 5. An item of equipment can be rented many times over its lifetime.
 
-To identify entities, we look for 'nouns' that have an independent existence and a set of descriptive properties. 
+To identify entities, we look for 'nouns' that have an independent existence and a set of descriptive properties.
 - **Customer**: Exists regardless of whether they have a current rental.
 - **Rental**: A specific contract event.
 - **Equipment**: The physical asset being rented.
@@ -29,10 +29,10 @@ Attributes are the properties of these entities. A common mistake is treating a 
 
 Using the Merise methodology, we define the Conceptual Data Model (MCD) by focusing on entities and their associations with specific cardinalities (min, max).
 
-- **Customer <-> Rental**: 
+- **Customer <-> Rental**:
   - A Customer can sign 0 or many rentals (0,N).
   - A Rental is signed by exactly 1 customer (1,1).
-- **Rental <-> Equipment**: 
+- **Rental <-> Equipment**:
   - A Rental contains 1 or many pieces of equipment (1,N).
   - A piece of Equipment can be part of 0 or many rentals over time (0,N).
 
@@ -89,13 +89,13 @@ If we stored the price only in the `equipment` table, changing the price today w
 
 ## Exercise
 
-**Scenario**: The business decides that each piece of equipment must be assigned to a specific 'Warehouse' before it can be rented. A warehouse can hold many items, but an item belongs to only one warehouse at a time. 
+**Scenario**: The business decides that each piece of equipment must be assigned to a specific 'Warehouse' before it can be rented. A warehouse can hold many items, but an item belongs to only one warehouse at a time.
 
-**Question**: 
+**Question**:
 1. What is the cardinality between Warehouse and Equipment?
 2. How does the physical schema change?
 
-**Answer**: 
+**Answer**:
 1. Warehouse (0,N) <-> Equipment (1,1). A warehouse has zero or more items; an item must belong to exactly one warehouse.
 2. The `equipment` table must be updated to include a `warehouse_id` column as a Foreign Key referencing the new `warehouses` table.
 

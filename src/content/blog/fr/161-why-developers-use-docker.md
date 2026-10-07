@@ -54,7 +54,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### Trace d'Exécution
 Pour lancer ce convertisseur sur un fichier `data.csv` situé dans le répertoire courant :
-`docker run --rm --mount "type=bind,source=$PWD,target=/inputs,readonly" csv-converter /inputs/data.csv` 
+`docker run --rm --mount "type=bind,source=$PWD,target=/inputs,readonly" csv-converter /inputs/data.csv`
 
 *Note : Le flag `--rm` assure que le conteneur est supprimé après exécution, évitant l'accumulation de conteneurs arrêtés sur l'hôte.*
 
@@ -73,7 +73,7 @@ Bien que l'image soit immuable, l'environnement d'exécution ne l'est pas. Docke
 
 **Question** : Comment restructurer le Dockerfile pour utiliser le cache des couches et éviter le retéléchargement des dépendances ?
 
-**Réponse** : 
+**Réponse** :
 Il faut séparer la résolution des dépendances de la compilation du code. Copiez d'abord le `pom.xml`, lancez la commande de téléchargement, puis copiez le code source.
 
 ```dockerfile

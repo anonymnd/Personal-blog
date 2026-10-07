@@ -51,7 +51,7 @@ Let's trace the data for a consultant, Sarah, who works for "TechCorp" and "Desi
 | M2 | U1 | O2 | sarah_design |
 
 ### Resource Tenant Checks
-When Sarah requests a project, the system must not simply check if she is a user. It must verify the membership link. 
+When Sarah requests a project, the system must not simply check if she is a user. It must verify the membership link.
 
 **The Logic Flow:**
 1. Request arrives: `GET /projects/{projectId}`

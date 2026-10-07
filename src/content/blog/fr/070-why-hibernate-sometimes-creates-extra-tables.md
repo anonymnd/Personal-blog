@@ -86,7 +86,7 @@ Si nous persistons un produit avec l'ID `101`, les couleurs `{"Rouge", "Bleu"}` 
 
 **Table : `supplier`**
 | id | company_name |
-| :--- | :--- | 
+| :--- | :--- |
 | 50 | OfficeCorp |
 
 ### Ce que signifient les tables

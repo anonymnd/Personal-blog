@@ -46,6 +46,6 @@ If the clinic has eligibility rules involving insurance or specialty, elicit and
 
 **Task**: Classify this requirement and write the observable acceptance measure.
 
-**Answer**: 
+**Answer**:
 - **Classification**: Business Rule (Domain Logic).
 - **Acceptance Measure**: Create a test case where an appointment is scheduled for tomorrow 10:00 AM. Attempt to cancel it today at 11:00 AM (less than 24h). Verify that the `Fee` entity is created and linked to the `Patient` account. Then, repeat the test but upload a `MedicalExcuse` document; verify that no fee is generated.

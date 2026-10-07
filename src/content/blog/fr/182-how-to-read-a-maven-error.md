@@ -67,10 +67,10 @@ Clarifiez l’exigence avant de corriger : offset explicite ou choix documenté 
 ## Exercice
 
 **Scénario :** Vous voyez ceci dans vos logs :
-`Caused by: java.lang.NullPointerException: Cannot invoke "com.myapp.User.getName()" for null` 
+`Caused by: java.lang.NullPointerException: Cannot invoke "com.myapp.User.getName()" for null`
 `at com.myapp.InvoiceService.generateInvoice(InvoiceService.java:115)`
 
-**Question :** 
+**Question :**
 1. Est-ce une erreur de compilation ou d'exécution ?
 2. Quelle est la cause la plus probable à la ligne 115 ?
 3. Quelle est la première étape pour déboguer sans changer le code ?

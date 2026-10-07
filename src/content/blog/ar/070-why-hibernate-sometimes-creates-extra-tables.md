@@ -86,7 +86,7 @@ public class Supplier {
 
 **جدول `supplier`**
 | id | company_name |
-| :--- | :--- | 
+| :--- | :--- |
 | 50 | OfficeCorp |
 
 ### شنو كتعني الجداول

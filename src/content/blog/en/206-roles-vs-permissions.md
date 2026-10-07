@@ -33,16 +33,16 @@ public record Permission(Long id, String code) {}
 
 // The critical link for resource ownership
 public record ResourceAssignment(
-    Long userId, 
-    Long resourceId, 
-    String resourceType, 
+    Long userId,
+    Long resourceId,
+    String resourceType,
     String accessLevel // e.g., "EDITOR", "VIEWER"
 ) {}
 ```
 
 ## Worked Example: Museum Exhibit Access
 
-**Scenario:** 
+**Scenario:**
 - **Volunteer:** Can view exhibits.
 - **Curator:** Can edit exhibits, but only those they are assigned to.
 - **Finance:** Can view financial reports of exhibits, but cannot edit the exhibit content.

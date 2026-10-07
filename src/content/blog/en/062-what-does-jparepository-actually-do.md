@@ -11,7 +11,7 @@ draft: false
 
 ## The Architecture of Persistence
 
-To understand how a Java object becomes a database row, we must distinguish between three distinct layers: **JPA** (the specification/interface), **Hibernate** (the implementation/engine), and the **Database** (the storage, e.g., PostgreSQL). 
+To understand how a Java object becomes a database row, we must distinguish between three distinct layers: **JPA** (the specification/interface), **Hibernate** (the implementation/engine), and the **Database** (the storage, e.g., PostgreSQL).
 
 When you use a `JpaRepository`, you are interacting with a Spring Data abstraction that delegates to the JPA `EntityManager`. The `EntityManager` manages a **Persistence Context**—essentially a first-level cache that tracks every entity loaded or saved during a transaction. This context is the "brain" that decides whether a Java change requires a SQL `UPDATE`.
 
@@ -48,14 +48,14 @@ public class StockItem {
     private Long id;
     private String sku;
     private Integer quantity;
-    
+
     // Getters, Constructor, etc.
 }
 ```
 
 ### Trace 1: The Initial Insert
 1. `StockItem item = new StockItem("BOLT-01", 100);` → **State: New**.
-2. `repository.save(item);` → Hibernate sees it is new → calls `persist()`. 
+2. `repository.save(item);` → Hibernate sees it is new → calls `persist()`.
 3. Because we use `SEQUENCE`, Hibernate fetches the next ID (e.g., `1`) and assigns it to `item`. **State: Managed**. No SQL `INSERT` has happened yet.
 4. **Flush**: When the transaction ends or `flush()` is called, Hibernate generates: `INSERT INTO stock_item (id, sku, quantity) VALUES (1, 'BOLT-01', 100);`.
 
@@ -66,8 +66,8 @@ public class StockItem {
 
 ### Trace 3: The Detached Merge
 1. An entity is sent to a UI, modified, and sent back. It has an ID but is not in the current session → **State: Detached**.
-2. `StockItem detachedItem = ...; // quantity is 50` 
-3. `StockItem managedItem = repository.save(detachedItem);` → Hibernate calls `merge()`. 
+2. `StockItem detachedItem = ...; // quantity is 50`
+3. `StockItem managedItem = repository.save(detachedItem);` → Hibernate calls `merge()`.
 4. Hibernate loads the current record from DB, copies `50` into that managed instance, and returns it.
 5. **Flush**: `UPDATE stock_item SET quantity = 50 WHERE id = 1;`.
 

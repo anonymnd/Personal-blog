@@ -40,7 +40,7 @@ import java.util.*;
 public class BasketDemo {
     static class ShoppingBasket {
         List<String> items = new ArrayList<>();
-        
+
         void addItem(String item) {
             items.add(item);
         }
@@ -98,7 +98,7 @@ void modify(List<Integer> a, List<Integer> b) {
 ```
 
 **Réponse :**
-`list1` et `list2` contiendront toutes deux `[1, 2, 3, 4]`. 
+`list1` et `list2` contiendront toutes deux `[1, 2, 3, 4]`.
 - `a.add(3)` mute l'objet partagé.
 - `a = new ArrayList<>()` réassigne seulement la copie locale `a` ; aucun effet sur `list1`.
 - `b.add(4)` mute l'objet partagé car `b` pointe toujours vers la liste originale.

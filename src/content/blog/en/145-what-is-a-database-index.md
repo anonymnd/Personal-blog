@@ -11,7 +11,7 @@ draft: false
 
 ## The B-Tree Mechanism
 
-A B-Tree index is not a simple binary tree. It is a multi-way balanced search tree designed to minimize disk I/O. Instead of two children per node, a B-Tree node contains multiple keys and pointers, allowing the database to navigate millions of rows in very few hops. 
+A B-Tree index is not a simple binary tree. It is a multi-way balanced search tree designed to minimize disk I/O. Instead of two children per node, a B-Tree node contains multiple keys and pointers, allowing the database to navigate millions of rows in very few hops.
 
 When you search for a value, the engine starts at the root, compares the target value against the keys in the node, and follows the pointer to the appropriate child page. This continues until it reaches a leaf node, which contains the actual pointer to the row in the table (the heap). Because the tree remains balanced, the cost of finding any single record is logarithmic and consistent.
 
@@ -30,12 +30,12 @@ Consider this scenario: An audit log where we need to find logs for a specific t
 ### Analysis of Index Options
 
 1. **Index on `(created_at)`**: The engine can find the time range, but it must then filter every single tenant's logs for that period. High I/O.
-2. **Index on `(tenant_id)`**: The engine finds all logs for 'T1', but then must sort them by time in memory (filesort) or scan them all to filter the date. 
+2. **Index on `(tenant_id)`**: The engine finds all logs for 'T1', but then must sort them by time in memory (filesort) or scan them all to filter the date.
 3. **Composite Index on `(tenant_id, created_at)`**: This is the optimal choice. The engine jumps directly to the 'T1' section of the index. Because the entries for 'T1' are already stored sorted by `created_at`, the engine can read the range and return the results in the requested order without a separate sorting step.
 
 ## Worked Example: EXPLAIN Plan Trace
 
-Assume a table `audit_logs` with 1 million rows. 
+Assume a table `audit_logs` with 1 million rows.
 
 **Scenario A: No Index or Index on `(created_at)` only**
 `EXPLAIN ANALYZE SELECT * FROM audit_logs WHERE tenant_id = 'T1' AND created_at > '2023-01-01' ORDER BY created_at DESC;`

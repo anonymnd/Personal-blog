@@ -38,7 +38,7 @@ Secrets (like the `api.key`) should never be in Git. On the VPS, these are typic
 
 ## The Deployment Artifact and Lifecycle
 
-We do not move source code to the server; we move a compiled, immutable artifact (e.g., a `.jar` file). 
+We do not move source code to the server; we move a compiled, immutable artifact (e.g., a `.jar` file).
 
 **The Deployment Sequence:**
 1. **Transfer**: The JAR is uploaded to the VPS via SCP or SFTP.
@@ -106,7 +106,7 @@ Once the service is started, we perform a **Smoke Check**: a minimal set of test
 
 ## Exercise
 
-**Scenario**: You deployed a new version of the appointment service. The Nginx logs show `502 Bad Gateway`, but the `systemd` status shows the service is `active (running)`. 
+**Scenario**: You deployed a new version of the appointment service. The Nginx logs show `502 Bad Gateway`, but the `systemd` status shows the service is `active (running)`.
 
 1. What is the most likely cause of this discrepancy?
 2. How would you verify if the application is actually accepting requests internally?

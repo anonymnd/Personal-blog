@@ -33,7 +33,7 @@ Require exactly one affected row; zero means that the workshop is missing, close
 Do not catch every DataIntegrityViolationException and call it a duplicate. Inspect the known violated constraint at an appropriate transaction boundary. An ORM save may defer SQL until flush or commit, so a try/catch around save alone may not catch the failure. For PostgreSQL, a failed statement can leave the transaction requiring rollback. Test two different users taking the last seat, as well as one user registering twice.
 ## Focused Exercise
 
-**Scenario**: You are building a system where a user can join a "Premium Group". 
+**Scenario**: You are building a system where a user can join a "Premium Group".
 - The `groupCode` must not be blank.
 - The user must be at least 18 years old (Business check).
 - A user can only be in one Premium Group at a time (Database invariant).

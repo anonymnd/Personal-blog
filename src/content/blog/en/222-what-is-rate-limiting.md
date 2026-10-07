@@ -11,7 +11,7 @@ draft: false
 
 ## Rate Limiting Purpose and Key Selection
 
-Rate limiting prevents service degradation by controlling the rate of incoming requests. The primary goal is to protect resources from being overwhelmed by a single malicious or malfunctioning client, ensuring high availability for others. 
+Rate limiting prevents service degradation by controlling the rate of incoming requests. The primary goal is to protect resources from being overwhelmed by a single malicious or malfunctioning client, ensuring high availability for others.
 
 Choosing the right "key" for the limiter is critical. A global limiter (one limit for the entire API) is dangerous because one aggressive user can trigger a 429 Too Many Requests response for every other user. Instead, per-client limiting (using an API key or User ID) ensures fairness: only the offender is throttled.
 
@@ -30,16 +30,16 @@ Consider a geocoding API with the following configuration:
 - **Bucket Capacity**: 10 tokens
 
 ### Burst Calculation
-If the API has been idle for several seconds, the bucket is full (10 tokens). 
+If the API has been idle for several seconds, the bucket is full (10 tokens).
 
-1. **T=0s**: A client sends 12 requests instantly. 
+1. **T=0s**: A client sends 12 requests instantly.
    - 10 requests are processed immediately (consuming the burst capacity).
    - 2 requests are rejected with a 429 status.
-2. **T=1s**: The bucket has refilled by 5 tokens. 
+2. **T=1s**: The bucket has refilled by 5 tokens.
    - The client can now send 5 more requests immediately.
 
 ### The 429 and Retry-After Tradeoff
-When a request is rejected, the server returns an HTTP 429. To prevent the client from immediately retrying and hammering the server, the `Retry-After` header should be included. 
+When a request is rejected, the server returns an HTTP 429. To prevent the client from immediately retrying and hammering the server, the `Retry-After` header should be included.
 
 - **Short Retry-After**: Encourages fast recovery but can lead to "thundering herd" problems if many clients retry at the exact same millisecond.
 - **Long Retry-After**: Protects the server more effectively but degrades user experience.
@@ -51,7 +51,7 @@ To enforce one aggregate quota across instances, coordinate token consumption at
 Combine per-client quotas for fairness with a global capacity limit when needed; neither alone guarantees availability. Identity keys must be trusted, and IP-based limits can group many users behind NAT. The examples assume no intervening requests, an initially stated bucket balance and a documented refill policy. The leaky-bucket description is the queue/shaping variant; a policing variant can reject excess traffic without queueing.
 ## Exercise
 
-**Scenario**: A system has a refill rate of 2 tokens/sec and a capacity of 5. The bucket is currently empty. 
+**Scenario**: A system has a refill rate of 2 tokens/sec and a capacity of 5. The bucket is currently empty.
 1. How many requests can be processed at T=3 seconds?
 2. If 10 requests arrive at T=3 seconds, how many are rejected?
 

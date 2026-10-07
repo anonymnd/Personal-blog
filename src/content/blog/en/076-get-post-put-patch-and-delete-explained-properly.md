@@ -19,16 +19,16 @@ Consider a Playlist resource. The client owns the representation of the playlist
 ### 1. Creation (POST)
 When a client creates a playlist, they send a `POST` to `/playlists`. The server assigns the ID.
 
-**Request:** `POST /playlists` 
+**Request:** `POST /playlists`
 **Body:** `{"title": "Chill Vibes", "tracks": [101, 102]}`
 
-**Successful Response:** `201 Created`. 
+**Successful Response:** `201 Created`.
 Crucially, the server should include a `Location` header: `Location: /playlists/789`. This tells the client exactly where the new resource lives.
 
 ### 2. Full Replacement (PUT)
 `PUT` is used to replace the entire target resource. The client sends the complete updated representation.
 
-**Request:** `PUT /playlists/789` 
+**Request:** `PUT /playlists/789`
 **Body:** `{"title": "Chill Vibes Updated", "tracks": [101, 102, 103]}`
 
 **Successful Response:** `200 OK` (returning the updated playlist) or `204 No Content` (if the client doesn't need the body back).
@@ -36,7 +36,7 @@ Crucially, the server should include a `Location` header: `Location: /playlists/
 ### 3. Partial Modification (PATCH)
 `PATCH` is used for modifications. Unlike `PUT`, the client only sends the fields that need to change.
 
-**Request:** `PATCH /playlists/789` 
+**Request:** `PATCH /playlists/789`
 **Body:** `{"title": "Midnight Jazz"}`
 
 **Successful Response:** `200 OK` with the modified representation.
@@ -44,7 +44,7 @@ Crucially, the server should include a `Location` header: `Location: /playlists/
 ### 4. Removal (DELETE)
 `DELETE` removes the resource identified by the URI.
 
-**Request:** `DELETE /playlists/789` 
+**Request:** `DELETE /playlists/789`
 **Successful Response:** `204 No Content`. This is the standard for successful deletions where no body is returned.
 
 ## Contrast: Idempotency in Action

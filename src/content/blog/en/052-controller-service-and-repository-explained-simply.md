@@ -117,7 +117,7 @@ public class DispatchController {
 
 **Scenario**: You are adding a "Priority Shipping" feature. Only orders over $100 can use priority carriers. Where should this check live, and how does it affect the layers?
 
-**Answer**: 
+**Answer**:
 1. **Controller**: No change, except perhaps accepting a `priority` flag in the request.
 2. **Service**: The check `if (order.getTotal() < 100 && priorityRequested) throw ...` must live here. This is a business invariant.
 3. **Repository**: No change. It still just fetches the order or saves the shipment. The repository should not know about the $100 threshold.

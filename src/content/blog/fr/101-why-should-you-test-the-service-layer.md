@@ -63,10 +63,10 @@ public class CurrencyService {
     public ConversionResult convert(BigDecimal amount, String from, String to) {
         BigDecimal rate = rateClient.getRate(from, to);
         BigDecimal result = amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
-        
+
         var entity = new ConversionEntity(result, from, to);
         repository.save(entity);
-        
+
         return new ConversionResult(result, LocalDateTime.now());
     }
 }

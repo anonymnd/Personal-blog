@@ -73,7 +73,7 @@ public class GlobalErrorHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleCarrierFailure(CarrierIntegrationException ex) {
         // كنلوكي الـ stack trace كامل داخليا باش نعرفو المشكل، ولكن ما كنصيفطوهش للي كيخدم بالـ API
         log.error("External carrier failure: {}", ex.getCarrierCode(), ex);
-        
+
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
             HttpStatus.SERVICE_UNAVAILABLE, "The delivery carrier is temporarily unavailable");
         problem.setTitle("Carrier Integration Error");

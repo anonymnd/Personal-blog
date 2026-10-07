@@ -29,7 +29,7 @@ public class Ticket {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User owner;
-    
+
     // Getters, Constructeur
 }
 
@@ -39,7 +39,7 @@ public class User {
     @GeneratedValue
     private Long id;
     private String username;
-    
+
     // Getters, Constructeur
 }
 ```
@@ -72,7 +72,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
 ## Pagination et multiplication des lignes
 
-Le `JOIN FETCH` résout le N+1, mais introduit un risque avec les collections `@OneToMany` (ex: `Ticket` → `Comment`). 
+Le `JOIN FETCH` résout le N+1, mais introduit un risque avec les collections `@OneToMany` (ex: `Ticket` → `Comment`).
 
 Si vous récupérez une collection via un join, la base de données retourne un produit cartésien. Si un ticket a 5 commentaires, le résultat contient 5 lignes pour ce ticket. Si vous appliquez un `Pageable`, Hibernate ne peut pas limiter les lignes au niveau de la base de données sans tronquer la collection. Il récupère donc **toutes** les lignes en mémoire pour paginer en Java, ce qui peut causer une `OutOfMemoryError`.
 

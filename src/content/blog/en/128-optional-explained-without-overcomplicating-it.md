@@ -42,7 +42,7 @@ public class CatalogService {
     // Mocking a repository findById that returns Optional
     public Optional<BookEdition> findPreferredEdition(String bookId) {
         // Simulate a quick cache hit or miss
-        return Optional.empty(); 
+        return Optional.empty();
     }
 
     public BookEdition findAnyEditionExpensive(String bookId) {
@@ -70,7 +70,7 @@ public class CatalogService {
 ```
 
 ### Analysis of the Execution
-1. **The Pipeline**: `findPreferredEdition` returns an `Optional.empty()`. 
+1. **The Pipeline**: `findPreferredEdition` returns an `Optional.empty()`.
 2. **The Map**: The `.map()` block is skipped entirely because the Optional is empty.
 3. **The Fallback**: `orElseGet()` triggers the `Supplier`. The log "Performing expensive fallback lookup" appears exactly once.
 4. **Failure Case**: If we had used `.orElse(findAnyEditionExpensive(bookId))`, the expensive method would run every time, regardless of whether a preferred edition existed.

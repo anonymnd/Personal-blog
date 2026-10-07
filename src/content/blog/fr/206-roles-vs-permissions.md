@@ -33,16 +33,16 @@ public record Permission(Long id, String code) {}
 
 // Le lien critique pour la propriété des ressources
 public record ResourceAssignment(
-    Long userId, 
-    Long resourceId, 
-    String resourceType, 
+    Long userId,
+    Long resourceId,
+    String resourceType,
     String accessLevel // ex: "EDITOR", "VIEWER"
 ) {}
 ```
 
 ## Exemple concret : Accès aux expositions du musée
 
-**Scénario :** 
+**Scénario :**
 - **Bénévole (Volunteer) :** Peut consulter les expositions.
 - **Conservateur (Curator) :** Peut modifier les expositions, mais seulement celles qui lui sont assignées.
 - **Finance :** Peut consulter les rapports financiers des expositions, mais ne peut pas modifier le contenu de l'exposition.

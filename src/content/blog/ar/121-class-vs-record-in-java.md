@@ -31,7 +31,7 @@ List<String> myStops = new ArrayList<>(List.of("Casablanca", "Rabat"));
 RouteSummary summary = new RouteSummary("R-101", myStops);
 
 // هنا كاين المشكل: إلا بدلنا list الأصلية، الـ record حتى هو كيتبدل
-myStops.add("Tangier"); 
+myStops.add("Tangier");
 System.out.println(summary.stops()); // Output: [Casablanca, Rabat, Tangier]
 ```
 

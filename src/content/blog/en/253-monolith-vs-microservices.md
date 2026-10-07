@@ -22,7 +22,7 @@ To determine a boundary, we evaluate two metrics:
 
 ## Scenario: Travel Booking System
 
-Consider a system with three primary capabilities: **Itinerary**, **Payment**, and **Customer Support**. 
+Consider a system with three primary capabilities: **Itinerary**, **Payment**, and **Customer Support**.
 
 ### The Modular Monolith Phase
 Initially, we organize these as distinct packages in a single Spring Boot application. The key is to avoid layer-based packaging (e.g., `com.app.service`, `com.app.repository`) in favor of feature-based packaging:
@@ -78,13 +78,13 @@ If we move `Payment` to a microservice without fixing the boundaries, we encount
 1. `ItineraryService` calls `PaymentClient.process()`.
 2. `PaymentService` encounters a timeout due to network latency.
 3. `ItineraryService` throws a 500 error, but the payment actually succeeded in the background.
-4. Result: The customer is charged, but the itinerary is not confirmed. 
+4. Result: The customer is charged, but the itinerary is not confirmed.
 
 **Solution**: Implement an asynchronous pattern (Outbox pattern) or a Saga to handle eventual consistency, which is the cost of choosing distributed deployment over a modular monolith.
 
 ## Exercise
 
-**Scenario**: You have a `CustomerSupport` module that needs to show the last three payments for a user. Currently, it calls `PaymentRepository.findByUserId()`. 
+**Scenario**: You have a `CustomerSupport` module that needs to show the last three payments for a user. Currently, it calls `PaymentRepository.findByUserId()`.
 
 **Question**: Why is this a boundary violation, and how should it be fixed to allow the `Payment` module to be moved to a separate server later?
 

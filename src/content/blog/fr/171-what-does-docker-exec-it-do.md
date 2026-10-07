@@ -65,7 +65,7 @@ Même avec des healthchecks, des erreurs surviennent (ex: mauvais identifiants).
 
 #### 1. Analyse des Logs
 Pour comprendre pourquoi l'API ne démarre pas, on suit les logs :
-`docker compose logs -f api` 
+`docker compose logs -f api`
 
 Si les logs indiquent `FATAL: password authentication failed for user "recipe_admin"`, nous savons que les variables d'environnement de l'API ne correspondent pas à celles de la DB.
 
@@ -73,10 +73,10 @@ Si les logs indiquent `FATAL: password authentication failed for user "recipe_ad
 Quand les logs ne suffisent pas, on utilise `docker exec -it`. Cette commande alloue un pseudo-TTY et garde l'entrée standard (STDIN) ouverte, nous permettant d'exécuter des commandes dans le conteneur en cours d'exécution.
 
 Pour vérifier si la base de données est joignable depuis le réseau de l'API :
-`docker compose exec api ping db` 
+`docker compose exec api ping db`
 
 Pour tester la connexion manuellement depuis le conteneur DB :
-`docker compose exec db pg_isready -U recipe_admin -d recipe_db` 
+`docker compose exec db pg_isready -U recipe_admin -d recipe_db`
 
 Si `pg_isready` confirme que les connexions sont acceptées dans le conteneur DB mais que l'API échoue toujours, le problème vient probablement de l'URL de connexion ou du bridge réseau, et non du processus de base de données.
 

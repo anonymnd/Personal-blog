@@ -11,13 +11,13 @@ draft: false
 
 ## Resources vs. Actions
 
-A common mistake in API design is treating endpoints like remote procedure calls (RPC), where the URI represents a 'button' (e.g., `/envelopes/sign-document`). In a true RESTful contract, URIs identify resources, and HTTP methods define the operation. 
+A common mistake in API design is treating endpoints like remote procedure calls (RPC), where the URI represents a 'button' (e.g., `/envelopes/sign-document`). In a true RESTful contract, URIs identify resources, and HTTP methods define the operation.
 
 In a document-signing system, we have two distinct types of changes: **Metadata Updates** (changing a description) and **Business Transitions** (marking a document as signed). While both modify the database, they have different semantic meanings and authorization requirements. Metadata updates are typically CRUD operations, whereas business transitions are state machine movements that often trigger side effects like email notifications or legal timestamps.
 
 ## The Resource Hierarchy
 
-To maintain a clean contract, we define resources based on their lifecycle. An `Envelope` is the root aggregate. `Signers` are dependent resources. 
+To maintain a clean contract, we define resources based on their lifecycle. An `Envelope` is the root aggregate. `Signers` are dependent resources.
 
 ### Collection and Detail Endpoints
 - `GET /envelopes`: Returns a paginated list of envelopes. Filtering (e.g., `?status=pending`) happens via query parameters, not separate endpoints.
@@ -91,7 +91,7 @@ public class EnvelopeController {
 
 ## Exercise
 
-**Scenario**: You need to add a 'Review' phase to the workflow. A manager must approve the envelope before it is sent to signers. 
+**Scenario**: You need to add a 'Review' phase to the workflow. A manager must approve the envelope before it is sent to signers.
 
 1. Which endpoint would you use to change the envelope's description during review?
 2. Which endpoint would you create to handle the manager's approval transition?

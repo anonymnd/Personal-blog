@@ -62,7 +62,7 @@ This approach prevents the common mistake of coding the 'Happy Path' first and d
 
 **Scenario:** The library introduces a 'Grace Period'. If a book is returned 1-3 days late, no fine is charged. If it is 4+ days late, a daily fine is applied. However, if the user is a 'Premium Member', the grace period is extended to 7 days.
 
-**Task:** Create a decision table to determine if a fine should be applied based on: `Days Late`, `Member Type (Standard/Premium)`. 
+**Task:** Create a decision table to determine if a fine should be applied based on: `Days Late`, `Member Type (Standard/Premium)`.
 
 **Answer:**
 

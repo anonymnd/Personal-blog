@@ -31,7 +31,7 @@ List<String> myStops = new ArrayList<>(List.of("Casablanca", "Rabat"));
 RouteSummary summary = new RouteSummary("R-101", myStops);
 
 // La faille : modifier la liste originale affecte le record
-myStops.add("Tanger"); 
+myStops.add("Tanger");
 System.out.println(summary.stops()); // Résultat: [Casablanca, Rabat, Tanger]
 ```
 

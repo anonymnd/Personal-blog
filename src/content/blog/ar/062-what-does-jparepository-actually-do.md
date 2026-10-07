@@ -48,14 +48,14 @@ public class StockItem {
     private Long id;
     private String sku;
     private Integer quantity;
-    
+
     // Getters, Constructor, etc.
 }
 ```
 
 ### تتبع 1: أول Insert
 1. `StockItem item = new StockItem("BOLT-01", 100);` → **الحالة: New**.
-2. `repository.save(item);` → Hibernate لقاها جديدة → عيط لـ `persist()`. 
+2. `repository.save(item);` → Hibernate لقاها جديدة → عيط لـ `persist()`.
 3. حيت خدامين بـ `SEQUENCE` ، Hibernate كيجيب ID (مثلا `1`) وكيعطيه لـ `item`. **الحالة: Managed**. مازال ما خرج حتى SQL `INSERT`.
 4. **Flush**: ملي كتسالي transaction أو كتعيط لـ `flush()`، Hibernate كيصاوب: `INSERT INTO stock_item (id, sku, quantity) VALUES (1, 'BOLT-01', 100);`.
 
@@ -66,8 +66,8 @@ public class StockItem {
 
 ### تتبع 3: Merge ديال نسخة Detached
 1. entity مشات لـ UI، تبدلات، ورجعات. عندها ID ولكن ما بقاتش في session → **الحالة: Detached**.
-2. `StockItem detachedItem = ...; // quantity ولات 50` 
-3. `StockItem managedItem = repository.save(detachedItem);` → Hibernate كيعيط لـ `merge()`. 
+2. `StockItem detachedItem = ...; // quantity ولات 50`
+3. `StockItem managedItem = repository.save(detachedItem);` → Hibernate كيعيط لـ `merge()`.
 4. Hibernate كيشارج السطر من DB، كيكوبي `50` في الـ managed instance، وكيرجعها ليك.
 5. **Flush**: `UPDATE stock_item SET quantity = 50 WHERE id = 1;`.
 

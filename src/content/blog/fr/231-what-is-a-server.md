@@ -106,7 +106,7 @@ Une fois le service lancé, on effectue un **Smoke Check** : un ensemble minimal
 
 ## Exercice
 
-**Scénario** : Vous avez déployé une nouvelle version du service. Les logs Nginx affichent `502 Bad Gateway`, mais le statut `systemd` indique que le service est `active (running)`. 
+**Scénario** : Vous avez déployé une nouvelle version du service. Les logs Nginx affichent `502 Bad Gateway`, mais le statut `systemd` indique que le service est `active (running)`.
 
 1. Quelle est la cause la plus probable de cette divergence ?
 2. Comment vérifier si l'application accepte réellement les requêtes en interne ?

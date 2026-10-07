@@ -11,7 +11,7 @@ draft: false
 
 ## The Core Problem: Diagram Misuse
 
-Many developers treat UML as a mandatory ritual rather than a communication tool. The most common mistake is using the wrong diagram to answer a specific question. For example, trying to explain a business decision branch using a Deployment diagram is impossible because deployment diagrams describe physical infrastructure, not logic. 
+Many developers treat UML as a mandatory ritual rather than a communication tool. The most common mistake is using the wrong diagram to answer a specific question. For example, trying to explain a business decision branch using a Deployment diagram is impossible because deployment diagrams describe physical infrastructure, not logic.
 
 To choose the right tool, you must first identify the question you are asking: "Who is involved?", "What is the flow?", "In what order do objects talk?", "What is the structure?", or "Where does the code live?"
 
@@ -58,10 +58,10 @@ Once the workflow is clear, we need to know *which* objects handle the logic. A 
 - **Lifelines:** The User is an actor lifeline; the SeatService is an object lifeline.
 
 ### 3. The Structural Question: Class Diagram
-While the sequence shows the *talk*, the Class Diagram shows the *knowledge*. 
+While the sequence shows the *talk*, the Class Diagram shows the *knowledge*.
 
 **Crucial Distinction: Conceptual Class vs. SQL Table**
-A UML Class represents a business concept with behavior (methods), not just a data row. A `Reservation` class might have a method `calculateExpiry()`, whereas a SQL table only has a `expiry_date` column. 
+A UML Class represents a business concept with behavior (methods), not just a data row. A `Reservation` class might have a method `calculateExpiry()`, whereas a SQL table only has a `expiry_date` column.
 
 **Model Artifact:**
 - Class `Ticket`: attributes (id, price, seatNumber).
@@ -78,7 +78,7 @@ If you try to show the "Payment Timeout" logic in a Deployment Diagram, you will
 
 **Question:** Which two diagrams should you use to model the "Malware Scan → Delete" logic and the "App Server → Cloud Bucket" connection? Explain why.
 
-**Answer:** 
+**Answer:**
 1. **Activity Diagram** (or Sequence Diagram) for the logic: It handles the decision branch (Scan Success vs. Failure) and the resulting action (Save vs. Delete).
 2. **Deployment Diagram** for the connection: It maps the physical relationship between the Application Server and the Cloud Storage provider.
 

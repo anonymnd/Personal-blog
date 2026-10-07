@@ -14,7 +14,7 @@ draft: false
 When a user interacts with a weather dashboard, the browser doesn't just "send data"; it initiates a complex sequence of network and application-layer events. Let's trace two specific interactions: fetching station readings and subscribing to alerts.
 
 ### 1. The Origin and the Wire
-When the dashboard executes `fetch('/stations/42/readings?limit=10')`, the browser constructs an HTTP GET request. The request contains a start line (`GET /stations/42/readings?limit=10 HTTP/1.1`), headers (like `Accept: application/json`), and an empty body. 
+When the dashboard executes `fetch('/stations/42/readings?limit=10')`, the browser constructs an HTTP GET request. The request contains a start line (`GET /stations/42/readings?limit=10 HTTP/1.1`), headers (like `Accept: application/json`), and an empty body.
 
 Crucially, the frontend code (React/Vue/Angular) is already running in the browser's memory. It is a separate logical entity from the Spring Boot server, even if they are packaged in the same JAR. The request travels over TCP/IP to the server's IP and port (usually 8080).
 
@@ -33,9 +33,9 @@ In `/stations/{id}/readings`, the `{id}` is part of the URI itself. It identifie
 The `?limit=10` part is a query string. These are typically used for filtering, sorting, or pagination. Unlike path variables, query parameters are optional or have defaults. Spring looks for the key `limit` in the request parameters and converts `10` to an `Integer`.
 
 #### Request Body (`@RequestBody`)
-For the `POST /subscriptions` call, the data isn't in the URL. It's in the HTTP body as a JSON string: `{"email": "user@example.com", "stationId": 42}`. 
+For the `POST /subscriptions` call, the data isn't in the URL. It's in the HTTP body as a JSON string: `{"email": "user@example.com", "stationId": 42}`.
 
-Spring uses `HttpMessageConverters` (typically Jackson) to perform the conversion. The process is: 
+Spring uses `HttpMessageConverters` (typically Jackson) to perform the conversion. The process is:
 `JSON String` → `Jackson ObjectMapper` → `Java Record/POJO`.
 
 ## Worked Example: The Weather API
@@ -51,7 +51,7 @@ public class WeatherController {
     // GET /stations/42/readings?limit=10
     @GetMapping("/{id}/readings")
     public List<Reading> getReadings(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam(defaultValue = "20") int limit) {
         // Logic to fetch readings for station 'id' limited to 'limit'
         return List.of(new Reading(22.5, "Celsius"));

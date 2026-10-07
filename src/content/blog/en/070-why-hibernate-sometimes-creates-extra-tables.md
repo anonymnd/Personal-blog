@@ -86,7 +86,7 @@ If we persist a Product with ID `101`, colors `{"Red", "Blue"}`, and one `Dimens
 
 **Table: `supplier`**
 | id | company_name |
-| :--- | :--- | 
+| :--- | :--- |
 | 50 | OfficeCorp |
 
 ### What the tables mean

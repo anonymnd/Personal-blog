@@ -48,7 +48,7 @@ class AudioEngine {
     }
 
     private void notifyObservers() {
-        // Création d'un instantané pour éviter ConcurrentModificationException 
+        // Création d'un instantané pour éviter ConcurrentModificationException
         // si un observateur se désabonne pendant la boucle de notification
         List<PlaybackObserver> snapshot = new ArrayList<>(observers);
         for (PlaybackObserver observer : snapshot) {

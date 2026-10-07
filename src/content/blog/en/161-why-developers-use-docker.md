@@ -11,7 +11,7 @@ draft: false
 
 ## The Core Distinction: Image vs. Container
 
-To achieve reproducibility, we must first distinguish between the blueprint and the execution. A Docker Image is a read-only, immutable template. It contains everything the application needs to run: the OS filesystem, the runtime (like Java or Python), libraries, and your compiled code. When you start a container, Docker adds a thin writable layer on top of this immutable image. 
+To achieve reproducibility, we must first distinguish between the blueprint and the execution. A Docker Image is a read-only, immutable template. It contains everything the application needs to run: the OS filesystem, the runtime (like Java or Python), libraries, and your compiled code. When you start a container, Docker adds a thin writable layer on top of this immutable image.
 
 Crucially, a container is not a Virtual Machine. While a VM bundles a full guest operating system and its own kernel, a container shares the host machine's Linux kernel. On Windows or macOS, Docker Desktop runs a lightweight Linux VM in the background to provide this kernel, but the containers themselves remain isolated processes using namespaces and cgroups rather than hardware virtualization.
 
@@ -54,7 +54,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### Execution Trace
 To run this converter on a file named `data.csv` located in the current directory:
-`docker run --rm --mount "type=bind,source=$PWD,target=/inputs,readonly" csv-converter /inputs/data.csv` 
+`docker run --rm --mount "type=bind,source=$PWD,target=/inputs,readonly" csv-converter /inputs/data.csv`
 
 *Note: The `--rm` flag ensures the container is deleted after execution, preventing the accumulation of stopped containers on the host.*
 
@@ -73,7 +73,7 @@ While the image is immutable, the execution environment is not. Docker solves th
 
 **Question**: How do you restructure the Dockerfile to use layer caching to avoid redownloading dependencies on every code change?
 
-**Answer**: 
+**Answer**:
 Separate the dependency resolution from the code compilation. Copy only the `pom.xml` first, run the dependency download command, and then copy the source code.
 
 ```dockerfile

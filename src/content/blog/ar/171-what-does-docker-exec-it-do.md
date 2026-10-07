@@ -65,7 +65,7 @@ services:
 
 #### 1. تحليل الـ Logs
 باش تعرف علاش الـ API ما بغاش يشعل، كنتبعو الـ logs:
-`docker compose logs -f api` 
+`docker compose logs -f api`
 
 إلا لقيتي `FATAL: password authentication failed for user "recipe_admin"` ، عرف بلي الـ environment variables اللي عطيتي للـ API ماشي هما اللي عطيتي للـ DB.
 
@@ -73,10 +73,10 @@ services:
 ملي الـ logs ما كيكونوش كافيين، كنستعملو `docker exec -it`. هاد command كتحل terminal وسط الـ container اللي خدام دابا.
 
 باش تأكد واش الـ database واصلة من جيهة الـ API:
-`docker compose exec api ping db` 
+`docker compose exec api ping db`
 
 باش تيستي الـ connection يدوياً من وسط الـ DB container:
-`docker compose exec db pg_isready -U recipe_admin -d recipe_db` 
+`docker compose exec db pg_isready -U recipe_admin -d recipe_db`
 
 إلا رجعات `pg_isready` بلي الـ connections مقبولين وسط الـ DB container ولكن الـ API مزال كيـ fail، المشكل غالباً كيكون في الـ connection string (URL) أو الـ network bridge، ماشي في الـ database process.
 

@@ -65,7 +65,7 @@ Even with healthchecks, failures occur (e.g., wrong credentials or schema migrat
 
 #### 1. Log Analysis
 To see why the API is failing to boot, we stream the logs:
-`docker compose logs -f api` 
+`docker compose logs -f api`
 
 If the logs show `FATAL: password authentication failed for user "recipe_admin"`, we know the environment variables passed to the API do not match those passed to the DB.
 
@@ -73,10 +73,10 @@ If the logs show `FATAL: password authentication failed for user "recipe_admin"`
 When logs are insufficient, we use `docker exec -it`. This command allocates a pseudo-TTY and keeps STDIN open, allowing us to run commands inside the running container.
 
 To verify if the database is actually reachable from the API's network perspective:
-`docker compose exec api ping db` 
+`docker compose exec api ping db`
 
 To test the database connection manually from the DB container itself:
-`docker compose exec db pg_isready -U recipe_admin -d recipe_db` 
+`docker compose exec db pg_isready -U recipe_admin -d recipe_db`
 
 If `pg_isready` returns `accepting connections` inside the DB container but the API still fails, the issue is likely the connection string (URL) or the network bridge, not the database process.
 

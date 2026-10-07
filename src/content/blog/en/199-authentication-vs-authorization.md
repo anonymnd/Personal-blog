@@ -62,16 +62,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         String authHeader = request.getHeader("Authorization");
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-        
+
         // The trust boundary: validate signature, exp, iss, and aud
         Optional<UserPrincipal> principal = tokenProvider.validateAndParseToken(token);
 
@@ -100,7 +100,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 ## Exercise
 
-**Scenario**: You are auditing a fitness app. The developer uses a single JWT that lasts for 30 days. When a user clicks "Logout", the app calls `localStorage.removeItem('token')`. 
+**Scenario**: You are auditing a fitness app. The developer uses a single JWT that lasts for 30 days. When a user clicks "Logout", the app calls `localStorage.removeItem('token')`.
 
 1. Why is this insufficient for security?
 2. How does the dual-token (Access/Refresh) approach solve the revocation problem without making every API call stateful?

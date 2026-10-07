@@ -17,7 +17,7 @@ Consider a flight system. A flight is not uniquely identified by its flight numb
 
 ## Referential Integrity and the Foreign Key
 
-A Foreign Key (FK) does not identify a row; it enforces a relationship. It ensures that a child record (like a Ticket) cannot point to a non-existent parent (a Flight). 
+A Foreign Key (FK) does not identify a row; it enforces a relationship. It ensures that a child record (like a Ticket) cannot point to a non-existent parent (a Flight).
 
 Crucially, in PostgreSQL, creating a Foreign Key constraint does not automatically create an index on the referencing column. While the parent table's PK is indexed, the child table's FK is not. This means that while inserting a ticket is fast (it only checks the parent index), deleting a flight or querying tickets for a specific flight will trigger a full table scan of the tickets table unless you manually add an index to the FK column.
 
@@ -51,7 +51,7 @@ public class Ticket {
     private Flight flight; // Foreign Key: Referential Integrity
 
     private String passengerName;
-    
+
     @Column(unique = true)
     private String ticketNumber; // Unique Constraint: Candidate Key
 }

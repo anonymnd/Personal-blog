@@ -35,7 +35,7 @@ draft: false
 #### جسم الطلب (`@RequestBody`)
 فـ حالة `POST /subscriptions` الـ data ما كايناش فـ URL، بل كاينا فـ الـ body على شكل JSON string: `{"email": "user@example.com", "stationId": 42}`.
 
-Spring كيخدم بـ `HttpMessageConverters` (غالبا Jackson) باش يدير التحويل. العملية هي: 
+Spring كيخدم بـ `HttpMessageConverters` (غالبا Jackson) باش يدير التحويل. العملية هي:
 `JSON String` → `Jackson ObjectMapper` → `Java Record/POJO`.
 
 ## مثال تطبيقي: Weather API
@@ -51,7 +51,7 @@ public class WeatherController {
     // GET /stations/42/readings?limit=10
     @GetMapping("/{id}/readings")
     public List<Reading> getReadings(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam(defaultValue = "20") int limit) {
         // Logic باش نجيبو readings ديال station 'id' بـ limit محدد
         return List.of(new Reading(22.5, "Celsius"));

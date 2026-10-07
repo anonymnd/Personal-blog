@@ -57,13 +57,13 @@ import java.util.Optional;
 import com.app.domain.Money; // Type applicatif
 
 public class CurrencyConverter {
-    
+
     public com.app.domain.Money mapToDomain(com.legacy.sdk.Money sdkMoney) {
         if (sdkMoney == null) return null;
-        
+
         // Conversion explicite : extraction des valeurs pour construire une nouvelle instance
         return new com.app.domain.Money(
-            sdkMoney.getValue(), 
+            sdkMoney.getValue(),
             sdkMoney.getIsoCode()
         );
     }
@@ -71,7 +71,7 @@ public class CurrencyConverter {
     public void processPayment(com.legacy.sdk.Money sdkMoney) {
         // Ceci provoquerait une ClassCastException :
         // com.app.domain.Money domainMoney = (com.app.domain.Money) sdkMoney;
-        
+
         com.app.domain.Money domainMoney = mapToDomain(sdkMoney);
         System.out.println("Traité : " + domainMoney.amount());
     }
