@@ -2,9 +2,9 @@
 
 Source: UI/UX Pro Max from https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
 
-The verified `personal technical blog editorial` design-system query recommended Swiss Modernism 2.0: modular grids, clear hierarchy, low visual overhead, and Libre Bodoni/Public Sans typography. The reading palette query also returned Book & Reading Tracker. This implementation adapts those results to a personal engineering notebook: warm paper, dark green ink, an understated graph-paper illustration, and readable article cards. The generated storytelling funnel and pink CTA were omitted because browsing and reading are this site's primary activities.
+The verified `personal technical blog editorial` design-system query recommended Swiss Modernism 2.0: modular grids, clear hierarchy, low visual overhead, and Libre Bodoni/Public Sans typography. The reading palette query also returned Book & Reading Tracker. This implementation adapts those results to a personal engineering notebook: warm paper, blue and violet ink (updated at the user’s request), an understated graph-paper illustration, and readable article cards. The generated storytelling funnel and pink CTA were omitted because browsing and reading are this site's primary activities.
 
-- Background: #f8f6f0; surface: #fffdf8; body: #232f29; secondary text: #59635a; accent: #28543e; divider: #d6d9cc.
+- Background: #f8f6f0; surface: #fffdf8; body: #25283d; secondary text: #5b6175; blue accent: #1d4ed8; violet accent: #6d28d9; divider: #d8d8e4.
 - Display: Libre Bodoni. UI/body: Public Sans. Darija: Noto Sans Arabic. Code: JetBrains Mono.
 - Desktop shell: 74rem; article: 46rem with a separate contents rail. Phone gutters: 1rem.
 - Navigation and filter controls: at least 44px high; visible 3px focus outline.
