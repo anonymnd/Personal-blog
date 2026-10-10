@@ -1,0 +1,738 @@
+[
+  {
+    "order": 1,
+    "id": 1,
+    "slug": "001-i-knew-spring-boot-but-i-didn-t-know-how-to-start-a-real-application",
+    "title": "From a Blank Project to a First Working Feature",
+    "sourceIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      280
+    ]
+  },
+  {
+    "order": 2,
+    "id": 11,
+    "slug": "011-how-to-understand-a-business-workflow-before-designing-the-backend",
+    "title": "Turn a Business Workflow into Explicit Use Cases",
+    "sourceIds": [
+      11,
+      14,
+      15,
+      16,
+      17,
+      20,
+      21,
+      22
+    ]
+  },
+  {
+    "order": 3,
+    "id": 12,
+    "slug": "012-actors-users-and-entities-what-s-the-difference",
+    "title": "Actors, Accounts and Domain Entities Are Different Things",
+    "sourceIds": [
+      12,
+      13
+    ]
+  },
+  {
+    "order": 4,
+    "id": 18,
+    "slug": "018-business-rules-vs-technical-rules",
+    "title": "Business Rules, Technical Constraints and Quality Requirements",
+    "sourceIds": [
+      18,
+      19
+    ]
+  },
+  {
+    "order": 5,
+    "id": 23,
+    "slug": "023-business-flow-diagram-vs-uml-diagram",
+    "title": "Choose and Build the UML Diagram That Answers Your Question",
+    "sourceIds": [
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34
+    ]
+  },
+  {
+    "order": 6,
+    "id": 35,
+    "slug": "035-why-database-design-should-happen-before-building-too-many-features",
+    "title": "From Business Rules to a Relational Database Model",
+    "sourceIds": [
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      45,
+      48,
+      272
+    ]
+  },
+  {
+    "order": 7,
+    "id": 44,
+    "slug": "044-how-to-convert-a-database-model-into-jpa-entities",
+    "title": "Map Entity Relationships Correctly with JPA",
+    "sourceIds": [
+      44,
+      46,
+      138,
+      139,
+      140
+    ]
+  },
+  {
+    "order": 8,
+    "id": 47,
+    "slug": "047-what-is-database-normalization-and-why-should-you-care",
+    "title": "Normalize a Database Without Losing Business Meaning",
+    "sourceIds": [
+      47
+    ]
+  },
+  {
+    "order": 9,
+    "id": 49,
+    "slug": "049-user-accounts-vs-organizations-how-to-model-b2b-applications",
+    "title": "Model Users, Organizations and Tenant Memberships",
+    "sourceIds": [
+      49
+    ]
+  },
+  {
+    "order": 10,
+    "id": 50,
+    "slug": "050-why-your-database-should-not-mirror-your-ui",
+    "title": "Design DTOs and Mappings Around an API Contract",
+    "sourceIds": [
+      50,
+      57,
+      58,
+      59,
+      60,
+      61,
+      84,
+      85,
+      265,
+      266
+    ]
+  },
+  {
+    "order": 11,
+    "id": 51,
+    "slug": "051-what-actually-happens-when-a-request-reaches-spring-boot",
+    "title": "Trace a Browser Request Through Spring Boot",
+    "sourceIds": [
+      51,
+      64,
+      65,
+      66,
+      67,
+      190,
+      191,
+      193,
+      194,
+      263
+    ]
+  },
+  {
+    "order": 12,
+    "id": 52,
+    "slug": "052-controller-service-and-repository-explained-simply",
+    "title": "Give Controllers, Services and Repositories Clear Responsibilities",
+    "sourceIds": [
+      52,
+      53,
+      54,
+      192,
+      197,
+      264
+    ]
+  },
+  {
+    "order": 13,
+    "id": 55,
+    "slug": "055-what-is-dependency-injection",
+    "title": "Dependency Injection, Inversion of Control and Interface Contracts",
+    "sourceIds": [
+      55,
+      56,
+      124,
+      125
+    ]
+  },
+  {
+    "order": 14,
+    "id": 62,
+    "slug": "062-what-does-jparepository-actually-do",
+    "title": "Follow a JPA Entity from Java State to SQL",
+    "sourceIds": [
+      62,
+      63,
+      68,
+      69,
+      133,
+      134,
+      135,
+      136,
+      137
+    ]
+  },
+  {
+    "order": 15,
+    "id": 70,
+    "slug": "070-why-hibernate-sometimes-creates-extra-tables",
+    "title": "Why Value Collections and Associations Need Extra Tables",
+    "sourceIds": [
+      70,
+      141,
+      142
+    ]
+  },
+  {
+    "order": 16,
+    "id": 71,
+    "slug": "071-how-to-turn-a-business-workflow-into-rest-endpoints",
+    "title": "Design a REST Contract Around Resources and Business Transitions",
+    "sourceIds": [
+      71,
+      72,
+      73,
+      74,
+      75,
+      83,
+      86,
+      87,
+      88,
+      198
+    ]
+  },
+  {
+    "order": 17,
+    "id": 76,
+    "slug": "076-get-post-put-patch-and-delete-explained-properly",
+    "title": "HTTP Methods and Successful Responses: One Consistent Guide",
+    "sourceIds": [
+      76,
+      77,
+      78,
+      79,
+      80,
+      81
+    ]
+  },
+  {
+    "order": 18,
+    "id": 82,
+    "slug": "082-400-vs-401-vs-403-vs-404-vs-500",
+    "title": "Choose HTTP Error Statuses Without Hiding the Real Failure",
+    "sourceIds": [
+      82,
+      98,
+      99,
+      100,
+      208
+    ]
+  },
+  {
+    "order": 19,
+    "id": 89,
+    "slug": "089-where-should-validation-happen-in-a-backend-application",
+    "title": "Validate Input, Business Eligibility and Database Invariants",
+    "sourceIds": [
+      89,
+      90,
+      91,
+      92,
+      93
+    ]
+  },
+  {
+    "order": 20,
+    "id": 94,
+    "slug": "094-why-you-should-create-custom-exceptions",
+    "title": "Turn Domain Exceptions into a Stable API Error Contract",
+    "sourceIds": [
+      94,
+      95,
+      96,
+      97
+    ]
+  },
+  {
+    "order": 21,
+    "id": 101,
+    "slug": "101-why-should-you-test-the-service-layer",
+    "title": "Choose Tests by the Risk They Can Actually Detect",
+    "sourceIds": [
+      101,
+      103,
+      113,
+      114,
+      115,
+      116,
+      118,
+      267
+    ]
+  },
+  {
+    "order": 22,
+    "id": 102,
+    "slug": "102-junit-vs-mockito",
+    "title": "Use Mockito Without Confusing Interactions with Outcomes",
+    "sourceIds": [
+      102,
+      104,
+      105,
+      106,
+      107,
+      117,
+      268
+    ]
+  },
+  {
+    "order": 23,
+    "id": 108,
+    "slug": "108-arrange-act-assert-explained",
+    "title": "Test Create, Update and Delete as Observable Behaviors",
+    "sourceIds": [
+      108,
+      109,
+      110,
+      111,
+      112
+    ]
+  },
+  {
+    "order": 24,
+    "id": 119,
+    "slug": "119-why-two-java-classes-with-the-same-name-can-be-different-types",
+    "title": "Java Type Identity Depends on Packages and Class Loaders",
+    "sourceIds": [
+      119,
+      120
+    ]
+  },
+  {
+    "order": 25,
+    "id": 121,
+    "slug": "121-class-vs-record-in-java",
+    "title": "Records and Immutable Value Objects: What Is Really Immutable?",
+    "sourceIds": [
+      121,
+      130
+    ]
+  },
+  {
+    "order": 26,
+    "id": 122,
+    "slug": "122-object-vs-reference-in-java",
+    "title": "Objects, References and new in Java",
+    "sourceIds": [
+      122,
+      123
+    ]
+  },
+  {
+    "order": 27,
+    "id": 126,
+    "slug": "126-streams-vs-loops-when-should-you-use-each",
+    "title": "Choose Loops, Streams and Method References by Readability",
+    "sourceIds": [
+      126,
+      127
+    ]
+  },
+  {
+    "order": 28,
+    "id": 128,
+    "slug": "128-optional-explained-without-overcomplicating-it",
+    "title": "Use Optional as a Clear Absence Contract",
+    "sourceIds": [
+      128
+    ]
+  },
+  {
+    "order": 29,
+    "id": 129,
+    "slug": "129-checked-vs-unchecked-exceptions",
+    "title": "Checked and Unchecked Exceptions Express Handling Contracts",
+    "sourceIds": [
+      129
+    ]
+  },
+  {
+    "order": 30,
+    "id": 131,
+    "slug": "131-the-observer-design-pattern-explained-simply",
+    "title": "Use the Observer Pattern When Notifications Need Subscribers",
+    "sourceIds": [
+      131,
+      132
+    ]
+  },
+  {
+    "order": 31,
+    "id": 143,
+    "slug": "143-lazy-loading-vs-eager-loading",
+    "title": "Fetch Related Data Without Creating an N+1 Query Problem",
+    "sourceIds": [
+      143,
+      144
+    ]
+  },
+  {
+    "order": 32,
+    "id": 145,
+    "slug": "145-what-is-a-database-index",
+    "title": "Design and Read B-Tree Indexes for Real Queries",
+    "sourceIds": [
+      145,
+      146
+    ]
+  },
+  {
+    "order": 33,
+    "id": 147,
+    "slug": "147-primary-key-vs-foreign-key",
+    "title": "Primary Keys, Foreign Keys and Unique Constraints Protect Different Facts",
+    "sourceIds": [
+      147,
+      148
+    ]
+  },
+  {
+    "order": 34,
+    "id": 149,
+    "slug": "149-what-is-a-database-transaction",
+    "title": "Database Transactions and Spring Transaction Boundaries",
+    "sourceIds": [
+      149,
+      150
+    ]
+  },
+  {
+    "order": 35,
+    "id": 151,
+    "slug": "151-why-do-we-need-database-migrations",
+    "title": "Evolve a Production Schema with Flyway Instead of Guesswork",
+    "sourceIds": [
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160,
+      271
+    ]
+  },
+  {
+    "order": 36,
+    "id": 161,
+    "slug": "161-why-developers-use-docker",
+    "title": "Build Reproducible Application Images with Docker",
+    "sourceIds": [
+      161,
+      162,
+      163,
+      174,
+      175,
+      269,
+      279
+    ]
+  },
+  {
+    "order": 37,
+    "id": 164,
+    "slug": "164-what-does-port-mapping-mean",
+    "title": "Docker Ports, localhost and Service Discovery in One Network Model",
+    "sourceIds": [
+      164,
+      165,
+      166,
+      169,
+      170,
+      270
+    ]
+  },
+  {
+    "order": 38,
+    "id": 167,
+    "slug": "167-what-is-a-docker-volume",
+    "title": "Persist Container Data Safely with Volumes and Backups",
+    "sourceIds": [
+      167,
+      168
+    ]
+  },
+  {
+    "order": 39,
+    "id": 171,
+    "slug": "171-what-does-docker-exec-it-do",
+    "title": "Run and Diagnose an Application Stack with Docker Compose",
+    "sourceIds": [
+      171,
+      172,
+      173
+    ]
+  },
+  {
+    "order": 40,
+    "id": 176,
+    "slug": "176-what-happens-when-you-run-mvn-clean",
+    "title": "Understand Maven Lifecycle Commands and Build Artifacts",
+    "sourceIds": [
+      176,
+      177,
+      178,
+      179,
+      180,
+      181
+    ]
+  },
+  {
+    "order": 41,
+    "id": 182,
+    "slug": "182-how-to-read-a-maven-error",
+    "title": "Debug Java Failures by Evidence, Not Random Edits",
+    "sourceIds": [
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      189
+    ]
+  },
+  {
+    "order": 42,
+    "id": 195,
+    "slug": "195-what-is-cors",
+    "title": "Understand Origins, CORS and Browser-Enforced Access",
+    "sourceIds": [
+      195,
+      196
+    ]
+  },
+  {
+    "order": 43,
+    "id": 199,
+    "slug": "199-authentication-vs-authorization",
+    "title": "Build a JWT Authentication Flow with Explicit Trust Boundaries",
+    "sourceIds": [
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      212
+    ]
+  },
+  {
+    "order": 44,
+    "id": 206,
+    "slug": "206-roles-vs-permissions",
+    "title": "Model Roles and Permissions Without Losing Resource Ownership",
+    "sourceIds": [
+      206,
+      207
+    ]
+  },
+  {
+    "order": 45,
+    "id": 209,
+    "slug": "209-why-passwords-should-never-be-stored-as-plain-text",
+    "title": "Store Passwords with Salted, Slow Hashes",
+    "sourceIds": [
+      209,
+      210,
+      211
+    ]
+  },
+  {
+    "order": 46,
+    "id": 213,
+    "slug": "213-why-run-multiple-instances-of-the-same-application",
+    "title": "Scale Application Instances and Route Traffic with a Load Balancer",
+    "sourceIds": [
+      213,
+      214,
+      215,
+      216,
+      277,
+      278
+    ]
+  },
+  {
+    "order": 47,
+    "id": 217,
+    "slug": "217-what-is-consistent-hashing",
+    "title": "Use Consistent Hashing to Reduce Partition Movement",
+    "sourceIds": [
+      217
+    ]
+  },
+  {
+    "order": 48,
+    "id": 218,
+    "slug": "218-what-is-a-cache",
+    "title": "Use Redis Cache-Aside Without Serving Incorrect Data",
+    "sourceIds": [
+      218,
+      219,
+      220,
+      221
+    ]
+  },
+  {
+    "order": 49,
+    "id": 222,
+    "slug": "222-what-is-rate-limiting",
+    "title": "Choose Rate-Limiting Algorithms for Bursts and Fairness",
+    "sourceIds": [
+      222,
+      223
+    ]
+  },
+  {
+    "order": 50,
+    "id": 224,
+    "slug": "224-what-is-a-circuit-breaker",
+    "title": "Use Circuit Breakers to Contain Dependency Failures",
+    "sourceIds": [
+      224,
+      225
+    ]
+  },
+  {
+    "order": 51,
+    "id": 226,
+    "slug": "226-what-is-kafka",
+    "title": "Use Messaging and Kafka When Work Must Survive the Request",
+    "sourceIds": [
+      226,
+      227,
+      228,
+      229,
+      230
+    ]
+  },
+  {
+    "order": 52,
+    "id": 231,
+    "slug": "231-what-is-a-server",
+    "title": "Deploy an Application from a Laptop to a Server",
+    "sourceIds": [
+      231,
+      232,
+      233,
+      234,
+      235,
+      276
+    ]
+  },
+  {
+    "order": 53,
+    "id": 236,
+    "slug": "236-git-vs-github",
+    "title": "Use Git for History and GitHub for Collaboration",
+    "sourceIds": [
+      236,
+      237,
+      238
+    ]
+  },
+  {
+    "order": 54,
+    "id": 239,
+    "slug": "239-what-is-ci-cd",
+    "title": "Build a CI/CD Pipeline with Clear Release Gates",
+    "sourceIds": [
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      273,
+      275
+    ]
+  },
+  {
+    "order": 55,
+    "id": 246,
+    "slug": "246-where-kubernetes-fits-into-ci-cd",
+    "title": "Place Kubernetes in the Deployment Architecture",
+    "sourceIds": [
+      246,
+      247,
+      248,
+      250,
+      274
+    ]
+  },
+  {
+    "order": 56,
+    "id": 249,
+    "slug": "249-what-happens-when-a-kubernetes-container-crashes",
+    "title": "Diagnose Kubernetes Restarts and Traffic Readiness",
+    "sourceIds": [
+      249,
+      251,
+      252
+    ]
+  },
+  {
+    "order": 57,
+    "id": 253,
+    "slug": "253-monolith-vs-microservices",
+    "title": "Choose Module Boundaries Before Choosing Microservices",
+    "sourceIds": [
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262
+    ]
+  }
+]

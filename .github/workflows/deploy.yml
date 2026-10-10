@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '48 * * * *'
 
 permissions:
   contents: read
@@ -17,6 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.window.outputs.build }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,17 +31,25 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Check publication window
+        id: window
+        run: node scripts/publication-window.mjs
+
       - name: Install and build
+        if: steps.window.outputs.build == 'true'
         run: |
           npm ci
+          node scripts/test-publication.mjs
           npm run build
 
       - name: Upload Pages artifact
+        if: steps.window.outputs.build == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
+    if: needs.build.outputs.publish == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
