@@ -9,7 +9,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "ai:translate": "node scripts/ai-translate-post.mjs"
   },
   "dependencies": {
     "astro": "^6.1.6"

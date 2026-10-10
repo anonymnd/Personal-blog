@@ -30,3 +30,42 @@ With the configured `base` path, open **http://localhost:4326/Personal-blog/** (
 ## New posts
 
 Add Markdown under `src/content/blog/en/`, `fr/`, and `ar/` with the same `translationKey` in each file’s frontmatter.
+
+## AI-powered multilingual drafting
+
+You can write one post in any locale, then generate the other two with AI (natural rewrite, not literal translation).
+
+### 1) Free local mode (default): Ollama
+
+Install Ollama and run a model locally, for example:
+
+```bash
+ollama pull llama3.1:8b
+```
+
+### 2) Run generator
+
+```bash
+npm run ai:translate -- --source "src/content/blog/ar/your-post.md"
+```
+
+Optional flags:
+
+- `--provider ollama` (default) or `--provider openai`
+- `--model llama3.1:8b` (or any local model you have)
+- `--force` to overwrite existing translated files
+
+### 3) OpenAI mode (optional)
+
+Only if you want cloud generation:
+
+```powershell
+$env:OPENAI_API_KEY="your_api_key_here"
+npm run ai:translate -- --provider openai --source "src/content/blog/ar/your-post.md"
+```
+
+The script keeps `translationKey`, `pubDate`, and structure, and creates missing locale files in:
+
+- `src/content/blog/en/...`
+- `src/content/blog/fr/...`
+- `src/content/blog/ar/...`
