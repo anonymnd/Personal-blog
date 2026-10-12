@@ -17,6 +17,11 @@ export function blogIndexHref(lang: Locale): string {
 	return withBase(`${lang}/blog/`);
 }
 
+/** Page 1 is the plain blog index; page 2+ gets its own numbered URL. */
+export function blogIndexPageHref(lang: Locale, pageNum: number): string {
+	return pageNum <= 1 ? blogIndexHref(lang) : withBase(`${lang}/blog/${pageNum}/`);
+}
+
 export function postHref(lang: Locale, translationKey: string): string {
 	return withBase(`${lang}/blog/${translationKey}/`);
 }

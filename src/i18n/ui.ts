@@ -22,6 +22,9 @@ type HomeCopy = {
 type BlogIndexCopy = {
 	title: string;
 	intro: (n: number) => string;
+	prev: string;
+	next: string;
+	pageOf: (current: number, total: number) => string;
 };
 
 type PostCopy = {
@@ -98,14 +101,23 @@ const blogIndex: Record<Locale, BlogIndexCopy> = {
 	en: {
 		title: 'All posts',
 		intro: (n) => `${n} article${n === 1 ? '' : 's'} so far.`,
+		prev: '← Newer',
+		next: 'Older →',
+		pageOf: (current, total) => `Page ${current} of ${total}`,
 	},
 	fr: {
 		title: 'Tous les articles',
 		intro: (n) => `${n} article${n === 1 ? '' : 's'} pour l’instant.`,
+		prev: '← Plus récents',
+		next: 'Plus anciens →',
+		pageOf: (current, total) => `Page ${current} sur ${total}`,
 	},
 	ar: {
 		title: 'كل المقالات',
 		intro: (n) => (n === 1 ? 'مقال واحد حتى الآن.' : `${n} مقالات حتى الآن.`),
+		prev: '← أحدث',
+		next: 'أقدم →',
+		pageOf: (current, total) => `صفحة ${current} من ${total}`,
 	},
 };
 
