@@ -1,0 +1,68 @@
+---
+title: "Baseline ممل وصعيب تغلبو (CSP + LDA)"
+description: "الـ pipeline القياسي ديال motor-imagery، على sujet واحد، مع الرقم الصادق — ضعيف، فيه noise، وماشي خايب كـ point de référence لكل شي غايتبني فوقو."
+pubDate: 2026-08-17T10:00:00.000Z
+translationKey: a-boring-baseline-that-is-hard-to-beat
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - signal-processing
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: 'المرجع ديال CSP، LDA، وعلاش هاد الكومبينيزون بالضبط هي أول حاجة قياسية كتجرب فـ EEG ديال motor-imagery قبل ما تمشي لشي حاجة أعقد.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+];
+
+الـ signal <a href={withBase('/ar/blog/cleaning-a-brain-signal-what-filtering-changes-and-what-it-hides/')}>تفلتر</a>، الخطوة الجاية هي الأوضح وأقل حاجة glamour: نبني الـ pipeline القياسي، على sujet واحد، ونشوف شنو رقم غايعطي. ماشي باش نكونو impressionnants — باش يكون عندنا point de référence صادق قبل ما نسقسيو شي حاجة أصعب على الداتا.
+
+<Callout type="key-insight" label="علاش baseline ممل مهم">
+قبل ما نسقسي « واش الـ model ديالي كيتعمم بين الناس »، خاصني نعرف واش كيقدر يدير التاش الأساسية أصلا، لشخص واحد، بـ méthode مفهومة مزيان. إلا هاد الرقم ضعيف، هادشي معلومة مفيدة — ماشي échec نخبيه.
+</Callout>
+
+## الـ Pipeline
+
+mouvement ديال قبضة يسرى ضد يمنى متخيل، sujet واحد، 3 runs مجموعين (45 essai فالمجموع — 23 يسرى، 22 يمنى). مفلترين بحال المقال لي فات، من بعد مقسمين لـ epochs حول event marker ديال كل essai.
+
+method ديال feature extraction هي **CSP** — Common Spatial Patterns، الفيلتر spatial القياسي ديال EEG ديال motor-imagery. CSP كتلقى combinaisons linéaires ديال channels كتزيد الفرق فـ variance بين جوج classes؛ فالواقع، للـ imagery ديال اليد اليسرى/اليمنى، غالبا كتلقى filtres كيبرزو مناطق الـ cortex moteur فين الجوج mouvements المتخيلين كيعطيو أوضح contraste. فوق هادشي: **LDA**، classifier linéaire بسيط. <SourceLink authors="Lotte et al." year="2018" title="A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update" href="https://pubmed.ncbi.nlm.nih.gov/29932424/" />
+
+التقييم: cross-validation بـ 5 folds، CSP مضبوط من جديد فـ كل fold ديال training — عمرو ماضبط على كاع الـ 45 essai قبل الـ split. تفصيل صغير، ولكن ضبط CSP على كلشي أول كيخلي معلومة على essais ديال test تفوت للفيلتر spatial نفسو، حتى قبل ما الـ classifier يشوف الـ labels.
+
+## النتيجة
+
+<CodeBlock language="text" filename="output">
+Epochs: 45 (left=23, right=22)
+Balanced accuracy: 0.535 +/- 0.145
+Fold scores: [0.475, 0.300, 0.525, 0.700, 0.675]
+</CodeBlock>
+
+0.535 ديال balanced accuracy، بالكاد فوق ligne ديال chance لي هي 0.5، مع écart-type (0.145) قريب من كبر الـ signal نفسو. fold واحد عطا 0.300 — أخس من التخمين — وفولد آخر عطا 0.700.
+
+<Callout type="warning" label="نقاوم الرغبة فـ تبرير هادشي">
+أول حاجة فكرت فيها كانت نقلب على bug: channels غالطين، window غالطة ديال epoch، events labelisés غالط. تأكدت من الثلاثة بالنسبة للـ event-mapping والـ filtering ديال الجوج مقالات لي فاتو، ومالقيتش والو غالط. التفسير الأصدق هو كيفكذلك الأقل مرضي: 45 essai ماشي بزاف ديال الداتا، motor-imagery ديال sujet واحد هي signal فيها noise بالصح، ورقم ضعيف بـ variance عالية هو نتيجة معقولة هنا — ماشي بالضرورة غلطة.
+</Callout>
+
+## علاش مانديرش نصلح هادشي دابا
+
+غايكون سهل نجرب classifier مختلف، كثر ديال composantes CSP، bande ديال frequency مختلفة، ونكمل نبدل حتى الرقم يبان أحسن. قررت عمدا مانديرش هادشي هنا. هاد الـ baseline موجودة باش تكون point de référence ثابت للمقارنة، ماشي cible نأوبتيميزيها — والمقالات الجايين فهاد الـ thread محتاجين بالضبط هاد الرقم، كيفما كان ضعيف، باش يوريو شنو كيوقع ملي نفس الـ pipeline كيتقيم بين الناس بلاصة فـ واحد.
+
+<Callout type="further-reading" label="التالي">
+المقال الجاي كيعاود يستعمل نفس هاد الـ pipeline بالضبط على 10 sujets مجموعين — وأول version ديال هاد التجربة ماعطاتش غير score أخس من هاد الـ baseline، عطات score ديال chance. هاهو شنو خاب، وعلاش.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

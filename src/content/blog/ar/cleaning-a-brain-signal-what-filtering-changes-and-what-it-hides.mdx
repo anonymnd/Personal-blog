@@ -1,0 +1,74 @@
+---
+title: "تنظيف signal ديال الدماغ: شنو كيبدل الـ filtering، وشنو كيخبي"
+description: "filtre passe-bande و filtre coupe-bande، مطبقين على recording حقيقي ديال EEG، مع spectrum قبل/بعد باش يوري بالضبط شنو حيدو."
+pubDate: 2026-08-03T10:00:00.000Z
+translationKey: cleaning-a-brain-signal-what-filtering-changes-and-what-it-hides
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - signal-processing
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Widmann et al.',
+		year: '2015',
+		title: 'Digital filter design for electrophysiological data — a practical approach',
+		why: 'خلفية على علاش اختيار الـ filtre (cutoffs، ordre ديال الفيلتر، zero-phase ضد causal) هو قرار méthodologique حقيقي فـ EEG processing، ماشي default كتقبلو بعينين مسدودين.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4506252/',
+	},
+];
+
+<a href={withBase('/ar/blog/what-i-found-when-i-opened-my-first-eeg-file/')}>المقال لي فات</a> سالا بـ spike مؤكد فـ 60 Hz فـ power spectrum — ماكانش بادي فـ échelle واسعة، بان واضح ملي زووميت. هاد المقال هو التتمة: شنو كيوقع فالواقع للـ signal ملي هاد الـ noise، وكاع شي فـ خارج الـ frequency range لي يهمني، كيتفلتر.
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+filtre passe-bande و filtre coupe-bande هوما غير جوج أسطر ديال code. شنو كيحيدو فالواقع، وكيفاش غادي نعرف إلا اخترت cutoffs غالطين؟
+</Callout>
+
+## الفيلتر
+
+جوج حوايج مطبقين مع بعضياتهم، على نفس الـ sujet/run ديال المقال لي فات:
+
+- **Passe-bande، 1–40 Hz.** كيحافظ على الـ frequency range لي فيها الـ signals لي يهموني — الـ motor-imagery غالبا كيشوف فـ bandes mu (8–13 Hz) و bêta (13–30 Hz)، إذن 1–40 Hz كيحافظ على هادشي مع marge من الجوج الجوانب، وفنفس الوقت كيحيد الـ dérive البطيئة تحت 1 Hz والـ noise العضلي/الإلكتروني فوق 40 Hz.
+- **Coupe-bande، 60 Hz.** كيهدف بالضبط الـ interference ديال الـ secteur لي تأكدنا منها فالمقال لي فات، بلا ما يمس الـ frequencies لي جنبها بقوة بحال ما كيدير filtre passe-bande واسع.
+
+<CodeBlock language="text" filename="output">
+Peak power at 60 Hz:
+  before = 1.395e-11
+  after  = 1.428e-16
+  ratio  = 97,686x reduction
+</CodeBlock>
+
+نقصان ديال 97,686 مرة فـ power بالضبط فـ 60 Hz، وفحتى بلاصة أخرى فالـ spectrum — هادشي هو لي خاص filtre coupe-bande يدير: حيد جراحي لفريكونسة وحدة، ماشي تنظيف عام.
+
+## شنو كيوري الـ spectrum قبل/بعد
+
+مرسومين جنب بعضياتهم، 0–80 Hz: الـ spectrum « قبل » فيه الانحدار المتوقع بحال 1/f زائد الـ spike ديال 60 Hz فوقو. الـ spectrum « بعد » كيحافظ على نفس الشكل العام فـ pass-band، من بعد كيهبط بزربة بدءا من 40 Hz تقريبا — الـ cutoff ديال passe-bande — حتى power قريبة من الصفر فوقها، والـ spike ديال 60 Hz مسحون تماما.
+
+<Callout type="formula" label="شنو الفيلتر ماديرش">
+ماديرش flat على كاع الـ spectrum ولا حيد كاع الـ contenu عالي الفريكونسة بالتساوي — قطع بقوة فـ cutoff لي اخترناه (40 Hz) وجراحيا فـ notch لي اخترناه (60 Hz)، وخلى كلشي فـ pass-band بنفس الشكل لي كان قبل. هادشي هو الفرق بين « الداتا تفلترات » و « فهمت شنو دار الفيلتر للداتا ».
+</Callout>
+
+## الجزء السهل نغلط فيه
+
+الـ cutoffs ديال فيلتر هوما قرار، ماشي default. 1–40 Hz ماجاتش من الريح — واسعة بزاف باش تحافظ على range ديال mu/bêta لي محتاجها فالواقع مع marge، وضيقة بزاف باش تحيد أسوأ الـ dérive البطيئة والـ noise عالي الفريكونسة. tâche مختلفة — مثلا، شي حاجة كتهتم بـ activité فـ bande gamma فوق 40 Hz — غاتحتاج cutoff مختلف تماما، واختيار الـ default ديال كتاب EEG بلا ما تتأكد شنو كيحافظ أو كيحيد لهاد التاش بالضبط هو بالضبط نوع الغلطة الصامتة لي ماكتعطيكش error. <SourceLink authors="Widmann et al." year="2015" title="Digital filter design for electrophysiological data — a practical approach" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4506252/" />
+
+## شنو غادي ناخد للخطوة الجاية
+
+هاد الفيلتر — passe-bande 1–40 Hz، coupe-bande 60 Hz — غايولي خطوة التحضير الثابتة لكل تجربة بعد هاد الواحدة، مطبقة بنفس الشكل على كل sujet، مضبوطة قبل ما يوقع أي split بلاصة فـ كل fold (ماكاين والو حتى يفوتي هنا؛ الـ cutoffs مختارين مرة وحدة، من معرفة الدومين، ماشي متعلمين من الداتا). كون عندي الأرقام قبل/بعد هنا كيعني هاد القرار موثق، ماشي مفترض.
+
+<Callout type="further-reading" label="التالي">
+الـ signal نظيف دابا، المقال الجاي غايبني أول classifier حقيقي — baseline ممل وبصح على sujet واحد، قبل ما يجي حتى سؤال على التعميم بين الـ sujets.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

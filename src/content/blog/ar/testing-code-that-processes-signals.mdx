@@ -1,0 +1,51 @@
+---
+title: "Tester code لي كيعالج Signals: شنو test unitaire يقدر و مايقدرش يبرهن"
+description: "assertAlmostEqual ماشي optionnel من ملي floats كيدخلو للصورة، وsuite ديال tests لي عدات مازال مايقدرش يقولك cutoff ديال الفيلتر كان الصحيح."
+pubDate: 2026-09-21T10:00:00.000Z
+translationKey: testing-code-that-processes-signals
+locale: ar
+interactive: true
+tags:
+  - testing
+  - data
+  - engineering
+---
+
+test unitaire لـ fonction ديال formatage ديال chaîne ولا règle ديال validation عندو شكل نظيف: بهاد entrée، نتوقعو بالضبط هاد sortie. code ديال signal-processing — filtres، transformées ديال Fourier، rééchantillonnage، feature extraction — كيكسر هاد الشكل بشي طرق specifiques، وهاد الكسورات تستاهل تتسمى قبل ما نكتبو tests، ماشي من بعد debugging علاش suite لي عدات طلعات صيفطات شي حاجة غالطة.
+
+## الـ égalité الدقيقة هي assertion غالطة
+
+`assertEqual(result, expected)` كتخدم ملي sortie déterministe حتى للـ bit — compte entier، drapeau booléen، chaîne. sortie ديال filtre passe-bande هي séquence ديال أرقام à virgule flottante منتجة بـ multiplications و sommations متكررة، وجوج implémentations mathématiquement équivalentes (bibliothèque FFT مختلفة، plateforme مختلفة، حتى drapeau ديال compilateur مختلف) يقدرو légitimement يختلفو فالرقم الخامس عشر من بعد الفاصلة. tester code ديال signal-processing كيعني نأفيرميو *القرب*، ماشي égalité — `assertAlmostEqual`، `numpy.allclose`، ولا tolérance explicite — واختيار هاد tolérance هو نفسو قرار محتاج سبب، ماشي default مسخي من fichier ديال test آخر.
+
+```python
+# غالط: غايفلاكي على noise ديال virgule flottante لي ماكيعنيش والو
+assert filtered_signal[100] == 0.42315
+
+# صحيح: كيقول tolérance لي test فالواقع كيهمو
+assert abs(filtered_signal[100] - 0.42315) < 1e-6
+```
+
+## test يقدر يبرهن cohérence، ماشي صحة
+
+test كيصيفط onde sinusoïdale معروفة لـ filtre passe-bande وكيتأكد بلي amplitude ديال sortie هبطات برا من pass-band كيبرهن بلي الفيلتر *كيتصرف بحال فيلتر* — مايبرهنش بلي 1-40 Hz كانت pass-band الصحيحة للتاش. هادشي قرار ديال domaine، مأخوذ بقراية على أي range ديال frequency فيها الـ signal لي يهمنا، ماشي شي حاجة suite ديال tests تقدر تتأكد منها من premiers principes. tests المفيدين هنا كيتأكدو بلي *mécanisme* كيدير شنو كيدعي (filtre coupe-bande فـ 60 Hz فعلا كيضغط 60 Hz، rééchantillonnage من 1000 Hz لـ 250 Hz فعلا كيعطي ربع عدد ديال échantillons) — ماشي بلي mécanisme كان مصوب على الهدف الصحيح.
+
+## tests مبنيين على propriétés كيلقاو شنو tests مبنيين على exemples كيفوتهم
+
+قبضة ديال entrées ديال exemples مختارين بـ اليد كتست les cas لي فكرتي فيهم. bugs ديال signal-processing غالبا كيعيشو فـ les cas لي مافكرتيش فيهم: entrée بطول صفر، signal أقصر من window ديال فيلتر، داتا كاملها NaN من perte ديال sensor، sampling rate لي ماكيقسمش بالتساوي طول ديال window. test مبني على propriété — ولد بزاف ديال entrées عشوائيين (وcas limites)، أفيرمي invariant لي خاصو يبقى صحيح لكاملهم — كيغطي بزاف من هاد l'espace أكثر من exemples وحدهم:
+
+```python
+@given(arrays(dtype=np.float64, shape=st.integers(0, 1000)))
+def test_filter_never_changes_signal_length(signal):
+    result = bandpass_filter(signal, low=1, high=40, fs=160)
+    assert len(result) == len(signal)
+```
+
+هادشي مابيدلش tests مبنيين على exemples — test كيأفيرمي « هاد entrée معروفة كتفلتر لهاد sortie معروفة » يبقى أوضح vérification ديال régression ملي implémentation كتبدل — ولكن كيلقى bugs ديال شكل وcas limite لي exemples ثابتين مايقدروش structurellement يلقاوهم.
+
+## tests ديال golden-file، مستعملين عمدا
+
+لشي حاجة معقدة بزاف باش تحسب sortie متوقعة بيدك ماشي pratique — pipeline كامل ديال prétraitement، extracteur ديال features بـ plusieurs étapes — test ديال golden-file (سجل sortie معروفة كـ bonne مرة وحدة، قارن exécutions المستقبل بيها) غالبا هو الخيار العملي الوحيد. الـ risque هو استعمالو كـ substitut للفهم: golden file مولدة بـ version فيها bug ديال code غاتصادق على bug بفرح كـ صحيح لأبد. golden file كتستاهل بلاصتها غير ملي sortie لي تولدات منها تأكدات بشكل مستقل مرة وحدة على الأقل — من expert ديال domaine، valeur ديال référence منشورة، ولا méthode أبسط كتحسب نفس الحاجة بطريقة مختلفة.
+
+## الحد الصادق
+
+والو من هادشي ماكيسد الفرق الحقيقي بين « code كيدير شنو كتبت » و « code كيدير شنو signal محتاج فالواقع ». هاد الفرق هو بالضبط علاش، فـ [thread ديال recherche ديال EEG فهاد البلوغ](/Personal-blog/ar/blog/what-id-check-before-believing-any-brain-decoding-result/)، pipeline لي عدا tests ديالو و نتيجة بانت معقولة مازال تتأكدو ضد null model، mise en garde على حجم عينة، و « ربما هادشي ماغايتعممش » صادقة — suite ديال tests ضرورية باش تلقى bugs mécaniques، وعمرها ماكانت غاتكون كافية باش تلقى hypothèse scientifique غالطة.

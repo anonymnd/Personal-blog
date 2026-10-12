@@ -1,0 +1,73 @@
+---
+title: "Poignet ضد Poitrine — شحال بلاصة الـ sensor كتبدل الجواب؟"
+description: "نفس الناس، نفس التاش، نفس discipline ديال évaluation — غير bracelet مريح بدل جهاز clinique على الصدر. شنو هادشي كيكلف فالواقع، بالأرقام؟"
+pubDate: 2026-09-28T10:00:00.000Z
+translationKey: wrist-vs-chest-how-much-does-sensor-placement-change-the-answer
+locale: ar
+interactive: true
+tags:
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Schmidt et al.',
+		year: '2018',
+		title: 'Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection',
+		why: 'الـ dataset لي استعملتو فهاد المقال: 15 sujet، sensors physiologiques ديال poitrine (RespiBAN) و poignet (Empatica E4) مسجلين فنفس الوقت خلال protocole ديال stress فـ laboratoire.',
+		href: 'https://dl.acm.org/doi/10.1145/3242969.3242985',
+	},
+];
+
+كل تجربة فهاد البلوغ حتى دابا استعملت EEG ديال الراس. هاديك عمدا تبديل ديال signal، باش نشوف واش الـ pattern لي كنكمل نلقاها — جمع الناس كيزيد score وهمي، évaluation مزيانة كترجعو — كيبان شي حتى فبلاصة ماهياش EEG خالص.
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+إلا بدلت من جهاز sensor ديال poitrine clinique لنوع ديال bracelet لي شخص يمكن يلبسو فالواقع، شحال ديال accuracy هادشي كيكلف — على نفس الناس بالضبط، نفس التاش بالضبط؟
+</Callout>
+
+## الداتا
+
+<SourceLink authors="Schmidt et al." year="2018" title="Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection" href="https://dl.acm.org/doi/10.1145/3242969.3242985" /> سجل 15 شخص لابسين جوج أجهزة فنفس الوقت خلال protocole ديال laboratoire فيه tâche كتدير stress و baseline ديال rest: وحدة RespiBAN على الصدر (ECG، EDA، EMG، respiration، température، accéléromètre 3 axes، كاملهم فـ 700 Hz) و bracelet Empatica E4 (pouls ديال volume sanguin فـ 64 Hz، EDA و température فـ 4 Hz، accéléromètre فـ 32 Hz). نفس الشخص، نفس خمسطاش دقيقة، جوج بلايص مختلفين ديال sensor.
+
+قطعت الجوج signals لـ windows ديال 30 ثانية، خليت غير الـ windows المليبلين كاملين « baseline » أو كاملين « stress »، وحسبت moyenne و écart-type ديال كل channel فكل window — 12 feature للصدر، 8 للـ poignet. نفس régression logistique، نفس évaluation بـ 5-fold ديال subject-wise (`GroupKFold` بـ subject) بحال تجارب EEG.
+
+## النتيجة
+
+<DataTable caption="WESAD baseline ضد stress، balanced accuracy ديال subject-wise">
+<thead><tr><th>جهاز</th><th>Features</th><th>Balanced accuracy</th><th>Null (مخلط)</th></tr></thead>
+<tbody>
+<tr><td>Poitrine (RespiBAN)</td><td>12</td><td>0.807 ± 0.066</td><td>0.500 ± 0.021</td></tr>
+<tr><td>Poignet (Empatica E4)</td><td>8</td><td>0.694 ± 0.060</td><td>0.494 ± 0.010</td></tr>
+</tbody>
+</DataTable>
+
+الجوج أجهزة واضحين فـ الفرق عن chance — هادشي ماشي حالة واحد كيخدم ولخر ماخدامش خالص. ولكن الفرق بينهم حقيقي: 0.114 ديال balanced accuracy، كثر من 11 نقطة، ضايعين فـ الانتقال من جهاز الصدر لـ bracelet، على نفس évaluation ديال subject-wise لي الجوج مقالات لي فاتو استعملوها.
+
+<Callout type="formula" label="علاش الفرق معقول">
+جهاز الصدر كيقيس ECG و EMG مباشرة على الجلد حدا القلب والحجاب الحاجز — signals مرتبطين بقوة بـ réponse physiologique ديال stress. الـ bracelet كيستنتج بزاف من هادشي بشكل غير مباشر، عبر pouls ديال volume sanguin و conductance ديال الجلد فبلاصة فيها noise بزاف. تخسارة ديال جودة signal ملي كتبعد sensor من المصدر هي بالضبط شنو كنتوقعو؛ السؤال كان غير شحال.
+</Callout>
+
+## علاش هادشي مهم لـ boucle « حس، فهم، تأقلم »
+
+هادشي كيرتبط بالجوج مقالات لي فاتو، ماشي غير بإعادة استعمال نفس méthode ديال évaluation. جهاز poignet هو الـ form factor الواقعي لأي شي خاصو يخدم برا من laboratoire — هادشي كيعني أي système adaptatif حقيقي مبني على هاد النوع ديال signal كيختار يخلص هاد 11 نقطة ديال كلفة مقابل الراحة والعملية. واش هاد الـ compromis يستاهل ولا لا كيعتمد كاملا على شنو système محتاج يكون صحيح فيه، وهادشي سؤال ديال conception، ماشي ديال modélisation.
+
+<Callout type="warning" label="شنو ماكتوريش هادشي">
+15 sujet عينة صغيرة لتقدير كلفة بحال هادي، و label ديال stress هنا جاي من protocole ديال laboratoire (tâche مؤقتة ديال الهضرة قدام الناس و arithmétique) ماشي من stress حقيقي يومي ديال شخص — إذن « 11 نقطة » خاصة بهاد التاش، هاد population، وهاد الجوج أجهزة. هادشي رقم من تجربة واحدة، ماشي constante عامة ديال poignet-ضد-poitrine.
+</Callout>
+
+<Callout type="further-reading" label="فين هاد الـ thread غادي من بعد">
+3 نتائج حقيقية حتى دابا، على جوج signals مختلفين: écart ديال leakage (<a href={withBase('/ar/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>random ضد subject-wise split</a>)، <a href={withBase('/ar/blog/how-much-data-from-one-new-person-does-a-model-need/')}>courbe de calibration</a>، ودابا كلفة ديال بلاصة sensor. الجزء الجاي فهاد الـ thread كيحاول يرجع نتيجة من مقال منشور على dataset مختلف، ويقول بصح فين ديالي طابقت وفين ماطابقتش.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

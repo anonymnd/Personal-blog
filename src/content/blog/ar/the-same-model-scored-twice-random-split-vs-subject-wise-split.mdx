@@ -1,0 +1,136 @@
+---
+title: "نفس الـ Model، تقيّم جوج مرات — Random Split ضد Subject-Wise Split"
+description: "درّبت نفس الـ classifier على نفس الداتا ديال EEG وقيمتو بجوج طرق مختلفين. score واحد كان كذوب. هاهي التجربة، الأرقام، وفين غلطت فـ أول version."
+pubDate: 2026-09-07T10:00:00.000Z
+translationKey: the-same-model-scored-twice-random-split-vs-subject-wise-split
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import LeakageDiagram from '../../../components/eeg/LeakageDiagram.astro';
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+
+export const papers = [
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: 'المصدر الرئيسي ديال هاد المقال. راجعو 63 دراسة منشورة ديال deep learning فـ EEG ولقاو غير 17 لي تجنبو بوضوح leakage على مستوى الـ sujet؛ فـ ré-exécution واحدة، accuracy على participant مستبعد هبطت من قريب كاملة لـ قريب chance.',
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Zyma et al.',
+		year: '2019',
+		title: 'Electroencephalograms during Mental Arithmetic Task Performance (EEGMAT dataset)',
+		why: 'الـ dataset لي استعملت فأول تجربة — 36 sujet، EEG فـ rest ضد arithmétique mentale، 23 channel، segments قصار بلا artefacts.',
+		href: 'https://physionet.org/content/eegmat/1.0.0/',
+	},
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: 'كيشرح الـ acquisition system لي موراء dataset ديال PhysioNet EEG Motor Movement/Imagery لي استعملتو فالتجربة الثانية.',
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: 'خلفية على CSP وعلاش هو filtre spatial مضبوط على مجموعة recordings معينة ماشي extracteur عام ديال features — مهم باش نفهمو علاش جمع الـ sujets قبل ضبط CSP خاب هنا.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+];
+
+درّبت classifier على داتا ديال EEG، قيمتو، ولقيت 0.871 ديال balanced accuracy.
+
+من بعد قيمت نفس الـ model المدرب بطريقة مختلفة، على نفس الداتا بالضبط، ولقيت 0.690.
+
+والو ما تبدل فالـ model. والو ما تبدل فالداتا. غير حاجة وحدة تبدلات: شكون الـ essais لي خلاوهم يكونو مع بعضياتهم فـ training set.
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+إلا model مدرب ومجرب على نفس الناس — غير على moments مختلفين من recordings ديالهم — شحال من score ديالو هو « فهمت الـ signal » ضد « عرفت هاد الدماغ بالضبط » ؟
+</Callout>
+
+## جوج طرق باش تقطع نفس الكوطة
+
+نكول عندي EEG ديال 36 شخص، ولكل شخص عندي بزاف segments قصار: شي واحدين مسجلين فـ rest، شي واحدين وهوما كيديرو arithmétique mentale. بغيت نـclassifie rest ضد arithmétique.
+
+الطريقة العادية باش نقيمو classifier هي k-fold cross-validation: نخلطو كاع الـ segments مع بعضياتهم، نقسمو لـ 5 folds، ندربو على 4، نجربو على 1، ونعاودو. هادشي هو **random split**.
+
+الطريقة الأخرى هي ماخليش حتى segments ديال شخص يفوتو من training لـ test. تختار شكون *الناس* لي غادين فـ test fold، ماشي شكون *السيغمونات*. هادشي هو **subject-wise split** — فـ scikit-learn، `GroupKFold` مع subject ID كـ groupe.
+
+<LeakageDiagram />
+
+الـ random split فيها leakage حيت segments ديال نفس الشخص كيشبهو بعضياتهم كثر من segments ديال ناس مختلفين — نفس شكل الجمجمة، نفس impédance ديال electrode هاد النهار، نفس rythme دماغي أساسي. model يقدر يحل جزء من « rest ضد arithmétique » بحل « شكون هاد الشخص »، و random split كتخليه يدير هادشي ببلاش، من الجوج جوانب ديال الـ split. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" />
+
+## تجربة 1: rest ضد arithmétique mentale (EEGMAT)
+
+استعملت dataset ديال PhysioNet EEGMAT — 36 شخص، كل واحد عندو recording ديال rest و recording ديال arithmétique mentale، 21 channel فـ 500 Hz. قطعت كل recording لـ windows ديال 10 ثواني بلا تداخل، ولكل window حسبت log band power (delta/theta/alpha/beta/gamma) على كل channel — 100 feature لكل window، 850 window فالمجموع.
+
+فوق هادشي: régression logistique، مع feature scaler مضبوط غير فـ كل training fold — عمرو ماضبط على الـ dataset الكامل أول. ضبط scaler قبل الـ split هي نفسها leakage صغيرة، وسهل بزاف تفوتك.
+
+<DataTable caption="EEGMAT: rest ضد arithmétique، balanced accuracy، 5 folds">
+<thead><tr><th>Split</th><th>Moyenne</th><th>Écart-type</th><th>شنو كتعني</th></tr></thead>
+<tbody>
+<tr><td>Random (fuite)</td><td>0.871</td><td>±0.025</td><td>segments مخلطين بين الناس</td></tr>
+<tr><td>Subject-wise</td><td>0.690</td><td>±0.048</td><td>ناس كاملين مستبعدين</td></tr>
+<tr><td>Null (labels مخلطين)</td><td>0.496</td><td>±0.015</td><td>labels عشوائيين، subject-wise split — خاصها تكون حدا chance</td></tr>
+</tbody>
+</DataTable>
+
+الفرق هو 0.182 — تقريبا 18 نقطة ديال balanced accuracy، فالاتجاه لي قصة الـ leakage كتتوقع. الـ null model لي طاح قريب بالضبط على 0.5 هو لي كيقوليا بلي 0.690 ديال subject-wise هو signal حقيقي وماشي artefact ديال كيفاش بنيت الـ pipeline: إلا الـ null عطا score فوق chance بزاف، شي حاجة فـ code ديالي كانت غاتسرب معلومة الـ label بغض النظر على الـ split.
+
+<Callout type="warning" label="غلطة ديرتها أول">
+أول exécution ديال هادشي عطاتني null model بـ 0.654 — بزاف فوق chance. كنت مستعمل accuracy عادية، والجوج classes ماكانوش متوازنين (75% ديال الـ windows كانو « rest »، حيت recordings ديال rest كيدوزو تقريبا 3 مرات كثر من ديال arithmétique). classifier كيخمن غير « rest » فـ كل مرة كيعطي 0.75 فـ accuracy عادية بلا ما يتعلم والو. التبديل لـ balanced accuracy رجع الـ null لـ 0.496، فين خاصو يكون. خليت هادشي حيت نلقاوه هو جزء من النتيجة، ماشي note نخبيها.
+</Callout>
+
+## تجربة 2: قبضة يسرى ضد يمنى متخيلة (motor imagery)
+
+نفس السؤال، signal أصعب. استعملت 10 sujets من dataset ديال PhysioNet EEG Motor Movement/Imagery، mouvement ديال قبضة يسرى ضد يمنى متخيل، 64 channel فـ 160 Hz، passe-bande 1–40 Hz زائد filtre coupe-bande 60 Hz (كاين line noise حقيقي فـ 60 Hz فهاد الـ matériel ديال recording — تأكدت بـ power spectrum مزوومي قبل ما نفترض والو).
+
+أول محاولة ديالي استعملت CSP (Common Spatial Patterns)، الفيلتر spatial القياسي ديال decoding ديال motor-imagery، متبوع بـ LDA. مضبوط بشكل صحيح فـ كل fold ديال cross-validation، بلا leakage. النتيجة: كلشي عطا score ديال chance.
+
+<DataTable caption="Motor imagery، CSP+LDA مجموع على 10 sujets (أول محاولة)">
+<thead><tr><th>Split</th><th>Moyenne</th><th>Écart-type</th></tr></thead>
+<tbody>
+<tr><td>Random</td><td>0.452</td><td>±0.022</td></tr>
+<tr><td>Subject-wise</td><td>0.504</td><td>±0.023</td></tr>
+<tr><td>Null (مخلط)</td><td>0.490</td><td>±0.025</td></tr>
+</tbody>
+</DataTable>
+
+الثلاثة أرقام كاينين فـ noise ديال بعضياتهم. ماكاين حتى écart ديال leakage باش نلقاوه هنا حيت ماكاين حتى signal من الأول — ماشي bug، décalage فـ modélisation. CSP كتضبط filtre spatial واحد لكل training set، وهاد الفيلتر مضبوط على géométrie ديال أي دمغان كاينين فيه. تجمع essais ديال عشرة ناس مختلفين قبل ما تضبط CSP، والفيلتر فالأخير كيدير compromis بين عشرة géométries مختلفين بلاصة ما يوصف واحدة منهم مزيان. هادشي هو، بشكل صغير، بالضبط المشكل ديال التعميم لي باقي هاد المشروع كيهضر عليه — بان من أول baseline.
+
+تبديل CSP بنفس features ديال band-power المستعملين فـ تجربة 1 (log power عبر 4 bandes، 32 channel) صلحو:
+
+<DataTable caption="Motor imagery، features ديال band-power، نفس 10 sujets (مصلح)">
+<thead><tr><th>Split</th><th>Moyenne</th><th>Écart-type</th></tr></thead>
+<tbody>
+<tr><td>Random (fuite)</td><td>0.599</td><td>±0.041</td></tr>
+<tr><td>Subject-wise</td><td>0.573</td><td>±0.043</td></tr>
+<tr><td>Null (مخلط)</td><td>0.456</td><td>±0.044</td></tr>
+</tbody>
+</DataTable>
+
+دابا الـ null كاين واضح تحت الجوج scores الحقيقيين، إذن كاين signal متعلم. الفرق صغير — 0.027 — بزاف أصغر من 0.182 ديال EEGMAT. كنقرا هادشي بلي التاش صعيبة بالصح، ماشي مشكل فـ pipeline: baseline ديال sujet واحد لي دريتها قبل على نفس التاش ديال قبضة يسرى/يمنى، بـ 45 essai غير، عطات هي كيفكذلك score ضعيف 0.535 ± 0.145. Rest-ضد-arithmétique عندها signature كبيرة، بطيئة، على الدماغ كاملو. Motor imagery يسرى-ضد-يمنى عندها واحدة أدق، أكثر localisée، و10 sujets و450 essai ماشي بزاف باش تلقاها فيه.
+
+## شنو كناخد من هادشي
+
+النتيجة الصادقة ماشي « subject-wise splitting كتنقص score ديالك، attention ». هي أضيق وأفيد من هادشي: **كبر الفرق بين random split و subject-wise split كيقوليك شحال من المهارة الظاهرة ديال model ديالك كانت reconnaissance ديال شخص متلبسة**، وهاد الرقم مختلف لكل تاش ولكل ensemble ديال features. لـ rest-ضد-arithmétique بـ band power، بزاف من score ديال random split كان هادشي. لـ motor imagery، ملي صلحت الـ pipeline، ماكانش بزاف — الفرق لي بقا قريب من شنو كنتوقعو من جوج échantillons ديال 5-fold مختلفين شوية وبنفس الحجم.
+
+<Callout type="further-reading" label="التالي">
+السؤال الجاي الطبيعي هو: إلا كان عندنا model subject-wise لي عمرو ماشاف شخص جديد، شحال من الداتا ديال هاد الشخص خاصها باش تسد جزء من الفرق؟ هاديك هي تجربة courbe de calibration — المقال الجاي.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

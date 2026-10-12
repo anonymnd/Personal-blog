@@ -1,0 +1,72 @@
+---
+title: "شنو لقيت ملي حلّيت أول فيشي ديال EEG"
+description: "قبل أي model، قبل أي سؤال على الـ accuracy — شنو كاين فـ الواقع فـ recording ديال EEG حقيقي، وشنو فهمتو غلط أول مرة؟"
+pubDate: 2026-07-20T10:00:00.000Z
+translationKey: what-i-found-when-i-opened-my-first-eeg-file
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - data-science
+  - signal-processing
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+
+export const papers = [
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: 'كيشرح الـ acquisition system لي موراء الـ dataset ديال PhysioNet EEG Motor Movement/Imagery لي حليت فهاد المقال.',
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+];
+
+بديت thread صغير ديال recherche فهاد البلوغ، جنب المقالات العاديين ديال الهندسة: داتا حقيقية ديال EEG و wearable sensors، تجارب حقيقية، مكتوبة بصح — حتى الحاجات لي غلطت فيهم قبل ما نصلحهم. هاد أول مقال هو أقل خطوة impressionnante وأكثر خطوة مهمة: نحل فيشي واحد ونشوف فيه قبل ما نسقسي أي model يدير شي حاجة.
+
+<Callout type="key-insight" label="علاش نبداو من هنا">
+قبل « واش هادشي كيـclassifier مزيان »، كاين « شنو كاين فالواقع فهاد الـ recording، بشحال، وبشحال ديال الـ noise ». إلا قبزتي هاد الخطوة، من هنا كتدخل leakage، غلطات فـ units، وbugs صامتين.
+</Callout>
+
+## الفيشي
+
+sujet واحد، run واحد، من dataset ديال PhysioNet EEG Motor Movement/Imagery — dataset عمومي وبموافقة ديال 109 ناس كيديرو حركات حقيقية وmتخيلة بـ ايديهم ورجليهم وهوما لابسين casque EEG فيه 64 channel. <SourceLink authors="Schalk et al." year="2004" title="BCI2000: A General-Purpose Brain-Computer Interface (BCI) System" href="https://physionet.org/content/eegmmidb/1.0.0/" /> حليت الـ run لي فيه الـ sujet كيتخيل كيحرك قبضتو اليسرى ولا اليمنى، بـ MNE-Python، وطبعت الأساسيات قبل ما نرسم والو.
+
+<CodeBlock language="text" filename="output">
+Channels:       64 ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5'] ...
+Sampling rate:  160.0 Hz
+Duration:       125.0 s
+Annotations:    ['T0', 'T1', 'T2']
+</CodeBlock>
+
+64 channel، 160 sample فـ الثانية، شوية كثر من دقيقتين. الـ annotations هوما الجزء لي كيهم للي جاي: `T0`، `T1`، `T2` هوما codes عامين، وشنو كيـmعنيو كيتبدل حسب الـ run لي فيه راك. فهاد الـ run (mouvement imaginé ديال القبضة)، `T0` هو rest، `T1` هو mouvement imaginé ديال القبضة اليسرى، `T2` هو ديال اليمنى. إلا غلطتي فهاد الـ mapping، كل label فـ الـ dataset غيولي غالط بطريقة ماغاتعطيك حتى error — غير غاتدرب model بصمت على classes مقلوبين.
+
+## كيفاش بان الـ raw trace فالواقع
+
+ثمنية من الـ 64 channel، عشر ثواني، ملونين حسب الـ windows ديال T0/T1/T2: oscillation فيها noise، حتى channel ما بان flat، حتى electrode ما بانت ميتة، amplitudes حداها 100–130 µV peak-to-peak. والو ما كيشبه بـ « الموجة الدماغية » النظيفة والبطيئة لي كنت متخيلها قبل ما نبدا. كتبان بحال noise فيه structure مخبية فيه، وهاديك هي القريبة للحقيقة.
+
+## الـ spectrum، والغلطة فـ قراءتو
+
+الـ power spectrum (0–60 Hz) بان بالشكل لي كنت متوقعو فالعموم — الـ power كتنقص بزربة مع الـ frequency — ولكن ما لقيتش spike واضح فـ 50 ولا 60 Hz، الـ frequency ديال الـ power-line interference لي الـ recordings ديال EEG كيلتقطوها غالبا شي بزاف شي شوية. أول ملاحظة ديالي على هادشي كانت ماشي متأكدة: يمكن هاد الـ recording كان نظيف بزاف، أو يمكن الـ style ديال الـ plot (échelle en décibels، 8 channels فوق بعضياتهم) كان مخبيها.
+
+<Callout type="warning" label="تأكد، ما تفترضش">
+زوomiت نفس الـ spectrum على غير 45–65 Hz بلاصة 0–60 Hz. وكانت تما: spike واضح ومزيان بالضبط فـ 60 Hz — ماكانش بادي فالـ échelle الواسعة، وما كاينش شك فيه فالـ échelle الضيقة. الـ recording عمرو ماكان نظيف؛ غير أنا ماشفتش مزيان باش نشوف الـ noise لي كانت موجودة من قبل.
+</Callout>
+
+هاد الفرق — « ماكنشوفوش » ضد « ماكاينش » — طلع مهم دغيا. مقال جاي فهاد الـ thread احتاج filtre coupe-bande فـ 60 Hz بالضبط حيت هاد الـ noise حقيقية، وتأكيدها هنا بـ plot مزوومي هو لي خلا هاد القرار defendable بلاصة ما يكون مجرد تخمين.
+
+## شنو غادي ناخد للخطوة الجاية
+
+جوج حوايج concrets نجاو من هاد النظرة الأولى: الـ mapping ديال الـ event-codes (`T0`/`T1`/`T2` كيمعنيو حوايج مختلفين حسب الـ run — خاصني نتأكد من هادشي فـ كل run، ماشي نفترضو مرة وحدة) وحضور الـ 60 Hz line noise (مؤكدة، ماشي مفترضة، بزووم حقيقي). حتى واحد فيهم ماشي exciting فحد ذاتو. بزاف الجوج هوما نوع ديال التفاصيل لي كتكسر تجربة بصمت 3 خطوات من بعد إلا قبزتيها دابا.
+
+<Callout type="further-reading" label="التالي">
+فـ المقال الجاي فهاد الـ thread: شنو كيتبدل، بشكل concret، ملي هاد الـ line noise وباقي الـ spectrum كيتفلترو — مقارنة حقيقية قبل/بعد، ماشي affirmation.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

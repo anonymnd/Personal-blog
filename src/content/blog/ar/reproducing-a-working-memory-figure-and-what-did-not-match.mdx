@@ -1,0 +1,83 @@
+---
+title: "رجوع figure ديال working-memory — وشنو ماطابقش"
+description: "حاولت نرجع نتيجة منشورة ديال EEG على داتا عمومية. version ديالي رجعت فالاتجاه المعكوس. هاهي المحاولة، النتيجة الصادقة، وعلاش ماكنسميهاش réfutation."
+pubDate: 2026-10-12T10:00:00.000Z
+translationKey: reproducing-a-working-memory-figure-and-what-did-not-match
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import CodeBlock from '../../../components/common/CodeBlock.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Pavlov et al.',
+		year: '2022',
+		title: 'Pupillometry and electroencephalography in the digit span task',
+		why: 'الـ dataset والـ affirmation لي هاد المقال كيحاول يرجعها: theta frontal médian كيزيد فـ condition ديال mémoire ضد contrôle ديال écoute غير، مذكورة فـ Fig. 3d ديالهم.',
+		href: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9206021/',
+	},
+];
+
+كل مقال فهاد الـ thread حتى دابا كان تجربة ديالي، بشروط ديالي. هادي مختلفة عمدا: ناخد affirmation specifique و concrète من مقال منشور، نحاول نرجعها على نفس الداتا العمومية، ونقول بصح شنو وقع فالواقع — حتى إلا ماطابقتش.
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+إلا أخدت نتيجة EEG منشورة و ré-exécuti version ديال analyse بنفسي، على dataset لي الكتاب نشروه، واش رقم ديالي كيشير لنفس الاتجاه ديالهم؟
+</Callout>
+
+## الـ affirmation
+
+<SourceLink authors="Pavlov et al." year="2022" title="Pupillometry and electroencephalography in the digit span task" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9206021/" /> جمعو EEG ديال 86 شخص كيديرو tâche ديال sequence ديال أرقام: يسمعو sequence مهضورة ديال 5، 9، ولا 13 رقم، من بعد يا كيعاودوهم بالفم (condition ديال mémoire) يا مايديرو والو (contrôle ديال écoute غير). كيقولو، فـ Fig. 3d ديالهم، بلي theta frontal médian — power ديال EEG حوالي 6 Hz فـ electrode Fz — كيزيد فـ condition ديال mémoire مقارنة مع condition ديال contrôle. ماكاين حتى رقم فالنص ديال المقال لهادشي، غير figure و affirmation qualitative.
+
+هاديك هي الهدف: electrode specifique، bande ديال frequency specifique، اتجاه ديال effet specifique.
+
+## شنو ديرت
+
+حملت EEG ديال 3 sujets من dataset (OpenNeuro ds003838، متوفر عموميا) — أول 3 sujets معلمين كـ عندهم EEG قابل للاستعمال فـ table ديال participants ديال dataset نفسو. لكل essai، لقيت آخر رقم تقال، أخدت window ديال 3 ثواني مباشرة من بعدو (الـ intervalle ديال rétention قبل الـ rappel، حسب شرح الـ timing ديال التاش نفسها)، وحسبت log power فـ bande theta 4–8 Hz فـ channel Fz.
+
+<Callout type="formula" label="تأكد ديال sens قبل ما نوثق فشي حاجة أخرى">
+قبل ما نشوف النتيجة، تأكدت بلي logique ديالي ديال عد essais كتلقى العدد الصحيح ديال essais: 54 contrôle و 108 mémoire لكل sujet، فكل مرة. هادشي كيطابق بالضبط الـ design لي قالو عليه المقال (54 essai ديال écoute passive، 108 essai ديال mémoire، لكل participant). كناخد هادشي كدليل بلي parsing ديال الأحداث نفسو صحيح، حتى إلا — كما طلع — النتيجة لي كيغذيها ماتطابقش affirmation ديال المقال.
+</Callout>
+
+## النتيجة
+
+<DataTable caption="Log-power ديال theta frontal (Fz)، 3 sujets">
+<thead><tr><th>Sujet</th><th>Contrôle</th><th>Mémoire</th><th>Mémoire − Contrôle</th></tr></thead>
+<tbody>
+<tr><td>sub-032</td><td>-1.513</td><td>-1.624</td><td>-0.111</td></tr>
+<tr><td>sub-033</td><td>0.063</td><td>-0.008</td><td>-0.071</td></tr>
+<tr><td>sub-034</td><td>0.211</td><td>0.243</td><td>+0.031</td></tr>
+</tbody>
+</DataTable>
+
+جوج من 3 sujets مشاو فالاتجاه المعكوس من affirmation ديال المقال. الثالث مشى فالاتجاه الصحيح، بالكاد. بالموسط عبر الثلاثة: فرق موسط ديال −0.050 (mémoire أقل من contrôle، ماشي أكثر)، مع test t مزاوج ديال t = −1.190، p = 0.356 — بعيد بزاف على significatif، لي مع n=3 عمرها ماكانت غاتقول بزاف فأي اتجاه.
+
+<Callout type="warning" label="شنو ماكنأفيرميش">
+هادشي ماشي réfutation ديال النتيجة ديال Pavlov et al. 3 sujets ضد 86 ديالهم، window ديال 3 ثواني قدرتها من شرح التاش بلاصة ما نسخيتها من méthodes ديالهم بالضبط، بلا correction ديال baseline (مقارنة power بـ période ديال rest قبل essai، لي مقالات EEG spectraux عادة كيديرو وأنا مادرتهاش هنا)، و recording ديالهم استعمل FCz كـ référence en ligne — تفصيل يقدر يبدل شنو كتشوف فـ channel frontal قريب بحال Fz إلا ماديرتيش ré-référencement باش تطابق analyse ديالهم. أي واحد من هادو يقدر يفسر الفرق بلا ما يكون effet الأصلي غالط.
+</Callout>
+
+## علاش كنبوبلي non-réplication برضو
+
+الـ version الصادقة ديال هاد المقال هي « version صغيرة وسريعة ديالي ديال هاد analyse مابانتش فيها effet لي المقال كيذكرو »، ماشي « نقضت نتيجة منشورة » وماشي « مكنبوبليش هادشي بصمت حيت ماخدمش ». <a href={withBase('/ar/blog/what-id-check-before-believing-any-brain-decoding-result/')}>الـ checklist ديال المقال لي فات</a> كتنطبق على نتائج ديالي نفسها بحال أي واحد آخر: عينة صغيرة، dataset واحد، ensemble ديال اختيارات méthodologiques درتهم بلا ما نطابق بالضبط pipeline الأصلي ديال المقال. نتيجة ماكتتريبلش فهاد الظروف كتعطي معلومة على حدود محاولة رجوع سريعة — ماشي دليل قوي مع ولا ضد affirmation الأصلية.
+
+<Callout type="definition" label="شنو يخلي هادشي test حقيقي">
+نطابق بالضبط method ديالهم ديال epoching و correction ديال baseline، نستعمل عينة أقرب للكاملة ديالهم بلاصة 3 sujets، ومن الأحسن يكون عندنا الأرقام الحقيقيين ديالهم (ماشي غير figure) باش نقارنو بيهم بلاصة اتجاه غير. والو من هادشي ماكانش فالـ scope هنا — هاد كان premier passage، مذكور بالضبط كيفما هو.
+</Callout>
+
+## الكود
+
+كل script فهاد الـ thread — تجارب الـ leakage، courbe de calibration، المقارنة poignet-ضد-poitrine، وهاد محاولة الرجوع — عمومي: <a href="https://github.com/anonymnd/EEG" target="_blank" rel="noopener noreferrer">github.com/anonymnd/EEG</a>. الـ historique ديال commits كيتبع نفس الترتيب ديال المقالات، بما فيها échec ديال CSP pooling و bug ديال métrique ديال déséquilibre ديال classes، خليتهم بلاصة ما ننظفهم من بعد.
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

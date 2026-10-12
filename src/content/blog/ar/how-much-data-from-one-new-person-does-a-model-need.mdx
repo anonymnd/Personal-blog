@@ -1,0 +1,97 @@
+---
+title: "شحال من الداتا ديال شخص جديد محتاج model؟"
+description: "بدءا من model لي عمرو ماشافك، شحال من essais ديالك خاصها باش يبدا يقرب score ديالك؟ تجربة صغيرة ديال courbe de calibration على داتا حقيقية ديال EEG ديال motor-imagery."
+pubDate: 2026-09-14T10:00:00.000Z
+translationKey: how-much-data-from-one-new-person-does-a-model-need
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - data-science
+  - signal-processing
+  - reproducibility
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Lotte et al.',
+		year: '2018',
+		title: 'A review of classification algorithms for EEG-based brain-computer interfaces: a 10-year update',
+		why: 'Calibration لكل sujet هو sujet راسخ فـ littérature ديال BCI، ماشي حاجة جديدة هنا — من هاد الـ review تعلمت vocabulaire و compromis عاديين.',
+		href: 'https://pubmed.ncbi.nlm.nih.gov/29932424/',
+	},
+	{
+		authors: 'Schalk et al.',
+		year: '2004',
+		title: 'BCI2000: A General-Purpose Brain-Computer Interface (BCI) System',
+		why: 'الـ acquisition system لي موراء dataset ديال PhysioNet EEG Motor Movement/Imagery لي استعملتو لهاد التجربة.',
+		href: 'https://physionet.org/content/eegmmidb/1.0.0/',
+	},
+	{
+		authors: 'Jayaram & Barachant',
+		year: '2018',
+		title: 'MOABB: trustworthy algorithm benchmarking for BCIs',
+		why: 'كيوري نفس الـ pipeline كيتصرف بشكل مختلف بزاف حسب datasets مختلفين ديال motor-imagery — تذكير باش ما نعممش بزاف courbe de calibration ديال dataset واحد.',
+		href: 'https://iopscience.iop.org/article/10.1088/1741-2552/aadea0',
+	},
+];
+
+<a href={withBase('/ar/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>المقال لي فات</a> سالا بـ écart inter-sujets ضعيف ولكن حقيقي: model مدرب على 9 ناس ومجرب على عاشر عمرو ماشافو عطا score أقل بوضوح من واحد مدرب ومجرب على الكل مجموعين.
+
+هادشي كيخلي سؤال جاي واضح. الـ model عمرو ماشاف هاد العاشر. وإلا شاف شوية منو أول؟
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+بدءا من الصفر، شحال من essais ديال شخص جديد خاصها قبل ما score ديال model عليه يبدا يتقرب؟
+</Callout>
+
+## الإعداد
+
+نفس الداتا ديال المرة لي فاتت: 10 sujets، dataset ديال PhysioNet ديال motor-imagery، قبضة يسرى ضد يمنى متخيلة، features ديال band-power (log power عبر 4 bandes، 32 channel)، régression logistique.
+
+لكل واحد من 10 sujets بالدور، استبعدتو كاملا: درّبت غير على 9 لخرين. من بعد، قبل ما نجرب، خليت الـ model يشوف عدد صغير من essais ديال هاد الـ sujet المستبعد *نفسو* — مزيدين فـ training set، ماشي بدالو — وعاودت الاختبار. استعملت calibration sizes ديال 0، 2، 5، 10 و 20 essai.
+
+باش نخلي المقارنة عادلة، ثبّت 20 essai من كل sujet كـ ensemble ديال évaluation لي *عمرها* ماتستعمل للـ calibration، بغض النظر شحال من essais ديال calibration تزادو. essais ديال calibration مأخوذين من الباقي ديال الـ pool. هادشي هو نفس discipline ديال subject-wise ديال المقال لي فات، غير مع fuite مراقبة ديال شوية essais راجعين عمدا — وهادشي هو كامل هدف الـ calibration.
+
+<Callout type="definition" label="علاش هادشي ماشي غير réentraînement على الجميع">
+الـ calibration صغيرة وأسيميترية عمدا: الشخص الجديد كيساهم بقبضة ديال essais، الـ model عندو من قبل داتا ديال 9 ناس لخرين. أقرب لـ « système BCI كيتعلم شوية عليك فأول دقايق » من « جمع dataset جديد كامل ».
+</Callout>
+
+## النتيجة
+
+<DataTable caption="Courbe de calibration: balanced accuracy موسطة عبر 10 sujets مستبعدين">
+<thead><tr><th>Essais ديال calibration</th><th>Balanced accuracy موسطة</th><th>Écart-type</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0.559</td><td>±0.106</td></tr>
+<tr><td>2</td><td>0.554</td><td>±0.121</td></tr>
+<tr><td>5</td><td>0.577</td><td>±0.122</td></tr>
+<tr><td>10</td><td>0.597</td><td>±0.127</td></tr>
+<tr><td>20</td><td>0.634</td><td>±0.069</td></tr>
+</tbody>
+</DataTable>
+
+جوج essais ديال calibration مادارو والو — إلا كان شي حاجة، الموسط هبط شوية، لي كنقراها كـ noise نظرا لـ étalement ديال ±0.121، ماشي effet حقيقي. من 5 essais لـ فوق، التريند كيبدا يطلع وكيكمل: مع 20 essai، balanced accuracy الموسطة هي 0.634، تقريبا 7.5 نقطة فوق baseline بلا calibration.
+
+الـ écart-type كيفكذلك كينقص ملي essais ديال calibration كيزيدو — من 0.106 بلا calibration لـ 0.069 مع 20. هادشي effet ثاني يستاهل يتسمى بوحدو من الموسط لي طالع: الـ calibration ماشي غير كتزيد الموسط، كتخلي performance ديال model أكثر *ثبات* من شخص لآخر. شي حاجة من شنو كيغلط فيه model بـ leave-subject-out هي خاصة بالشخص بالصح، وقبضة من essais ديال هاد الشخص كتصلح بالضبط الجزء لي training مجموع ماقدرش يصلحو.
+
+<Callout type="warning" label="شنو ماكتوريش هادشي">
+عشرة sujets وخمسة calibration sizes كافيين باش تشوف تريند، ماشي كافيين باش تعطي رقم دقيق ديال essais لي خاصك فالواقع. كيفكذلك جربت غير calibration sizes حتى 20 — مازال ماعرفش واش courbe كتكمل تطلع، كتفلات، ولا محتاجة model مختلف تماما من بعد. وهادشي dataset واحد، tâche واحدة (قبضة يسرى ضد يمنى)، و ensemble واحد ديال features؛ <SourceLink authors="Jayaram & Barachant" year="2018" title="MOABB: trustworthy algorithm benchmarking for BCIs" href="https://iopscience.iop.org/article/10.1088/1741-2552/aadea0" /> تذكير مزيان بلي نفس الـ pipeline يقدر يتصرف بشكل مختلف بزاف على dataset آخر ديال motor-imagery.
+</Callout>
+
+## فين هادشي خلا الـ thread
+
+جوج مقالات، boucle حقيقية وحدة: جمع الجميع وكتزيد score ديالك بـ reconnaissance ديال الشخص؛ استبعد شخص كاملا والـ score كيهبط لشي حاجة أقرب للحقيقة؛ خلي model يشوف *شوية* من هاد الشخص وجزء، ماشي الكل، ديال الهبوط كيتقرب. هاديك هي boucle « حس، فهم، تأقلم، عاود قيس » لي كامل هاد المشروع كيرجع ليها، دارت مرة وحدة، بصح، على EEG حقيقي.
+
+<Callout type="further-reading" label="التالي">
+السؤال المفتوح الجاي فهاد الـ thread هو واش نفس المودال — جمع كيضر، شوية calibration كيعاون — كيبان على نوع مختلف تماما ديال signal. Wearable sensors (poignet و poitrine، ماشي EEG ديال الراس) هوما التاليين.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

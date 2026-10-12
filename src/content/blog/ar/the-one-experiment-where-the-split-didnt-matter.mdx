@@ -1,0 +1,98 @@
+---
+title: "التجربة الوحيدة لي الـ Split ماديرش فرق"
+description: "كل تجربة ديال EEG و wearable فهاد الـ thread وريات écart ديال leakage. من بعد جربت نفس السؤال على داتا ديال تعليم، والـ écart تقريبا اختفى — وهادشي طلع هو الجزء المهم."
+pubDate: 2026-10-12T16:00:00.000Z
+translationKey: the-one-experiment-where-the-split-didnt-matter
+locale: ar
+interactive: true
+tags:
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import DataTable from '../../../components/common/DataTable.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Pashler et al.',
+		year: '2008',
+		title: 'Learning Styles: Concepts and Evidence',
+		why: 'الـ review الكلاسيكية موراء النقاش ديال « learning styles » فهاد المقال — كتأرجومي بلي الـ recherche لي كتدعم تعليم مطابق للستيل ماكانش عندها الـ designs randomisés لي خاصنا باش نوثقو فيها.',
+		href: 'https://journals.sagepub.com/doi/10.1111/j.1539-6053.2009.01038.x',
+	},
+	{
+		authors: 'Clinton-Lisell & Litzinger',
+		year: '2024',
+		title: 'A meta-analysis of learning styles',
+		why: 'نظرة أحدث وأكثر تعاطفا على نفس السؤال — لقات effet صغير إيجابي ديال تعليم مطابق للستيل، ولكن كتوصفو كـ صغير وناذر بزاف باش يبرر اعتماد النظرية.',
+		href: 'https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1407518/full',
+	},
+	{
+		authors: 'McDaniel, Marsh & Gouravajhala',
+		year: '2022',
+		title: 'Individual Differences in Learning From Educational Materials: The Case of Structure Building',
+		why: 'affirmation ديال فرق فردي أكثر défendable من learning styles: capacité ديال « structure-building » (بناء modèles mentaux متماسكين لنص) كتتوقع comprehension بشكل ثابت عبر الدراسات.',
+		href: 'https://journals.sagepub.com/doi/10.1177/17456916221108124',
+	},
+	{
+		authors: 'Corbett & Anderson',
+		year: '1994',
+		title: 'Knowledge tracing: Modeling the acquisition of procedural knowledge',
+		why: 'المقال الأساسي موراء knowledge tracing، الـ technique لي systèmes ديال tutorat adaptatif كيستعملوها باش يقدرو شنو طالب كيعرف دابا من historique ديال réponses ديالو.',
+		href: 'https://link.springer.com/article/10.1007/BF01099821',
+	},
+];
+
+القراءة على adaptive learning لهاد الـ thread خدات لشي حاجة ماكنتش متوقعها: ماشي dataset آخر ديال EEG، ولكن سؤال واش كامل قصة الـ leakage لي كنحكيها كتتعمم حتى أبعد من neurosciences.
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+كل écart ديال leakage فهاد الـ thread حتى دابا جا من EEG ولا wearable sensors. واش الـ écart هو propriété ديال évaluation ديال أي model على ناس، ولا specifiquement propriété ديال signals physiologiques؟
+</Callout>
+
+## علاش ماشي EEG هاد المرة
+
+الفكرة الأصلية — نسجل timing ديال الأسئلة، المحاولات، واستعمال indices من sessions ديالي ديال étude — محتاجة أداة ديال journalisation لي مازالت ماكاينش. بلاصة ما نفابريقي داتا باش نخلي الـ thread ماشي، قلبت على dataset عمومي حقيقي بنفس شكل الـ signal، ولقيت وحدة: ASSISTments، plateforme ديال tutorat لي logs ديال interaction ديالها ديال 2009-2010 (523,534 محاولة ديال أسئلة، 4,213 طالب) هي benchmark قياسي فـ fouille ديال داتا éducative. <SourceLink authors="Corbett & Anderson" year="1994" title="Knowledge tracing: Modeling the acquisition of procedural knowledge" href="https://link.springer.com/article/10.1007/BF01099821" /> كل سطر كيسجل واش جواب كان صحيح، شحال دام أول réponse، شحال ديال محاولات و indices تستعملو، وشحال مرة هاد الطالب تمرن على هاد skill بالضبط قبل.
+
+<Callout type="warning" label="détour من بين learning styles أول">
+قبل ما نمس الداتا، قريت شوية على فكرة « learning styles » — affirmation بلي تعليم مطابق لستيل visuel/auditif/kinesthésique كيحسن التعلم. الملخص الصادق: دعم ضعيف لحتى دعم. <SourceLink authors="Pashler et al." year="2008" title="Learning Styles: Concepts and Evidence" href="https://journals.sagepub.com/doi/10.1111/j.1539-6053.2009.01038.x" /> لقاو بلي recherche الداعمة ماعندهاش designs randomisés لي خاصنا باش نوثقو فيها، و meta-analyse أحدث ديال <SourceLink authors="Clinton-Lisell & Litzinger" year="2024" title="A meta-analysis of learning styles" href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1407518/full" /> لقات غير effet صغير، موصوف كـ صغير بزاف باش يبرر اعتماد النظرية. affirmation ديال فرق فردي مدعومة أحسن هي capacité ديال « structure-building » — <SourceLink authors="McDaniel, Marsh & Gouravajhala" year="2022" title="Individual Differences in Learning From Educational Materials: The Case of Structure Building" href="https://journals.sagepub.com/doi/10.1177/17456916221108124" /> لقاو بلي كتتوقع comprehension بشكل ثابت، فـ laboratoire وفالقسم. والو من هادشي مادخلش مباشرة فالتجربة لي تحت، ولكن شكل شنو كنت مستعد نفترضو من البداية: ماشي بزاف.
+</Callout>
+
+## التجربة
+
+نفس structure ديال كل تجربة leakage فهاد الـ thread: نتوقعو résultat binaire (هنا، صحيح ضد غالط) من ensemble صغير ديال features، بـ régression logistique، مقارن بين random split بـ 5-fold و split بـ طالب (`GroupKFold` بـ ID ديال طالب)، زائد null بـ labels مخلطين.
+
+الـ features عمدا generiques — والو على *أي* skill ولا سؤال، غير على الـ interaction نفسها: log ديال response time، عدد ديال محاولات، عدد ديال indices، total ديال indices متوفرين، log(opportunity — شحال مرة هاد الطالب شاف هاد skill قبل)، وواش استعمل indice كامل.
+
+## النتيجة
+
+<DataTable caption="ASSISTments: توقع ديال صحة الجواب، random ضد split بـ طالب">
+<thead><tr><th>Split</th><th>Balanced accuracy</th></tr></thead>
+<tbody>
+<tr><td>Random (fuite)</td><td>0.866 ± 0.002</td></tr>
+<tr><td>Par étudiant</td><td>0.865 ± 0.006</td></tr>
+<tr><td>Null (مخلط)</td><td>0.500 ± 0.000</td></tr>
+</tbody>
+</DataTable>
+
+الفرق هو 0.001. للمقارنة، أصغر فرق فأي بلاصة أخرى فهاد الـ thread كان 0.027 (motor imagery)، والأكبر كان 0.182 (EEGMAT). هاد واحد تقريبا صفر، على أكبر عينة فكامل السلسلة — 4,213 طالب، ضد 10-36 فتجارب EEG و wearable.
+
+<Callout type="formula" label="علاش هادشي ماشي contradiction">
+الـ features هنا — response time، استعمال indices، عدد محاولات — كتوصف شحال سؤال صعيب لمن كيجاوب عليه، ماشي شكون هاد الشخص. réponse بطيئة وتلاتة indices كيتوقعو جواب غالط بنفس الطريقة تقريبا لأي طالب. features ديال EEG و wearable كيحملو بطبيعتهم بزاف كثر ديال معلومة هوية الشخص (géométrie ديال الجمجمة، baseline ديال conductance ديال الجلد، signatures spectrales فردية)، وهادشي بالضبط شنو random split كيخلي model يستغلو ببلاش. حيد هاد معلومة الهوية من الـ features، و avantage ديال random split كيمشي معاها فمعظم الحالات.
+</Callout>
+
+## شنو هادشي كيزيد للـ checklist
+
+<a href={withBase('/ar/blog/what-id-check-before-believing-any-brain-decoding-result/')}>الـ checklist من مقال قدام فهاد الـ thread</a> قالت بلي كبر écart ديال leakage كيعتمد على التاش والـ dataset. هاد النتيجة كتزيدها دقة: كتعتمد specifiquement على شحال معلومة هوية الشخص مدمجة فـ *features*، ماشي نوع الـ signal الخام ولا صعوبة التاش. écart قريب من صفر ماشي دليل بلي discipline ديال évaluation ماعندهاش أهمية هنا — التحقق بـ طالب يبقى الطريقة الوحيدة باش نعرفو هادشي — ولكن هادشي دليل بلي هاد ensemble بالذات ديال features مايشفرش بصمت « شكون هاد الطالب » بحال ما كيديرو patterns spatiaux ديال EEG.
+
+<Callout type="definition" label="شنو مازال بغيت نتأكد منو">
+واش ensemble أغنى ديال features هنا — بما فيه شي حاجة بحال accuracy de base لكل طالب ولا vitesse ديال الكتابة — كيرجع يدخل écart بتهريب الهوية رجوعا. هاديك نفس الدرس ديال échec ديال CSP من قبل فهاد الـ thread، غير فالاتجاه المعكوس: زيادة signal أكثر خاص بالشخص للـ features هو اختيار عندو عواقب على شنو random split غايخبي.
+</Callout>
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

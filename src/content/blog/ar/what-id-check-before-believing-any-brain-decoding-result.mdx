@@ -1,0 +1,73 @@
+---
+title: "شنو غادي نتأكد منو قبل ما نصدق أي نتيجة ديال brain-decoding"
+description: "6 تجارب صغار من بعد، هاهي الـ checklist لي دابا كنطبقها على أي affirmation ديال accuracy ديال EEG ولا wearable sensor — حتى ديالي."
+pubDate: 2026-10-05T10:00:00.000Z
+translationKey: what-id-check-before-believing-any-brain-decoding-result
+locale: ar
+interactive: true
+tags:
+  - eeg
+  - machine-learning
+  - reproducibility
+  - data-science
+---
+
+import Callout from '../../../components/common/Callout.astro';
+import SourceLink from '../../../components/common/SourceLink.astro';
+import Sources from '../../../components/common/Sources.astro';
+import { withBase } from '../../../utils/url';
+
+export const papers = [
+	{
+		authors: 'Brookshire et al.',
+		year: '2024',
+		title: 'Data leakage in deep learning studies of translational EEG',
+		why: 'أفيد مقال موراء كامل هاد الـ checklist — راجعو 63 دراسة منشورة ولقاو بلي أغلبهم عندهم مشكل الـ leakage لي مشروح هنا.',
+		href: 'https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full',
+	},
+	{
+		authors: 'Jayaram & Barachant',
+		year: '2018',
+		title: 'MOABB: trustworthy algorithm benchmarking for BCIs',
+		why: 'استعملتو للنقطة على pipeline واحد كيتصرف بشكل مختلف حسب datasets — سبب باش ما نوثقش بزاف فرقم ديال dataset واحد.',
+		href: 'https://iopscience.iop.org/article/10.1088/1741-2552/aadea0',
+	},
+];
+
+6 تجارب صغار عبر جوج أنواع ديال signal — EEG ديال الراس و wearables ديال poignet/poitrine — عطاو نفس القبضة ديال modes ديال échec، بـ لباس مختلف، فكل مرة. هاد المقال هو تأمل، ماشي تجربة جديدة: الـ checklist لي دابا كنطبقها فالواقع، بصمت، كل مرة كنشوف رقم ديال accuracy impressionnant فمقال ديال brain-decoding ولا wearable-sensing.
+
+<Callout type="key-insight" label="علاش كتبت هادشي">
+كل نقطة تحت كلفاتني شي حاجة — رقم غالط، بعد-الزوال ضايع، ولا نتيجة بقيت غير شوية وثقت فيها وطلعات كتقيس الحاجة الغالطة. كتابة الـ checklist أرخص من إعادة تعلم كل نقطة.
+</Callout>
+
+## 1. كيفاش تقسمات الداتا؟
+
+<a href={withBase('/ar/blog/the-same-model-scored-twice-random-split-vs-subject-wise-split/')}>النتيجة الأساسية ديال هاد الـ thread</a>: نفس الـ model، نفس الداتا، تقيّم بجوج طرق، اختلف حتى 18 نقطة ديال balanced accuracy غير حسب واش segments ديال شخص واحد كانو مسموحين يبانو فالجوج جوانب ديال الـ split. <SourceLink authors="Brookshire et al." year="2024" title="Data leakage in deep learning studies of translational EEG" href="https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1373515/full" /> راجعو 63 دراسة منشورة ديال deep learning فـ EEG ولقاو غير 17 لي تجنبو بوضوح هادشي. إلا مقال مايقولش بوضوح كيفاش دار الـ split، دابا كنفترض version فيها leakage حتى يتبين العكس.
+
+## 2. واش الـ null model فالواقع حدا chance؟
+
+هاد الواحدة غلطت فيها قبل ما ندير صحيح. أول تجربة ديالي ديال leakage عطات null model (labels مخلطين) بـ score 0.654 — فوق بزاف من شنو كنت كنتوقع لـ chance — والسبب كان déséquilibre ديال classes زائد accuracy عادية كـ métrique: classifier بسيط « خمن دايما الـ classe الأغلبية » عطا score قريب من هادشي بلا ما يتعلم والو. التبديل لـ balanced accuracy صلح هادشي؛ الـ null هبط لـ 0.496، فين خاصو يكون. null model لي ماشي حدا chance كيعني شي حاجة فـ pipeline كتسرب معلومة الـ label بغض النظر شحال الـ split بان نظيف.
+
+## 3. واش method ديال feature-extraction كتعيش من بعد التجميع؟
+
+أول محاولة ديالي ديال classifier ديال motor-imagery بين الـ sujets استعملت CSP — الفيلتر spatial القياسي لهاد التاش — مضبوط على عشرة sujets مجموعين. عطا score ديال chance. ماشي bug: CSP كتضبط راسها على géométrie spatiale ديال مجموعة دمغان، وتجميع الـ sujets قبل ضبطها كيدير compromis بين عشرة géométries مختلفين بلاصة ما توصف واحدة منهم. التبديل لـ features ديال band-power (بلا حاجة لـ ضبط spatial لكل sujet) صلح هادشي فالحين. الدرس كيتعمم أبعد من CSP: أي خطوة ديال feature-extraction مضبوطة بشكل ضمني على population ديال training خاصها تتفحص قبل ما نوثقو فيها باش تتعمم أبعد من هاد population.
+
+## 4. واش حجم الـ effet معقول نظرا للعينة؟
+
+عشرة sujets، 45 essai لكل واحد، courbes de calibration مبنيين من خمسة أعداد ديال essais — كافي باش تشوف تريند، ماكافيش باش تأفيرمي رقم دقيق. دابا كنحاول نحط حجم العينة جنب كل رقم كنكتبو، بالضبط باش القارئ (حتى أنا فالمستقبل) يقدر يحكم شحال الرقم يستاهل من الثقة بشوف وحدة، بلا ما يقلب فـ section ديال méthodes.
+
+## 5. واش هاد النتيجة غاتعيش فـ dataset، tâche، ولا جهاز مختلف؟
+
+المقارنة poignet-ضد-poitrine ديال wearables وتجربة الـ leakage ديال motor-imagery عطاو écarts ديال leakage متقاربين وصغار (~0.03)، فـ حين تجربة EEG ديال rest-ضد-arithmétique عطات واحدة أكبر بزاف (0.182) — نفس method ديال évaluation، tâches مختلفين وحتى أنواع sensors مختلفين، effets بأحجام مختلفين. <SourceLink authors="Jayaram & Barachant" year="2018" title="MOABB: trustworthy algorithm benchmarking for BCIs" href="https://iopscience.iop.org/article/10.1088/1741-2552/aadea0" /> لقاو بلي نفس الـ pipeline يقدر يتصرف بشكل مختلف بزاف حسب datasets مختلفين ديال motor-imagery وحدهم. رقم ديال dataset واحد هو donnée، ماشي قانون.
+
+<Callout type="definition" label="الـ checklist، version قصيرة">
+قسم بـ subject، ماشي بـ segment. تأكد الـ null حدا chance. تأكد method ديال features ماكتفترضش ضمنيا شخص واحد. حط حجم العينة جنب الرقم. ماتعممش أبعد من الـ dataset الوحيد لي جاء منو الرقم.
+</Callout>
+
+## شنو ماكيعنيش هادشي
+
+والو من هادشي ماشي argument بلي decoding ديال EEG ولا wearable ماخدامش — 3 من 6 تجارب ديال هاد الـ thread لقاو signal حقيقي فوق chance، مؤكد بـ null model كان فالواقع حدا chance. هادشي أضيق من هادشي: *كبر* رقم ديال accuracy، بوحدو، كيقوليك شي قليل بلا ما تعرف كيفاش تقيّم. رقم أصغر، مقيّم بصح، أفيد من رقم أكبر، فيه leakage، حيت غير الأول كيقوليك شي حاجة صحيحة على شنو كيوقع مع شخص جديد.
+
+## المصادر و المقالات لي استعملت باش نتعلم هادشي
+
+<Sources papers={papers} />

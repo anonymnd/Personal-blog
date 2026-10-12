@@ -1,0 +1,40 @@
+---
+title: "تصميم API لداتا ديال Time Series"
+description: "Requêtes بـ range، downsampling، وعلاش endpoint ديال time-series كيكسر rules العاديين ديال pagination فـ REST — note صغيرة من بناء وحدة لـ outil ديال monitoring."
+pubDate: 2026-08-24T10:00:00.000Z
+translationKey: designing-an-api-for-time-series-data
+locale: ar
+interactive: true
+tags:
+  - api
+  - data
+  - system-design
+---
+
+أغلب APIs ديال REST كيرجعو liste ديال حوايج: utilisateurs، commandes، produits. endpoint ديال time-series كيرجع liste ديال *mesures ديال حاجة وحدة فالوقت* — usage ديال CPU كل 10 ثواني، lecture ديال sensor كل دقيقة، prix ديال action كل tick — وهاد الفرق كيكسر بزاف ديال defaults لي خدامين مزيان فكل بلاصة أخرى.
+
+## الـ Requête ماشي « عطيني كلشي »
+
+endpoint عادي ديال liste كيسقسي على page: `GET /orders?page=2&limit=50`. endpoint ديال time-series تقريبا دايما كيسقسي على *range*: `GET /metrics/cpu?from=2026-08-20T00:00:00Z&to=2026-08-24T00:00:00Z`. pagination مبنية على offset ماكتطابقش مزيان مع هادشي — « page 2 » ماكتعنيش والو لـ caller لي باغي « آخر 24 ساعة ». الـ range نفسها هي curseur الطبيعي، وأغلب APIs ديال time-series (Prometheus، InfluxDB، CloudWatch) كيستعملو `from`/`to` ولا `start`/`end` بلاصة `page`/`limit` بالضبط لهاد السبب.
+
+## الـ résolution هي paramètre، ماشي constante
+
+إلا sensor كيرابورتي كل 10 ثواني وشي واحد سقسى على شهر ديال داتا، هادشي تقريبا 260,000 نقطة — بزاف باش تتصيفط، بزاف باش ترسم فـ chart، وأغلبها redondant لـ vue شهرية على كل حال. الـ endpoint محتاج طريقة باش يقول « عطيني هاد الـ range، ولكن downsamplée » — paramètre explicite `interval` ولا `step` كيحكم شحال ديال النقط كيرجعو، بلا ما يتعلق بشحال مرة الداتا الأساسية كانت فالواقع مسجلة.
+
+```text
+GET /metrics/cpu?from=2026-08-01T00:00:00Z&to=2026-09-01T00:00:00Z&step=1h
+```
+
+هاد الـ paramètre الوحيد كيدير جوج خدمات فنفس الوقت: contrôle ديال performance (نقط أقل، payload أصغر، rendu أسرع) وcontrôle sémantique (moyenne horaire كتعني شي حاجة مختلفة من max horaire ولا آخر valeur horaire، و API خاصها تختار واحدة ولا تخلي caller يختار).
+
+## الـ Agrégation خاصها تكون explicite
+
+Downsampling ديال lectures ديال 10 ثواني لنقط horaires محتاج fonction ديال agrégation — moyenne، min، max، somme، ولا آخر valeur — و callers مختلفين باغيين وحدين مختلفين لنفس الداتا الأساسية. dashboard كيوري « charge typique » باغي moyenne. système ديال alerte كيراقب spikes باغي max. حط default واحد مدموج كيجاوب بصمت على سؤال caller مابغاش يسقسي عليه، إذن endpoint ديال time-series مصمم مزيان كيعرض agrégation كـ paramètre ديالو بوحدو بلاصة ما يكودي فيه بالقوة.
+
+## الكتابات append-only وبحجم كبير، القراءات محدودة بـ range وبـ rafales
+
+طريق الكتابة لداتا ديال time-series مايشبهش والو كتابة CRUD typique: ماكاين حتى mises à jour، تقريبا عمرها ماكاين suppression، غير flux ثابت ديال نقط جداد معلمين بـ horodatage. هاد نمط الوصول هو علاش bases de données ديال time-series مصممين خاص (InfluxDB، TimescaleDB، التخزين ديال Prometheus نفسو) كاينين بلاصة ما يستعملو غير table relationnelle عامة — مبنيين حول append و balayage بـ range ديال وقت، ماشي حول mises à jour على مستوى الـ lignes. API مبنية فوق وحدة منهم خاصها توري هاد الأسيميتري: endpoint ديال كتابة ضيق وبـ débit عالي (غالبا بـ lots — بزاف نقط فـ requête وحدة، ماشي وحدة)، و endpoint ديال قراءة هو لي كيحمل كامل la complexité ديال requête لي فوق.
+
+## الدرس الصغير
+
+والو من هادشي ماشي exotique — هي نفس الفكرة موراء [تحويل workflow لـ endpoints ديال REST](/Personal-blog/ar/blog/071-how-to-turn-a-business-workflow-into-rest-endpoints/) فالأساس: نطابقو شكل API مع نمط الوصول الحقيقي بلاصة ما نجبرو كل ressource تفوت من نفس template ديال liste ديال حوايج. داتا ديال time series عندها شكل (مرتبة، كثيفة، مستفسرة بـ range، غالبا downsamplée) مختلف بزاف من liste عادية ديال ressources حيث نسخ conventions CRUD العاديين عليها كيعطي API خدامة تقنيا ولكن كتحارب caller ديالها فـ كل requête.
