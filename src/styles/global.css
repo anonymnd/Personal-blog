@@ -135,9 +135,5 @@ html[dir=rtl]{--font-sans:'Noto Sans Arabic',system-ui,sans-serif}html[dir=rtl] 
 .code-block{margin:1.8rem 0}
 .table-wrap{margin:1.8rem 0}
 
-/* Pipeline step highlight */
-.step-active .step-num{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;box-shadow:4px 4px 0 #c6b6e5}
-.step-active .step-label{color:var(--accent)}
-
 @media(max-width:560px){.fig{padding:1.05rem 1.1rem 1rem;border-radius:16px 16px 40px 16px;box-shadow:5px 6px 0 #e9e5f6}.callout{padding:.9rem 1rem;gap:.75rem}}
 @media(prefers-reduced-motion:reduce){.fig *,.callout{transition:none!important;animation:none!important}}

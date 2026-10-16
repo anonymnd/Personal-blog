@@ -37,7 +37,7 @@ const active = new Set(highlight);
 	<h3 class="fig-title">Where the numbers come from: 19 electrodes on one scalp</h3>
 
 	<div class="eeg-stage">
-		<svg viewBox="0 0 320 340" class="eeg-svg" role="img"
+		<svg viewBox="0 0 320 340" class="eeg-svg" role="group"
 			aria-label="Top-down head diagram with 19 electrodes from the international 10-20 system">
 			<title>EEG 10-20 electrode placement</title>
 
@@ -108,24 +108,29 @@ const active = new Set(highlight);
 </style>
 
 <script>
-	const tip = document.querySelector<HTMLElement>('.eeg-tip');
-	const stage = document.querySelector<HTMLElement>('.eeg-stage');
-	document.querySelectorAll<SVGGElement>('.eeg-el').forEach((g) => {
-		const label = g.dataset.label ?? '', region = g.dataset.region ?? '';
-		const show = () => {
-			if (!tip || !stage) return;
-			tip.textContent = `${label} · ${region}`;
-			tip.hidden = false; tip.dataset.visible = 'true';
-			const sr = stage.querySelector('svg')?.getBoundingClientRect();
-			const cr = g.querySelector('.eeg-dot')?.getBoundingClientRect();
-			const rr = stage.getBoundingClientRect();
-			if (!sr || !cr) return;
-			tip.style.left = `${cr.left + cr.width / 2 - rr.left}px`;
-			tip.style.top = `${cr.top - rr.top - 8}px`;
-		};
-		const hide = () => { if (!tip) return; tip.dataset.visible = 'false';
-			setTimeout(() => { if (tip.dataset.visible === 'false') tip.hidden = true; }, 150); };
-		g.addEventListener('mouseenter', show); g.addEventListener('focus', show);
-		g.addEventListener('mouseleave', hide); g.addEventListener('blur', hide);
+	document.querySelectorAll<HTMLElement>('.eeg-stage').forEach((stage) => {
+		const tip = stage.querySelector<HTMLElement>('.eeg-tip');
+		stage.querySelectorAll<SVGGElement>('.eeg-el').forEach((g) => {
+			const label = g.dataset.label ?? '', region = g.dataset.region ?? '';
+			const show = () => {
+				if (!tip) return;
+				const cr = g.querySelector('.eeg-dot')?.getBoundingClientRect();
+				if (!cr) return;
+				const rr = stage.getBoundingClientRect();
+				tip.textContent = `${label} · ${region}`;
+				tip.hidden = false; tip.dataset.visible = 'true';
+				tip.style.left = `${cr.left + cr.width / 2 - rr.left}px`;
+				tip.style.top = `${cr.top - rr.top - 8}px`;
+			};
+			const hide = () => { if (!tip) return; tip.dataset.visible = 'false';
+				setTimeout(() => { if (tip.dataset.visible === 'false') tip.hidden = true; }, 150); };
+			g.addEventListener('mouseenter', show); g.addEventListener('focus', show);
+			g.addEventListener('mouseleave', hide); g.addEventListener('blur', hide);
+			g.addEventListener('click', show);
+			g.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); }
+				if (e.key === 'Escape') hide();
+			});
+		});
 	});
 </script>

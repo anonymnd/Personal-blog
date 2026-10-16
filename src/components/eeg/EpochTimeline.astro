@@ -24,7 +24,7 @@ const events = [6, 13.5];
 	<div class="epoch" data-duration={duration}>
 		<div class="track" role="slider" tabindex="0"
 			aria-label="Epoch window position" aria-valuemin="0" aria-valuemax={duration} aria-valuenow={duration / 2}
-			aria-valuetext="epoch centred at 10.0 seconds">
+			aria-valuetext={`Event at ${(duration / 2).toFixed(1)} seconds`}>
 			<svg class="trace" viewBox="0 0 640 96" preserveAspectRatio="none" aria-hidden="true">
 				<polyline points={trace()} fill="none" stroke="#8f86b8" stroke-width="1.6" stroke-linejoin="round" />
 			</svg>
@@ -40,8 +40,8 @@ const events = [6, 13.5];
 		</div>
 
 		<div class="readout">
-			<span>Window <b class="r-start">−0.5 s</b> → <b class="r-end">+1.0 s</b></span>
-			<span>Width <b class="r-width">1.5 s</b></span>
+			<span>Window <b class="r-start">−{pre.toFixed(1)} s</b> → <b class="r-end">+{post.toFixed(1)} s</b></span>
+			<span>Width <b class="r-width">{(pre + post).toFixed(1)} s</b></span>
 		</div>
 
 		<div class="knobs">
@@ -54,7 +54,7 @@ const events = [6, 13.5];
 		</div>
 
 		<p class="result" aria-live="polite">
-			Every marker yields <b>1.5 s</b> of signal — one candidate example, as long as it stays on a single side of the train/test split.
+			Every marker yields <b>{(pre + post).toFixed(1)} s</b> of signal — one candidate example, as long as it stays on a single side of the train/test split.
 		</p>
 	</div>
 
@@ -68,7 +68,7 @@ const events = [6, 13.5];
 <style>
 	.epoch{--dur:20}
 	.track{position:relative;height:104px;background:#fff;border:1px solid #ddd3f0;border-radius:10px;
-		cursor:grab;overflow:hidden;outline:none;box-shadow:inset 0 1px 0 #f0ecf9}
+		cursor:grab;touch-action:pan-y;overflow:hidden;outline:none;box-shadow:inset 0 1px 0 #f0ecf9}
 	.track:active{cursor:grabbing}
 	.track:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 	.trace{position:absolute;inset:0;width:100%;height:100%;padding:0 .4rem;box-sizing:border-box}
@@ -113,16 +113,33 @@ const events = [6, 13.5];
 		let centre = dur / 2, pre = parseFloat(kPre.value), post = parseFloat(kPost.value);
 
 		const render = () => {
-			const half = ((pre + post) / dur) * 50, pct = (centre / dur) * 100;
-			win.style.left = `${pct - half}%`; win.style.width = `${half * 2}%`;
+			// The position is the event time: pre and post need not be equal.
+			centre = Math.max(pre, Math.min(dur - post, centre));
+			win.style.left = `${((centre - pre) / dur) * 100}%`;
+			win.style.width = `${((pre + post) / dur) * 100}%`;
+			track.setAttribute('aria-valuemin', pre.toFixed(1));
+			track.setAttribute('aria-valuemax', (dur - post).toFixed(1));
 			track.setAttribute('aria-valuenow', centre.toFixed(1));
-			track.setAttribute('aria-valuetext', `epoch centred at ${centre.toFixed(1)} seconds`);
+			track.setAttribute('aria-valuetext', `Event at ${centre.toFixed(1)} seconds; window from ${(centre - pre).toFixed(1)} to ${(centre + post).toFixed(1)} seconds`);
 			rS.textContent = `−${pre.toFixed(1)} s`; rE.textContent = `+${post.toFixed(1)} s`;
 			const w = pre + post; rW.textContent = `${w.toFixed(1)} s`;
 			res.innerHTML = `Every marker yields <b>${w.toFixed(1)} s</b> of signal — one candidate example, as long as it stays on a single side of the train/test split.`;
 		};
-		kPre.addEventListener('input', () => { pre = parseFloat(kPre.value) || 0; render(); });
-		kPost.addEventListener('input', () => { post = parseFloat(kPost.value) || 0; render(); });
+		// Native number inputs permit typed values outside their min/max range.
+		const update = (input: HTMLInputElement) => {
+			if (!Number.isFinite(input.valueAsNumber)) return;
+			input.value = String(Math.max(Number(input.min), Math.min(Number(input.max), input.valueAsNumber)));
+			if (input === kPre) pre = input.valueAsNumber;
+			else post = input.valueAsNumber;
+			render();
+		};
+		[kPre, kPost].forEach((input) => {
+			input.addEventListener('input', () => update(input));
+			input.addEventListener('change', () => {
+				if (!Number.isFinite(input.valueAsNumber)) input.value = String(input === kPre ? pre : post);
+				update(input);
+			});
+		});
 
 		let dragging = false;
 		const move = (x: number) => { const r = track.getBoundingClientRect();
@@ -130,10 +147,14 @@ const events = [6, 13.5];
 		track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); move(e.clientX); });
 		track.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX); });
 		track.addEventListener('pointerup', () => { dragging = false; });
+		track.addEventListener('pointercancel', () => { dragging = false; });
+		track.addEventListener('lostpointercapture', () => { dragging = false; });
 		track.addEventListener('keydown', (e) => {
 			const step = e.shiftKey ? 1 : 0.25;
 			if (e.key === 'ArrowRight') { centre = Math.min(dur, centre + step); render(); e.preventDefault(); }
 			if (e.key === 'ArrowLeft')  { centre = Math.max(0, centre - step); render(); e.preventDefault(); }
+			if (e.key === 'Home') { centre = pre; render(); e.preventDefault(); }
+			if (e.key === 'End') { centre = dur - post; render(); e.preventDefault(); }
 		});
 		render();
 	});
