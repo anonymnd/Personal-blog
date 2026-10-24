@@ -1,0 +1,171 @@
+---
+title: "Construire une petite API Gateway avec Spring Boot — et ce que chaque politique m'a appris"
+description: "Visite guidée de ma gateway d'apprentissage : un point d'entrée pour deux services, avec authentification JWT, limites de débit par utilisateur, cache isolé par utilisateur, retries sûrs, circuit breakers par réplique et load balancing — et les petites décisions d'ordre qui ont compté le plus."
+pubDate: 2026-10-24T14:00:00.000Z
+translationKey: building-a-small-api-gateway-in-spring-boot
+locale: fr
+tags: ["system-design", "api-gateway", "spring-boot", "java", "distributed-systems"]
+draft: false
+---
+
+import Callout from '../../../components/common/Callout.astro';
+
+J'ai déjà écrit séparément sur le [rate limiting](/Personal-blog/fr/blog/222-what-is-rate-limiting/), les [circuit breakers](/Personal-blog/fr/blog/224-what-is-a-circuit-breaker/), le [load balancing entre instances](/Personal-blog/fr/blog/213-why-run-multiple-instances-of-the-same-application/) et l'[authentification JWT](/Personal-blog/fr/blog/199-authentication-vs-authorization/). Chacun a du sens isolément. Ce que je n'avais pas compris avant de construire quelque chose, c'est comment ils interagissent quand ils se trouvent tous devant la même requête. J'ai donc construit une petite API gateway qui fait tout cela à la fois, avec un tableau de bord qui montre ce qui est arrivé à chaque requête.
+
+Le code est sur GitHub : [anonymnd/api-getway](https://github.com/anonymnd/api-getway). C'est du Java 21 avec Spring Boot, environ 700 lignes de code principal, qui tourne en local devant quatre vrais processus de services HTTP.
+
+<Callout type="key-insight" label="La question à laquelle ce post répond">
+Si un seul processus doit authentifier, limiter, mettre en cache, réessayer, couper le circuit et répartir la charge pour chaque requête, dans quel ordre ces étapes doivent-elles se faire — et qu'est-ce qui casse si l'ordre est mauvais ?
+</Callout>
+
+## Ce que fait la gateway
+
+Il y a un seul point d'entrée, `http://127.0.0.1:18180`, et deux services derrière, chacun avec deux répliques :
+
+- **Catalog** sur les ports 9201 et 9202
+- **Orders** sur les ports 9301 et 9302
+
+Une requête vers `/api/catalog/items` est transmise à une réplique de Catalog sous la forme `/items` ; une requête vers `/api/orders/...` part vers une réplique d'Orders. Le préfixe est comparé sur une frontière de chemin (`/api/catalog` ou `/api/catalog/...`, jamais `/api/catalogue`) puis retiré avant la transmission. Les routes, les adresses des répliques et toutes les limites sont dans `application.yml` :
+
+```yaml
+gateway:
+  strategy: ROUND_ROBIN
+  request-timeout-ms: 1000
+  circuit-threshold: 3
+  circuit-open-ms: 8000
+  rate-capacity: 12
+  rate-refill-per-second: 2
+  cache-ttl-ms: 5000
+  routes:
+    - id: catalog
+      prefix: /api/catalog
+      cache: true
+      backends: [http://127.0.0.1:9201, http://127.0.0.1:9202]
+    - id: orders
+      prefix: /api/orders
+      cache: false
+      backends: [http://127.0.0.1:9301, http://127.0.0.1:9302]
+```
+
+Les services de démo sont un programme Java en un seul fichier (`demo/Service.java`) qui utilise le serveur HTTP intégré au JDK. Ils répondent avec leur numéro de port, pour qu'on voie quelle réplique a servi la requête. `/fail` renvoie toujours `503`, `/slow` dort plus longtemps que le timeout de la gateway, et `/items` de Catalog est marqué `Cache-Control: public, max-age=5`.
+
+## La vie d'une requête
+
+Voici l'ordre que suit une requête dans `GatewayController`. L'essentiel de ce que j'ai appris tient dans le *pourquoi* de cet ordre.
+
+1. Le **filtre de télémétrie** attribue un identifiant de requête et démarre un chronomètre.
+2. **Spring Security** vérifie le JWT bearer. Pas de token valide, pas de suite : `401`.
+3. **Correspondance de route.** Préfixe inconnu : `404`.
+4. **Limite de débit** pour cet utilisateur sur ce service. Au-delà : `429` avec `Retry-After`.
+5. **Limite de taille du corps.** Plus de 1 Mio : `413`.
+6. **Lecture du cache**, seulement si la requête est éligible.
+7. **Choix d'une réplique** saine et dont le circuit n'est pas ouvert.
+8. **Transmission**, avec un timeout. Si une requête sûre échoue de façon transitoire, un seul nouvel essai sur une *autre* réplique.
+9. **Enregistrement du résultat** sur le circuit breaker de cette réplique, puis mise en cache ou invalidation.
+
+Chaque réponse porte des en-têtes qui disent ce qui s'est passé : `X-Gateway-Outcome` (`CACHE_HIT`, `CACHE_MISS`, `FORWARDED`, `RATE_LIMITED`, `NO_BACKEND`…), `X-Gateway-Attempts`, `X-Gateway-Backend` et `X-RateLimit-Remaining`. Le tableau de bord ne fait que relire ces informations.
+
+## Authentification : savoir qui tu es avant tout le reste
+
+`/auth/register` et `/auth/login` stockent les utilisateurs dans une base H2 avec des hachages BCrypt et émettent des JWT HS256 valables 30 minutes. Le décodeur ne vérifie pas seulement la signature : il vérifie aussi l'émetteur (`learning-api-gateway`) et l'audience (`gateway-api`), pour qu'un token signé avec la même clé dans un autre but ne soit pas accepté ici.
+
+Deux petits détails qui valaient la peine d'être ajoutés :
+
+- **Le login fait le même travail que l'utilisateur existe ou non.** Si le nom d'utilisateur est introuvable, le mot de passe est quand même comparé à un hachage BCrypt factice. Sinon, « utilisateur inconnu » répondrait nettement plus vite que « mauvais mot de passe », et le temps de réponse révélerait quels noms existent.
+- **Le corps des requêtes d'auth est plafonné à 4 Ko avant le parsing JSON.** Un filtre lit au maximum 4 097 octets et rejette tout ce qui dépasse, pour qu'on ne puisse pas forcer le serveur à allouer un énorme « mot de passe » juste pour le refuser.
+
+Les tentatives de connexion sont aussi limitées, par adresse distante. Le code ignore volontairement `X-Forwarded-For` pour cela, parce que n'importe quel client peut mettre une nouvelle valeur dans cet en-tête à chaque tentative et contourner la limite.
+
+### La gateway est une frontière de confiance
+
+Les backends font confiance à la gateway pour dire qui est l'utilisateur : elle envoie `X-Authenticated-User` avec le subject du JWT. Cela ne fonctionne que si un client ne peut pas envoyer cet en-tête lui-même. Donc, à la transmission, la gateway **supprime** tous les en-têtes entrants `Authorization`, `Forwarded`, `X-Forwarded-*`, `X-Authenticated-*`, `X-Gateway-*` et `X-Request-Id`, et seulement ensuite ajoute les siens. Les en-têtes hop-by-hop (`Connection`, `Transfer-Encoding`, et tout ce qui est nommé dans `Connection`) sont aussi retirés dans les deux sens.
+
+<Callout type="warning" label="Facile à rater">
+Si une gateway ajoute un en-tête d'identité sans d'abord retirer la copie du client, n'importe qui peut se faire passer pour n'importe quel utilisateur en envoyant cet en-tête. Un test d'intégration vérifie que les en-têtes de confiance falsifiés n'atteignent jamais le backend.
+</Callout>
+
+## Rate limiting : des token buckets, et pourquoi avant le cache
+
+Chaque utilisateur a un token bucket *par service* : capacité 12, recharge de 2 jetons par seconde. On peut donc envoyer une rafale de 12 requêtes, puis tenir environ 2 par seconde. La clé est `api:<userId>:<serviceId>`, donc saturer Orders ne consomme pas ton quota Catalog.
+
+Le bucket utilise `System.nanoTime()` plutôt que l'heure murale, pour qu'un ajustement d'horloge ne puisse pas remplir (ou vider) d'un coup le bucket de tout le monde. La table des buckets est bornée à 1 024 clés ; quand elle est pleine, les buckets inactifs (non touchés depuis 2 minutes) sont récupérés, et s'il n'y en a aucun, les nouvelles clés sont refusées plutôt que de laisser la mémoire grossir sans limite.
+
+La décision d'ordre : **la limite de débit est vérifiée avant le cache.** Mon premier réflexe était l'inverse — un cache hit ne coûte presque rien, pourquoi le compter ? Mais la limite ne protège pas que le backend. C'est aussi ce qui empêche un utilisateur d'inonder la gateway elle-même et d'utiliser le cache comme amplificateur gratuit. Si les réponses en cache étaient gratuites, le quota voudrait seulement dire « requêtes qui ratent le cache », et personne ne peut raisonner sur une règle pareille.
+
+## Cache : par utilisateur, de courte durée, et protégé contre les courses
+
+Le cache paraît être la politique la plus simple. C'est celle qui avait le plus de pièges.
+
+Un `GET` sur Catalog n'est éligible au cache que s'il n'a pas de corps, pas d'en-tête `Range`, `Cookie`, `If-None-Match` ou `If-Modified-Since`, et que le client n'a pas envoyé `no-cache`/`no-store`. La réponse amont n'est stockée que si c'est un `200`, qu'elle indique `public` avec un `max-age`, et qu'elle n'a ni `Set-Cookie` ni `Vary`. Le TTL est le plus petit entre le `max-age` amont et le plafond de 5 secondes de la gateway.
+
+Trois décisions à expliquer :
+
+**La clé de cache inclut l'utilisateur.** La clé est `(route, userId, chemin+query)`. Même pour une réponse « public », je ne voulais pas que la requête d'un utilisateur soit servie depuis l'entrée d'un autre. Cela coûte un peu de taux de hit, et cela supprime toute une catégorie de fuites de données.
+
+**Les mutations invalident, avec une barrière de révision.** Un `POST`/`PUT`/`PATCH`/`DELETE` réussi sur un service vide le cache de ce service. Mais il y a une course : un `GET` lent peut démarrer avant un `POST`, finir après, puis écrire sa réponse désormais périmée dans le cache fraîchement vidé. Pour l'éviter, chaque route a un compteur de révision. Un `GET` lit la révision avant de transmettre ; au moment de stocker le résultat, l'écriture est abandonnée si la révision a changé entre-temps.
+
+**Les navigateurs ne doivent rien mettre en cache.** Chaque réponse de la gateway est envoyée avec `Cache-Control: no-store`. Le cache de la gateway se trouve *derrière* l'authentification et le rate limiting ; si un navigateur ou un proxy partagé mettait la réponse en cache, il contournerait les deux.
+
+Le cache est aussi borné : 128 entrées, éviction LRU, et les corps de plus de 64 Ko ne sont jamais stockés.
+
+## Load balancing : Round Robin ou Least Connections
+
+Les répliques de chaque service vivent dans un `Pool`. La sélection ignore les répliques qui ont échoué à leur dernier health check, celles dont le circuit est ouvert et — lors d'un retry — celles déjà essayées pour cette requête. Parmi les autres :
+
+- **Round Robin** prend la prochaine réplique éligible après un curseur tournant.
+- **Least Connections** prend celle qui a le moins de requêtes en cours.
+
+On change avec une seule valeur de config (ou `-Strategy LEAST_CONNECTIONS` dans le lanceur de démo). Avec les services de démo, les ports impairs répondent en 200 ms et les ports pairs en 50 ms, donc sous charge on voit vraiment Least Connections déplacer le trafic vers la réplique la plus rapide, alors que Round Robin continue d'alterner.
+
+La sélection renvoie un **bail** (lease) : choisir une réplique incrémente son compteur de requêtes actives, et fermer le bail (dans un bloc `try`-with-resources) le décrémente et enregistre le résultat. Comme la sélection et le comptage se font en une seule étape synchronisée, deux requêtes concurrentes ne peuvent pas voir toutes les deux « 0 actif » et s'entasser sur la même réplique.
+
+Un health checker appelle `/health` sur chaque réplique toutes les 2 secondes avec un timeout de 300 ms. Une réplique non prête est simplement ignorée jusqu'à ce qu'elle revienne.
+
+## Retries : seulement quand c'est sûr, et jamais sur la même réplique
+
+`GET` et `HEAD` peuvent être réessayés **une fois**, et seulement sur `502`, `503` ou `504`. Le retry attend 50 ms et part vers une *autre* réplique — réessayer la même instance en panne aide rarement.
+
+`POST`, `PUT`, `PATCH` et `DELETE` ne sont **jamais** réessayés automatiquement. Si un `POST` qui crée une commande expire, la gateway ne sait pas si le backend a déjà créé la commande. Réessayer pourrait la créer deux fois. Cette décision appartient au client (idéalement avec une clé d'idempotence), pas à un proxy qui ne voit pas le sens métier de la requête.
+
+Chaque tentative a un timeout d'une seconde qui couvre *toute* la réponse, pas seulement la connexion, et les corps de réponse sont lus par un subscriber borné qui s'arrête à 1 Mio.
+
+## Circuit breakers : un par réplique
+
+J'ai mis le circuit breaker sur chaque **réplique**, pas sur le service entier. Si 9302 est en panne mais que 9301 va bien, seule 9302 doit être coupée.
+
+- **Fermé :** les requêtes passent. Trois échecs consécutifs (statut ≥ 500 ou erreur de transport) l'ouvrent.
+- **Ouvert :** la réplique est ignorée pendant 8 secondes.
+- **Semi-ouvert :** après la pause, **une seule** vraie requête est autorisée comme essai. Un succès ferme le circuit ; un échec le rouvre pour 8 secondes de plus.
+
+Deux bugs subtils que les tests ont fait apparaître :
+
+**Les résultats tardifs d'avant une transition.** Supposons trois requêtes en cours ; le troisième échec ouvre le circuit, puis la première revient enfin avec un succès. Sans précaution, ce vieux succès « fermerait » un circuit qui vient de s'ouvrir pour une bonne raison. Chaque réplique garde un numéro de *génération* qui augmente à chaque ouverture du circuit ; un bail retient la génération dans laquelle il a été créé, et les résultats d'une génération plus ancienne sont ignorés.
+
+**L'état de santé et l'état du circuit sont séparés.** « Est-ce que `/health` a répondu ? » et « Est-ce que les vraies requêtes échouent ? » sont deux questions différentes. Une réplique peut répondre parfaitement aux health checks alors que chaque vraie requête renvoie `503` — exactement ce que fait l'endpoint `/fail` de la démo. Donc le health check ne réinitialise jamais le circuit, et le circuit ne se fait jamais passer pour le health check. Le seul lien entre les deux : si une vraie requête échoue parce que la réplique était injoignable, la réplique est immédiatement marquée malsaine, et un résultat de health check périmé déjà en cours ne peut pas la remarquer saine.
+
+<Callout type="definition" label="Pourquoi l'essai semi-ouvert est une vraie requête">
+Certaines implémentations testent avec un appel de santé séparé. Ici, l'essai est la prochaine vraie requête utilisateur : le circuit s'est ouvert sur des échecs de vraies requêtes, donc seule une vraie requête prouve qu'il s'est rétabli.
+</Callout>
+
+## La voir fonctionner
+
+Sous Windows, `.\demo\run.ps1 -SkipBuild` démarre la gateway et les quatre processus de services, génère localement un secret JWT et un mot de passe de base de données, et écrit les identifiants de démo dans le dossier `.runtime/` ignoré par git. Ensuite, ouvre `http://127.0.0.1:18180/`.
+
+Le tableau de bord montre les 50 dernières requêtes avec leur résultat, leurs tentatives, la réplique choisie et la durée, ainsi que la santé des répliques, l'état des circuits et les compteurs. Les boutons envoient de vraies requêtes HTTP à travers la gateway, donc on peut :
+
+- appeler Catalog deux fois et voir `CACHE_MISS` puis `CACHE_HIT`,
+- envoyer une rafale et voir les `429` apparaître une fois le bucket vide,
+- appeler l'endpoint défaillant d'Orders et voir les retries, puis l'ouverture des circuits, puis un essai semi-ouvert,
+- arrêter une réplique (`.\demo\run.ps1 -Action stop -Port 9202`) et voir le trafic basculer sur l'autre.
+
+`mvn verify` lance les tests automatisés : des tests d'intégration contre de vrais serveurs HTTP en processus (auth, suppression des en-têtes, round robin, isolation et invalidation du cache, limites de débit, retries sûrs, transitions de circuit, timeouts et limites de corps) et des tests unitaires des politiques avec une fausse horloge, dont un test de concurrence pour le token bucket.
+
+## Ce qu'elle ne fait volontairement pas
+
+C'est une gateway d'apprentissage à processus unique, et le README le dit. Les quotas, le cache, les métriques et l'état des circuits vivent en mémoire, donc deux instances de la gateway ne les partageraient pas — en production, on déplacerait les compteurs de rate limiting vers quelque chose comme Redis. Il n'y a pas de terminaison TLS, pas de streaming ni de WebSockets, et pas de haute disponibilité ; tout écoute sur loopback. Seuls les comptes utilisateurs persistent, dans un fichier H2 local.
+
+<Callout type="further-reading" label="Ce que j'en retiens">
+Chaque politique prise seule fait quelques dizaines de lignes. Ce qui a pris du temps, c'est l'ordre : l'authentification avant tout, la limite de débit avant le cache, retirer les en-têtes de confiance avant d'ajouter les siens, vérifier la révision avant d'écrire dans le cache, vérifier la génération avant de croire un résultat. La plupart des bugs intéressants concernaient deux politiques, pas une seule.
+</Callout>
+
+Le code complet, le lanceur de démo et les tests sont sur [github.com/anonymnd/api-getway](https://github.com/anonymnd/api-getway).

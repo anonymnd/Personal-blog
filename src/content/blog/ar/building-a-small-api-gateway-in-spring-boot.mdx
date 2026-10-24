@@ -1,0 +1,171 @@
+---
+title: "بنيت API Gateway صغيرة بـ Spring Boot — وشنو علمتني كل policy"
+description: "جولة فـ الـ gateway لي بنيت باش نتعلم: entry point واحد لجوج services، مع JWT auth، rate limit لكل user، cache معزول لكل user، retries آمنين، circuit breakers لكل replica و load balancing — والقرارات الصغار ديال الترتيب لي طلعو هوما الأهم."
+pubDate: 2026-10-24T14:00:00.000Z
+translationKey: building-a-small-api-gateway-in-spring-boot
+locale: ar
+tags: ["system-design", "api-gateway", "spring-boot", "java", "distributed-systems"]
+draft: false
+---
+
+import Callout from '../../../components/common/Callout.astro';
+
+كتبت قبل على [الـ rate limiting](/Personal-blog/ar/blog/222-what-is-rate-limiting/)، [الـ circuit breakers](/Personal-blog/ar/blog/224-what-is-a-circuit-breaker/)، [الـ load balancing بين instances](/Personal-blog/ar/blog/213-why-run-multiple-instances-of-the-same-application/) و [الـ JWT authentication](/Personal-blog/ar/blog/199-authentication-vs-authorization/)، كل واحد بوحدو. كل واحد مفهوم بوحدو. ولكن شي حاجة ما فهمتهاش حتى بنيت شي حاجة بيدي: كيفاش كيتفاعلو ملي كيكونو كاملين قدام نفس الـ request. داكشي علاش بنيت API gateway صغيرة كدير هادشي كامل فـ مرة وحدة، مع dashboard كيوريك شنو وقع لكل request.
+
+الكود كاين فـ GitHub: [anonymnd/api-getway](https://github.com/anonymnd/api-getway). Java 21 و Spring Boot، تقريبا 700 سطر ديال الكود الأساسي، وكيخدم local قدام ربعة ديال services HTTP حقيقيين.
+
+<Callout type="key-insight" label="السؤال لي كيجاوب عليه هادشي">
+إلا كان process واحد خاصو يدير authentication، rate limit، cache، retry، circuit breaking و load balancing لكل request، بأشمن ترتيب خاص هاد الخطوات يتدارو — وشنو كيتهرس إلا غلطتي فـ الترتيب؟
+</Callout>
+
+## شنو كدير الـ gateway
+
+كاين entry point واحد، `http://127.0.0.1:18180`، وموراه جوج services، كل واحد فيه جوج replicas:
+
+- **Catalog** فـ الـ ports 9201 و 9202
+- **Orders** فـ الـ ports 9301 و 9302
+
+request لـ `/api/catalog/items` كتمشي لواحد من replicas ديال Catalog على شكل `/items`؛ و request لـ `/api/orders/...` كتمشي لـ replica ديال Orders. الـ prefix كيتقارن على حدود الـ path (`/api/catalog` ولا `/api/catalog/...`، عمرو `/api/catalogue`) وكيتحيد قبل ما تتصيفط. الـ routes، العناوين ديال الـ replicas وكاع الـ limits كاينين فـ `application.yml`:
+
+```yaml
+gateway:
+  strategy: ROUND_ROBIN
+  request-timeout-ms: 1000
+  circuit-threshold: 3
+  circuit-open-ms: 8000
+  rate-capacity: 12
+  rate-refill-per-second: 2
+  cache-ttl-ms: 5000
+  routes:
+    - id: catalog
+      prefix: /api/catalog
+      cache: true
+      backends: [http://127.0.0.1:9201, http://127.0.0.1:9202]
+    - id: orders
+      prefix: /api/orders
+      cache: false
+      backends: [http://127.0.0.1:9301, http://127.0.0.1:9302]
+```
+
+الـ services ديال الـ demo هوما برنامج Java فـ fichier واحد (`demo/Service.java`) كيستعمل الـ HTTP server لي جاي مع الـ JDK. كيجاوبو بالـ port ديالهم، باش تشوف شمن replica خدماتك. `/fail` ديما كترجع `503`، `/slow` كتنعس كثر من الـ timeout ديال الـ gateway، و `/items` ديال Catalog معلمة بـ `Cache-Control: public, max-age=5`.
+
+## حياة request وحدة
+
+هادا هو الترتيب لي كتدوز منو request داخل `GatewayController`. أغلب داكشي لي تعلمت كاين فـ *علاش* هاد الترتيب بالضبط.
+
+1. الـ **telemetry filter** كيعطي request ID وكيبدا الـ timer.
+2. **Spring Security** كيتحقق من الـ JWT. ما كاينش token صالح، ما كاين حتى خدمة من بعد: `401`.
+3. **الـ route match.** prefix ما معروفش: `404`.
+4. **الـ rate limit** لهاد الـ user على هاد الـ service. فات الـ limit: `429` مع `Retry-After`.
+5. **الـ body limit.** كثر من 1 MiB: `413`.
+6. **البحث فـ الـ cache**، غير إلا كانت الـ request مؤهلة.
+7. **نختارو replica** لي healthy والـ circuit ديالها ماشي مفتوح.
+8. **نصيفطو**، مع timeout. إلا فشلات request آمنة بشكل مؤقت، كنعاودو مرة وحدة على replica *أخرى*.
+9. **نسجلو النتيجة** فـ الـ circuit breaker ديال داك الـ replica، ومن بعد cache ولا invalidation.
+
+كل response فيها headers كيقولو شنو وقع: `X-Gateway-Outcome` (`CACHE_HIT`، `CACHE_MISS`، `FORWARDED`، `RATE_LIMITED`، `NO_BACKEND`…)، `X-Gateway-Attempts`، `X-Gateway-Backend` و `X-RateLimit-Remaining`. الـ dashboard غير صفحة كتقرا هادشي.
+
+## Authentication: عرف شكون نتا قبل أي حاجة
+
+`/auth/register` و `/auth/login` كيخزنو الـ users فـ database H2 بـ hashes ديال BCrypt وكيعطيو JWT HS256 صالحين 30 دقيقة. الـ decoder ماشي غير كيتحقق من الـ signature — كيتحقق حتى من الـ issuer (`learning-api-gateway`) والـ audience (`gateway-api`)، باش token مسيني بنفس الـ key لغرض آخر ما يتقبلش هنا.
+
+جوج تفاصيل صغار كانو يستاهلو يتزادو:
+
+- **الـ login كيدير نفس الخدمة سواء الـ user كاين ولا لا.** إلا الـ username ما تلقاش، الـ password كيتقارن مع BCrypt hash وهمي. وإلا، "user ما كاينش" غايجاوب أسرع بزاف من "password غالط"، والوقت ديال الجواب غايفضح شمن usernames كاينين.
+- **الـ body ديال الـ auth محدود فـ 4 KB قبل الـ JSON parsing.** filter كيقرا ماكسيموم 4,097 octets وكيرفض أي حاجة كبر، باش حتى واحد ما يقدر يخلي السيرفر يحجز "password" ضخم غير باش يرفضو.
+
+محاولات الـ login حتى هي عندها rate limit، على حساب الـ remote address. الكود كيتجاهل `X-Forwarded-For` بالقصد هنا، حيت أي client يقدر يحط فيه قيمة جديدة فـ كل محاولة ويتهرب من الـ limit.
+
+### الـ gateway هي trust boundary
+
+الـ backends كيتيقو فـ الـ gateway باش تقول ليهم شكون هو الـ user: كتصيفط `X-Authenticated-User` فيه الـ subject ديال الـ JWT. هادشي كيخدم غير إلا الـ client ما يقدرش يصيفط هاد الـ header بوحدو. داكشي علاش، ملي كتصيفط، الـ gateway **كتحيد** أي `Authorization`، `Forwarded`، `X-Forwarded-*`، `X-Authenticated-*`، `X-Gateway-*` و `X-Request-Id` جايين من الـ client، ومن بعد عاد كتزيد ديالها. والـ hop-by-hop headers (`Connection`، `Transfer-Encoding`، وأي حاجة مذكورة فـ `Connection`) كيتحيدو فـ الجوج اتجاهات.
+
+<Callout type="warning" label="ساهل تفلتك">
+إلا gateway زادت identity header بلا ما تحيد النسخة ديال الـ client قبل، أي واحد يقدر يدير راسو أي user غير بلي يصيفط داك الـ header. كاين integration test كيتأكد بلي الـ trust headers المزورين عمرهم ما كيوصلو للـ backend.
+</Callout>
+
+## Rate limiting: token buckets، وعلاش قبل الـ cache
+
+كل user عندو token bucket *لكل service*: capacity 12، وكيتعمر بـ 2 tokens فـ الثانية. يعني تقدر تصيفط burst ديال 12 request، ومن بعد تقريبا 2 فـ الثانية. الـ key هو `api:<userId>:<serviceId>`، يعني إلا ضغطتي على Orders ما كتاكلش الـ quota ديال Catalog.
+
+الـ bucket كيستعمل `System.nanoTime()` ماشي الساعة العادية، باش تبديل الساعة ما يعمرش (ولا يخوي) الـ bucket ديال الناس كاملين فجأة. الـ map ديال الـ buckets محدودة فـ 1,024 key؛ ملي كتعمر، الـ buckets لي ما تقاسوش 2 دقايق كيتحيدو، وإلا ما كان حتى واحد خامل، الـ keys الجداد كيترفضو عوض ما نخليو الـ memory تكبر بلا حد.
+
+القرار ديال الترتيب: **الـ rate limit كيتشيكا قبل الـ cache.** أول فكرة جاتني كانت العكس — cache hit رخيص، علاش نحسبو؟ ولكن الـ limit ماشي غير كيحمي الـ backend. هو حتى لي كيمنع user واحد يغرق الـ gateway براسها، ويستعمل الـ cache كـ amplifier فابور. إلا كانو الـ responses لي فـ الـ cache فابور، الـ quota غاتولي معناها "الـ requests لي ما لقاتش فـ الـ cache"، وهادي قاعدة حتى واحد ما يقدر يفهمها.
+
+## Cache: لكل user، قصير، ومحمي من الـ races
+
+الـ cache كيبان أسهل policy. طلع هو لي فيه أكثر الفخاخ.
+
+`GET` على Catalog كيكون مؤهل للـ cache غير إلا ما فيه حتى body، وما فيهش `Range`، `Cookie`، `If-None-Match` ولا `If-Modified-Since`، والـ client ما صيفطش `no-cache`/`no-store`. والـ response ديال الـ upstream ما كتخزنش حتى تكون `200`، فيها `public` مع `max-age`، وما فيهاش `Set-Cookie` ولا `Vary`. الـ TTL هو الصغير بين الـ `max-age` ديال الـ upstream والـ limit ديال 5 ثواني ديال الـ gateway.
+
+ثلاثة ديال القرارات خاصهم شرح:
+
+**الـ cache key فيه الـ user.** الـ key هو `(route, userId, path+query)`. حتى لـ response "public"، ما بغيتش request ديال user يتخدم من entry ديال user آخر. كيكلف شوية من الـ hit rate، وكيحيد واحد الفئة كاملة ديال bugs ديال تسريب الداتا.
+
+**الـ mutations كيديرو invalidation، مع revision fence.** `POST`/`PUT`/`PATCH`/`DELETE` ناجح على service كيخوي الـ cache ديال داك الـ service. ولكن كاين race: `GET` بطيء يقدر يبدا قبل `POST`، يسالي من بعدو، ويكتب الـ response ديالو لي ولات قديمة فـ الـ cache لي يالاه تخوا. باش نتفاداو هادشي، كل route عندها revision counter. الـ `GET` كيقرا الـ revision قبل ما يصيفط؛ وملي كيبغي يخزن النتيجة، الكتابة كتتلغى إلا الـ revision تبدلات فـ الوسط.
+
+**الـ browsers ما خاصهم يخزنو والو.** كل response ديال الـ gateway كتمشي بـ `Cache-Control: no-store`. الـ cache ديال الـ gateway كاين *مور* الـ authentication والـ rate limiting؛ إلا browser ولا proxy مشترك خزن الـ response، غايتجاوز بجوج.
+
+والـ cache محدود: 128 entry، eviction بـ LRU، والـ bodies لي كبر من 64 KB عمرهم ما كيتخزنو.
+
+## Load balancing: Round Robin ولا Least Connections
+
+الـ replicas ديال كل service عايشين فـ `Pool`. الاختيار كيفوت الـ replicas لي فشلو فـ آخر health check، لي الـ circuit ديالهم مفتوح، و — فـ الـ retry — لي تجربو ديجا لهاد الـ request. من الباقيين:
+
+- **Round Robin** كياخد الـ replica المؤهلة الجاية من بعد cursor كيدور.
+- **Least Connections** كياخد لي عندها أقل requests خدامين دابا.
+
+كتبدل بقيمة وحدة فـ الـ config (ولا `-Strategy LEAST_CONNECTIONS` فـ الـ launcher ديال الـ demo). فـ الـ services ديال الـ demo، الـ ports الفرديين كيجاوبو فـ 200 ms والزوجيين فـ 50 ms، يعني تحت الضغط كتشوف بعينيك Least Connections كتحول الـ traffic للـ replica الأسرع، بينما Round Robin كيبقى يتناوب.
+
+الاختيار كيرجع **lease**: ملي كتختار replica، الـ active count ديالها كيزيد، وملي كتسد الـ lease (فـ `try`-with-resources) كينقص وكيتسجل الـ outcome. وحيت الاختيار والحساب كيتدارو فـ خطوة وحدة synchronized، جوج requests فـ نفس الوقت ما يقدروش يشوفو بجوج "0 active" ويتجمعو على نفس الـ replica.
+
+كاين health checker كيعيط على `/health` فـ كل replica كل 2 ثواني بـ timeout ديال 300 ms. الـ replica لي ما واجداش كتتفوت حتى ترجع.
+
+## Retries: غير ملي يكون آمن، وعمرو على نفس الـ replica
+
+`GET` و `HEAD` يقدرو يتعاودو **مرة وحدة**، وغير على `502`، `503` ولا `504`. الـ retry كيتسنى 50 ms وكيمشي لـ replica *أخرى* — تعاود نفس الـ instance لي خاسرة نادرا ما كتنفع.
+
+`POST`، `PUT`، `PATCH` و `DELETE` **عمرهم** ما كيتعاودو أوتوماتيكيا. إلا `POST` لي كيصاوب commande دار timeout، الـ gateway ما كتعرفش واش الـ backend ديجا صاوب الـ commande. إلا عاودنا، يقدر يصاوبها جوج مرات. هاد القرار ديال الـ client (والأحسن مع idempotency key)، ماشي ديال proxy ما كيشوفش المعنى ديال الـ request فـ الـ business.
+
+كل محاولة عندها timeout ديال ثانية وحدة كيغطي الـ response *كاملة*، ماشي غير الـ connexion، والـ response bodies كيتقراو بـ subscriber محدود كيوقف فـ 1 MiB.
+
+## Circuit breakers: واحد لكل replica
+
+حطيت الـ circuit breaker على كل **replica**، ماشي على الـ service كامل. إلا 9302 خاسرة و 9301 مزيانة، غير 9302 لي خاصها تتقطع.
+
+- **Closed:** الـ requests كيدوزو. ثلاثة ديال الفشل متتابعين (status ≥ 500 ولا transport errors) كيحلوه.
+- **Open:** الـ replica كتتفوت 8 ثواني.
+- **Half-open:** من بعد الـ cooldown، request حقيقية **وحدة** بالضبط كتدوز كـ تجربة. إلا نجحات كيتسد الـ circuit؛ إلا فشلات كيتحل 8 ثواني أخرى.
+
+جوج bugs خفاف الـ tests جبروني نعالجهم:
+
+**نتائج متأخرة من قبل تبديل الحالة.** نفترضو ثلاثة requests خدامين، الفشل الثالث حل الـ circuit، ومن بعد الأولى رجعات أخيرا بـ success. بلا انتباه، هاد الـ success القديم غادي "يسد" circuit يالاه تحل لسبب مزيان. كل replica كتحتافظ بـ *generation* number كيزيد كل مرة الـ circuit كيتحل؛ الـ lease كتعقل على الـ generation لي تخلقات فيها، والنتائج ديال generation قديمة كيتجاهلو.
+
+**الـ health والـ circuit حاجتين منفصلين.** "واش `/health` جاوب؟" و "واش الـ requests الحقيقيين كيفشلو؟" سؤالين مختلفين. replica تقدر تجاوب الـ health checks مزيان وكل request حقيقية كترجع `503` — بالضبط داكشي لي كدير `/fail` فـ الـ demo. داكشي علاش الـ health check عمرو ما كيدير reset للـ circuit، والـ circuit عمرو ما كيدير راسو هو الـ health check. الرابط الوحيد بيناتهم: إلا request حقيقية فشلات حيت الـ replica ما وصلنا ليهاش أصلا، الـ replica كتتعلم unhealthy فـ الحين، و health result قديم لي كان ديجا خدام ما يقدرش يرجعها healthy.
+
+<Callout type="definition" label="علاش التجربة ديال half-open هي request حقيقية">
+شي implementations كيجربو بـ health call منفصلة. هنا التجربة هي الـ request الحقيقية الجاية ديال الـ user، حيت الـ circuit تحل على فشل ديال requests حقيقيين، يعني غير request حقيقية هي لي تقدر تثبت بلي رجع مزيان.
+</Callout>
+
+## نشوفوها كتخدم
+
+فـ Windows، `.\demo\run.ps1 -SkipBuild` كيطلق الـ gateway والربعة ديال الـ services، كيصاوب local واحد JWT secret و password ديال الـ database، وكيكتب الـ credentials ديال الـ demo فـ الدوسي `.runtime/` لي git كيتجاهلو. ومن بعد حل `http://127.0.0.1:18180/`.
+
+الـ dashboard كيوريك آخر 50 request مع الـ outcome، عدد المحاولات، الـ replica لي تختارات والمدة، وزيد عليهم الـ health ديال الـ replicas، الحالة ديال الـ circuits والـ counters. الـ boutons كيصيفطو requests HTTP حقيقيين عبر الـ gateway، يعني تقدر:
+
+- تعيط على Catalog جوج مرات وتشوف `CACHE_MISS` ومن بعد `CACHE_HIT`،
+- تصيفط burst وتشوف الـ `429` كيبانو ملي الـ bucket كيخوا،
+- تعيط على الـ endpoint ديال Orders لي كيفشل وتشوف الـ retries، ومن بعد الـ circuits كيتحلو، ومن بعد تجربة half-open،
+- توقف replica (`.\demo\run.ps1 -Action stop -Port 9202`) وتشوف الـ traffic كيدوز للأخرى.
+
+`mvn verify` كيدور الـ tests الأوتوماتيكيين: integration tests ضد HTTP servers حقيقيين فـ نفس الـ process (auth، تحياد الـ headers، round robin، العزل والـ invalidation ديال الـ cache، rate limits، retries آمنين، تبديلات الـ circuit، timeouts و body limits) و unit tests ديال الـ policies بـ fake clock، منهم concurrency test ديال الـ token bucket.
+
+## شنو ما كديرش بالقصد
+
+هادي gateway ديال التعلم فـ process واحد، والـ README كيقولها. الـ quotas، الـ cache، الـ metrics والحالة ديال الـ circuits عايشين فـ الـ memory، يعني جوج instances ديال الـ gateway ما غاديش يتشاركوهم — فـ production كنحولو الـ counters ديال الـ rate limiting لشي حاجة بحال Redis. ما كاينش TLS termination، ما كاينش streaming ولا WebSockets، وما كاينش high availability؛ كلشي كيسمع غير على loopback. غير الـ user accounts لي كيبقاو، فـ fichier H2 local.
+
+<Callout type="further-reading" label="شنو غانهز معايا">
+كل policy بوحدها شي عشرات ديال السطور. لي خدا الوقت هو الترتيب: الـ authentication قبل كلشي، الـ rate limit قبل الـ cache، تحيد الـ trust headers قبل ما تزيد ديالك، تشيكي الـ revision قبل ما تكتب فـ الـ cache، تشيكي الـ generation قبل ما تتيق فـ نتيجة. أغلب الـ bugs المثيرين كانو بين جوج policies، ماشي فـ وحدة.
+</Callout>
+
+الكود كامل، الـ launcher ديال الـ demo والـ tests كاينين فـ [github.com/anonymnd/api-getway](https://github.com/anonymnd/api-getway).
