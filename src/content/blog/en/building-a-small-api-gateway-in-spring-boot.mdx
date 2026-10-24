@@ -1,0 +1,171 @@
+---
+title: "Building a Small API Gateway in Spring Boot — and What Each Policy Taught Me"
+description: "A walk through my learning API gateway: one entry point for two services, with JWT auth, per-user rate limits, a user-isolated cache, safe retries, per-replica circuit breakers and load balancing — and the small ordering decisions that turned out to matter most."
+pubDate: 2026-10-24T14:00:00.000Z
+translationKey: building-a-small-api-gateway-in-spring-boot
+locale: en
+tags: ["system-design", "api-gateway", "spring-boot", "java", "distributed-systems"]
+draft: false
+---
+
+import Callout from '../../../components/common/Callout.astro';
+
+I've written separately about [rate limiting](/Personal-blog/en/blog/222-what-is-rate-limiting/), [circuit breakers](/Personal-blog/en/blog/224-what-is-a-circuit-breaker/), [load balancing across instances](/Personal-blog/en/blog/213-why-run-multiple-instances-of-the-same-application/) and [JWT authentication](/Personal-blog/en/blog/199-authentication-vs-authorization/). Each one makes sense on its own. What I didn't understand until I built something is how they interact when they all sit in front of the same request. So I built a small API gateway that does all of them at once, with a dashboard that shows what happened to every request.
+
+The code is on GitHub: [anonymnd/api-getway](https://github.com/anonymnd/api-getway). It's Java 21 and Spring Boot, about 700 lines of main code, and it runs locally against four real HTTP service processes.
+
+<Callout type="key-insight" label="The question this answers">
+If one process has to authenticate, rate-limit, cache, retry, circuit-break and load-balance every request, in what order do those steps have to happen — and what breaks if you get the order wrong?
+</Callout>
+
+## What the gateway does
+
+There is one entry point, `http://127.0.0.1:18180`, and two backend services behind it, each with two replicas:
+
+- **Catalog** on ports 9201 and 9202
+- **Orders** on ports 9301 and 9302
+
+A request to `/api/catalog/items` is forwarded to one Catalog replica as `/items`; a request to `/api/orders/...` goes to an Orders replica. The prefix is matched on a path boundary (`/api/catalog` or `/api/catalog/...`, never `/api/catalogue`) and stripped before forwarding. The routes, replica addresses and every limit live in `application.yml`:
+
+```yaml
+gateway:
+  strategy: ROUND_ROBIN
+  request-timeout-ms: 1000
+  circuit-threshold: 3
+  circuit-open-ms: 8000
+  rate-capacity: 12
+  rate-refill-per-second: 2
+  cache-ttl-ms: 5000
+  routes:
+    - id: catalog
+      prefix: /api/catalog
+      cache: true
+      backends: [http://127.0.0.1:9201, http://127.0.0.1:9202]
+    - id: orders
+      prefix: /api/orders
+      cache: false
+      backends: [http://127.0.0.1:9301, http://127.0.0.1:9302]
+```
+
+The demo services are a single-file Java program (`demo/Service.java`) using the JDK's built-in HTTP server. They answer with their own port number, so you can see which replica served you. `/fail` always returns `503`, `/slow` sleeps past the gateway's timeout, and Catalog's `/items` is marked `Cache-Control: public, max-age=5`.
+
+## The life of one request
+
+This is the order a request goes through inside `GatewayController`. Most of what I learned is in *why* it's this order.
+
+1. **Telemetry filter** assigns a request ID and starts a timer.
+2. **Spring Security** checks the bearer JWT. No valid token, no further work: `401`.
+3. **Route match.** Unknown prefix: `404`.
+4. **Rate limit** for this user on this service. Over the limit: `429` with `Retry-After`.
+5. **Body limit.** More than 1 MiB: `413`.
+6. **Cache lookup**, only if the request is eligible.
+7. **Pick a replica** that is healthy and whose circuit isn't open.
+8. **Forward**, with a timeout. If a safe request fails transiently, try once more on a *different* replica.
+9. **Record the result** on that replica's circuit breaker, then cache or invalidate.
+
+Every response carries headers saying what happened: `X-Gateway-Outcome` (`CACHE_HIT`, `CACHE_MISS`, `FORWARDED`, `RATE_LIMITED`, `NO_BACKEND`…), `X-Gateway-Attempts`, `X-Gateway-Backend` and `X-RateLimit-Remaining`. The dashboard is just a page that reads those back.
+
+## Authentication: decide who you are before anything else
+
+`/auth/register` and `/auth/login` store users in an H2 database with BCrypt hashes and issue HS256 JWTs that live 30 minutes. The decoder doesn't only check the signature — it also checks the issuer (`learning-api-gateway`) and the audience (`gateway-api`), so a token signed with the same key for some other purpose isn't accepted here.
+
+Two small details I'm glad I added:
+
+- **Login does the same work whether the user exists or not.** If the username isn't found, the password is still checked against a dummy BCrypt hash. Otherwise "unknown user" returns noticeably faster than "wrong password", and response time leaks which usernames exist.
+- **The auth body is capped at 4 KB before JSON parsing.** A filter reads at most 4,097 bytes and rejects anything bigger, so nobody can make the server allocate a huge "password" string just to reject it.
+
+Login attempts are also rate-limited, by remote address. The code deliberately ignores `X-Forwarded-For` for this, because any client can set that header to a new value on every attempt and dodge the limit.
+
+### The gateway is a trust boundary
+
+The backends trust the gateway to say who the user is: it sends `X-Authenticated-User` with the JWT's subject. That only works if a client can't send that header themselves. So when forwarding, the gateway **removes** any incoming `Authorization`, `Forwarded`, `X-Forwarded-*`, `X-Authenticated-*`, `X-Gateway-*` and `X-Request-Id` headers, and only then adds its own. Hop-by-hop headers (`Connection`, `Transfer-Encoding`, and anything named in `Connection`) are dropped in both directions as well.
+
+<Callout type="warning" label="Easy to miss">
+If a gateway adds an identity header without first stripping the client's copy, anyone can impersonate any user by sending that header. An integration test checks that forged trust headers never reach the backend.
+</Callout>
+
+## Rate limiting: token buckets, and why it runs before the cache
+
+Each user gets a token bucket *per service*: capacity 12, refilling 2 tokens per second. So you can burst 12 requests, then sustain about 2 per second. The key is `api:<userId>:<serviceId>`, so hammering Orders doesn't eat your Catalog quota.
+
+The bucket uses `System.nanoTime()` rather than wall-clock time, so a clock adjustment can't suddenly refill (or drain) everyone's bucket. The map of buckets is bounded at 1,024 keys; when it's full, idle buckets (untouched for 2 minutes) are reclaimed, and if none are idle, new keys are refused rather than letting memory grow without limit.
+
+The ordering decision: **the rate limit is checked before the cache.** My first instinct was the opposite — a cache hit is cheap, why charge for it? But the limit protects more than the backend. It's also what stops one user from flooding the gateway itself, and from using the cache as a free amplifier. If cached responses were free, the quota would only mean "requests that miss the cache", which isn't a rule anyone can reason about.
+
+## Caching: per user, short-lived, and fenced against races
+
+Caching sounds like the easiest policy. It was the one with the most traps.
+
+A Catalog `GET` is only cache-eligible if it has no body and no `Range`, `Cookie`, `If-None-Match` or `If-Modified-Since` header, and the client didn't send `no-cache`/`no-store`. The upstream response is only stored if it's a `200`, says `public` with a `max-age`, and has no `Set-Cookie` or `Vary`. The TTL is the smaller of the upstream's `max-age` and the gateway's own 5-second cap.
+
+Three decisions worth explaining:
+
+**The cache key includes the user.** The key is `(route, userId, path+query)`. Even for a "public" response, I didn't want one user's request to be served from another user's entry. It costs some hit rate, and it removes a whole class of data-leak bugs.
+
+**Mutations invalidate, with a revision fence.** A successful `POST`/`PUT`/`PATCH`/`DELETE` on a service clears that service's cache. But there's a race: a slow `GET` might start before a `POST`, finish after it, and then write its now-stale response into the freshly cleared cache. To prevent that, each route has a revision counter. A `GET` reads the revision before forwarding; when it tries to store the result, the write is dropped if the revision has changed in between.
+
+**Browsers are told not to cache at all.** Every gateway response is sent with `Cache-Control: no-store`. The gateway's cache sits *behind* authentication and rate limiting; if a browser or shared proxy cached the response, it would skip both.
+
+The cache is also bounded: 128 entries, LRU eviction, and bodies over 64 KB are never stored.
+
+## Load balancing: Round Robin or Least Connections
+
+Each service's replicas live in a `Pool`. Selection skips replicas that failed their last health check, replicas whose circuit is open, and — on a retry — replicas already tried for this request. Among the rest:
+
+- **Round Robin** takes the next eligible replica after a rotating cursor.
+- **Least Connections** takes the one with the fewest in-flight requests.
+
+You switch with one config value (or `-Strategy LEAST_CONNECTIONS` in the demo launcher). With the demo services, odd ports respond in 200 ms and even ports in 50 ms, so under load you can actually watch Least Connections shift traffic toward the faster replica while Round Robin keeps alternating.
+
+Selection returns a **lease**: picking a replica increments its active count, and closing the lease (in a `try`-with-resources block) decrements it and records the outcome. Because selection and counting happen in one synchronized step, two concurrent requests can't both see "0 active" and pile onto the same replica.
+
+A health checker calls `/health` on every replica every 2 seconds with a 300 ms timeout. An unready replica is simply skipped until it recovers.
+
+## Retries: only when it's safe, and never on the same replica
+
+`GET` and `HEAD` may be retried **once**, and only on `502`, `503` or `504`. The retry waits 50 ms and goes to a *different* replica — retrying the same broken instance rarely helps.
+
+`POST`, `PUT`, `PATCH` and `DELETE` are **never** retried automatically. If an order-creating `POST` times out, the gateway doesn't know whether the backend already created the order. Retrying could create it twice. That decision belongs to the client (ideally with an idempotency key), not to a proxy that can't see the business meaning of the request.
+
+Each attempt has a 1-second timeout that covers the *whole* response, not just the connection, and response bodies are read through a bounded subscriber that stops at 1 MiB.
+
+## Circuit breakers: one per replica
+
+I put the circuit breaker on each **replica**, not on the whole service. If 9302 is broken but 9301 is fine, only 9302 should be cut off.
+
+- **Closed:** requests flow. Three consecutive failures (status ≥ 500 or transport errors) open it.
+- **Open:** the replica is skipped for 8 seconds.
+- **Half-open:** after the cooldown, exactly **one** real request is allowed through as a trial. Success closes the circuit; failure reopens it for another 8 seconds.
+
+Two subtle bugs the tests forced me to handle:
+
+**Late results from before a transition.** Suppose three requests are in flight, the third failure opens the circuit, and then the first one finally comes back with a success. Without care, that old success would "close" a circuit that just opened for good reason. Each replica keeps a *generation* number that increments every time the circuit opens; a lease remembers the generation it was created in, and results from an older generation are ignored.
+
+**Health and circuit state are separate.** "Did `/health` answer?" and "Are real requests failing?" are different questions. A replica can answer health checks perfectly while every real request returns `503` — exactly what the demo's `/fail` endpoint does. So the health check never resets the circuit, and the circuit never pretends to be the health check. The one link between them: if a real request fails because the replica couldn't be reached at all, the replica is immediately marked unhealthy, and a stale health result that was already in progress can't mark it healthy again.
+
+<Callout type="definition" label="Why the half-open trial is a real request">
+Some implementations probe with a separate health call. Here the trial is the next real user request, because the circuit opened on real-request failures, so only a real request proves it has recovered.
+</Callout>
+
+## Seeing it work
+
+On Windows, `.\demo\run.ps1 -SkipBuild` starts the gateway and the four service processes, generates a JWT secret and a database password locally, and writes demo credentials to the git-ignored `.runtime/` folder. Then open `http://127.0.0.1:18180/`.
+
+The dashboard shows the last 50 requests with their outcome, attempts, chosen replica and duration, plus replica health, circuit states and counters. The buttons send real HTTP requests through the gateway, so you can:
+
+- call Catalog twice and see `CACHE_MISS` then `CACHE_HIT`,
+- send a burst and watch `429`s appear once the bucket is empty,
+- call the failing Orders endpoint and watch retries, then circuits opening, then a half-open trial,
+- stop a replica (`.\demo\run.ps1 -Action stop -Port 9202`) and watch traffic fail over to the other one.
+
+`mvn verify` runs the automated tests: integration tests against real in-process HTTP servers (auth, header stripping, round robin, cache isolation and invalidation, rate limits, safe retries, circuit transitions, timeouts and body limits) and unit tests for the policies with a fake clock, including a concurrency test for the token bucket.
+
+## What it deliberately doesn't do
+
+This is a single-process learning gateway, and the README says so. Quotas, cache, metrics and circuit states live in memory, so two gateway instances wouldn't share them — a production setup would move rate-limit counters to something like Redis. There's no TLS termination, no streaming or WebSockets, and no high availability; everything binds to loopback. Only user accounts persist, in a local H2 file.
+
+<Callout type="further-reading" label="What I'd take away">
+The individual policies are each a few dozen lines. What took the time was ordering: authentication before anything else, rate limit before the cache, stripping trust headers before adding them, a revision check before writing to the cache, a generation check before trusting a result. Most of the interesting bugs were about two policies, not one.
+</Callout>
+
+The full source, the demo launcher and the tests are at [github.com/anonymnd/api-getway](https://github.com/anonymnd/api-getway).
